@@ -1,0 +1,11 @@
+# 改行コードは LF に統一する。
+# GitHub Actions は Linux で走るため、CRLF が混ざると lint.py の
+# 一文長判定や dedup.py の類似度計算がずれる。
+* text=auto eol=lf
+
+# バイナリ
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary
+*.pdf binary
