@@ -294,20 +294,43 @@ async function unlock(pass){
     km, {name:'AES-GCM',length:256}, false, ['decrypt']);
   return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct)));
 }
-$('#go').onclick = async () => {
-  const pw = $('#pw').value, e = $('#err');
-  if(!pw){ e.textContent = '合言葉を入力してください。'; return; }
-  $('#go').disabled = true; e.textContent = '復号しています…';
+/* 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+   端末に残るため、共用端末では画面右上の「合言葉を消す」を押すこと。 */
+const PASS_KEY = 'nf-pass';
+const savePass = p => { try{ localStorage.setItem(PASS_KEY, p); }catch(_){} };
+const readPass = () => { try{ return localStorage.getItem(PASS_KEY); }catch(_){ return null; } };
+function forgetPass(){ try{ localStorage.removeItem(PASS_KEY); }catch(_){} location.reload(); }
+
+async function tryUnlock(pw, quiet){
+  const e = $('#err');
+  if(!quiet){ $('#go').disabled = true; e.textContent = '復号しています…'; }
   try{
     D = await unlock(pw);
+    savePass(pw);
     $('#lock').style.display = 'none'; $('#app').style.display = 'block'; boot();
-  }catch(_){ e.textContent = '開けませんでした。合言葉を確認してください。'; $('#go').disabled = false; }
+    return true;
+  }catch(_){
+    // 保存済みで失敗したら古い合言葉が残っている。消して入力に戻す
+    if(quiet){ try{ localStorage.removeItem(PASS_KEY); }catch(_){} }
+    else { e.textContent = '開けませんでした。合言葉を確認してください。'; $('#go').disabled = false; }
+    return false;
+  }
+}
+
+$('#go').onclick = () => {
+  const pw = $('#pw').value;
+  if(!pw){ $('#err').textContent = '合言葉を入力してください。'; return; }
+  tryUnlock(pw, false);
 };
 $('#pw').addEventListener('keydown', ev => { if(ev.key === 'Enter') $('#go').click(); });
 
+/* 保存済みなら自動で開く */
+(() => { const saved = readPass(); if(saved) tryUnlock(saved, true); })();
+
 const TABS = [['home','ホーム'],['posts','記事'],['ladder','商品ライン'],['flow','フロー'],['log','自動運転ログ'],['input','入力']];
 function boot(){
-  $('#hmeta').innerHTML = '<span class="dot"></span>自動更新 稼働中<br>'+D.updatedAt.slice(0,10)+' 06:00 ／ @'+D.account.urlname;
+  $('#hmeta').innerHTML = '<span class="dot"></span>自動更新 稼働中<br>'+D.updatedAt.slice(0,10)+' 06:00 ／ @'+D.account.urlname
+    + '<br><a href="#" onclick="forgetPass();return false;" style="opacity:.45;font-size:11px;text-decoration:underline">合言葉を消す</a>';
   $('#nav').innerHTML = TABS.map(([k,l])=>{
     const b = k==='log' ? '<span class="bdg">'+D.autolog.filter(x=>x.st!=='ok').length+'</span>' : '';
     return '<button data-t="'+k+'">'+l+b+'</button>';

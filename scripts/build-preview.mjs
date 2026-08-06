@@ -453,6 +453,19 @@ const ITER = ${ITERATIONS};
 const PASS_KEY = 'nf-pass';
 const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
 async function decryptPayload(pass, enc) {
   const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
   const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
@@ -475,11 +488,14 @@ async function applyPass(pass, quiet) {
     document.getElementById('paid-body').innerHTML = data.html;
     document.getElementById('paid-lock').style.display = 'none';
     document.getElementById('paid-actions').style.display = '';
-    // タブを閉じたら消える。端末には残さない
-    sessionStorage.setItem(PASS_KEY, pass);
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
     if (err) err.textContent = '';
     return true;
   } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
     if (err) err.textContent = quiet ? '' : '合言葉が違います。';
     return false;
   }
@@ -491,12 +507,15 @@ async function unlockPaid() {
   await applyPass(pw, false);
 }
 
-// 同じタブで一度入れていれば、記事を移動しても入力し直さなくてよい
+// 一度入れれば次回以降は自動で開く
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = sessionStorage.getItem(PASS_KEY);
+  const saved = readPass();
   if (saved) applyPass(saved, true);
   const pw = document.getElementById('pw');
   if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
 });
 `;
 
@@ -566,6 +585,9 @@ function buildIndex(items, gates) {
 <header class="top">
   <h1>投稿キュー</h1>
   <div class="muted">${items.length} 本 ／ 生成 ${new Date().toLocaleString('ja-JP')}</div>
+  ${PUBLIC ? `<div class="row">
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>` : ''}
 </header>
 ${items.length ? cards : '<div class="card">記事がありません。<code>お願いします</code> で1本作ってください。</div>'}
 <div class="muted" style="margin-top:28px">
@@ -616,7 +638,8 @@ function buildArticle(it, gates, passphrase) {
   <div><button class="primary" onclick="unlockPaid()">表示する</button></div>
   <div class="err" id="lockerr"></div>
   <div class="note">AES-GCM-256。復号はこのブラウザの中だけで行われます。<br>
-    同じタブで一度入力すれば、他の記事でも入力し直す必要はありません。</div>
+    一度入力すれば、次回以降は自動で開きます。<br>
+    共用の端末では、読み終えたら「合言葉を消す」を押してください。</div>
 </div>
 <div id="paid-body"></div>` : `
 <div class="paywall">ここから有料エリア</div>
@@ -629,6 +652,7 @@ ${paidHtml}`);
     <button onclick="copyText(this, ${JSON.stringify(m.title ?? '')})">タイトルをコピー</button>
     ${buttons}
     ${tags ? `<button onclick="copyText(this, ${JSON.stringify(tags)})">ハッシュタグをコピー</button>` : ''}
+    ${PUBLIC ? '<button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>' : ''}
   </div>
 </div>
 
