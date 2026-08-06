@@ -781,13 +781,13 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | 1 | `account-research` + `account-design` + `/note-init` | **完了** |
 | 2 | `weekly-research` + 在庫管理 | **完了** |
 | **3** | **`lint.py` + `dedup.py` + Actions** | **完了**（実データで検証済み） |
-| 4 | `daily-article` + `daily-build` | **一部**（`reader-feedback` / `build-report` が未実装） |
+| 4 | `daily-article` + `daily-build` | **完了**（日次フローの4スキルが揃った） |
 | 5 | `build-preview.mjs` + `/note-preview` | **完了**（実起動で検証済み） |
 | 6 | `sales-letter` / `letter-audit` の型対応 | **一部**（`product-concept` / `draft-writing` / `title-design` が未実装） |
 | 7 | `fetch-metrics` + `profile-accumulator` | 未着手 |
 | 8 | 体験談型の解禁 + 営業部 | 未着手 |
 
-### 17.1 スキルの実装状況（7 / 15）
+### 17.1 スキルの実装状況（9 / 15）
 
 | 層 | スキル | 状態 | 影響 |
 |---|---|:---:|---|
@@ -801,15 +801,17 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | 生成 | `draft-writing` | **未** | **有料部分の本文が書けない** |
 | 生成 | `letter-audit` | ✔ | |
 | 生成 | `ethics-line` | ✔ | |
-| 生成 | `reader-feedback` | **未** | **無料記事のゲートが1つ欠ける**（`daily-build` が呼ぶ） |
+| 生成 | `reader-feedback` | ✔ | |
 | 生成 | `title-design` | **未** | 有料noteのタイトルが手動になる |
-| 生成 | `build-report` | **未** | **判断ログの形式が定義されていない**（`daily-build` が呼ぶ） |
+| 生成 | `build-report` | ✔ | |
 | 経営 | `profile-accumulator` | **未** | 実績が蓄積されず `experience` を解禁できない |
 | 経営 | `revenue-maximizer` | **未** | `monthly-review` が暫定版のまま |
 
-**優先順位:** `reader-feedback` と `build-report` を先に作る。この2つは無料記事の日次フローが呼ぶため、
-無いと `daily-build` が完全には動かない。次に `product-concept` / `draft-writing` / `title-design`
-（有料noteのフロー）、最後に `pricing-strategy` と経営層2本。
+**残り6本の内訳:** 有料noteのフローに4本（`product-concept` / `draft-writing` / `title-design` / `pricing-strategy`）、
+経営層に2本（`profile-accumulator` / `revenue-maximizer`）。
+
+**無料記事の日次フローは完成している。** `daily-article` → `reader-feedback` → `ethics-line` → `build-report`
+の4本が揃ったため、`/note-daily` は仕様どおり動く。
 
 > コマンドと Routine には手順が書かれているため動作自体はするが、**判断基準（物差し）が
 > 定義されていない状態である。** これは CLAUDE.md ルール1に反するため、暫定的な状態と扱う。
