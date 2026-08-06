@@ -37,8 +37,7 @@
     - https://blog.serverworks.co.jp/claude-code-subagents-guide
     - https://fyve.co.jp/claude-code/articles/claude-code-subagent-limit
     - https://zenn.dev/genda_jp/articles/16d35ffa464d65
-  status: pending
-
+  status: used
 - id: 2026-W32-02
   title: 何にトークンを使っているか——/context で見える化してから減らす
   type: free
