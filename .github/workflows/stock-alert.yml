@@ -1,0 +1,78 @@
+name: stock-alert
+
+# ネタ在庫の枯渇は、毎日投稿の唯一の停止要因である。
+# 切れる前に検知して Issue を立てる。
+#
+# 在庫が空の状態で記事を書かない。その場でテーマを作らない。
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # UTC 22:00 = JST 07:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 在庫を数える
+        id: count
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os, re, pathlib
+
+          p = pathlib.Path("research/themes.md")
+          if not p.exists():
+              print("pending=-1")
+              print("state=missing")
+              raise SystemExit(0)
+
+          text = p.read_text(encoding="utf-8")
+          pending = len(re.findall(r"^\s*status:\s*pending\s*$", text, re.M))
+          used = len(re.findall(r"^\s*status:\s*used\s*$", text, re.M))
+
+          print(f"pending={pending}")
+          print(f"used={used}")
+          print("state=" + ("empty" if pending == 0 else "low" if pending < 3 else "ok"))
+          PY
+
+      - name: サマリー
+        run: |
+          {
+            echo "## ネタ在庫"
+            echo ""
+            echo "- 未使用: ${{ steps.count.outputs.pending }} 本"
+            echo "- 状態: ${{ steps.count.outputs.state }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Issue を立てる
+        if: steps.count.outputs.state == 'low' || steps.count.outputs.state == 'empty' || steps.count.outputs.state == 'missing'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATE: ${{ steps.count.outputs.state }}
+          PENDING: ${{ steps.count.outputs.pending }}
+        run: |
+          TITLE="ネタ在庫が少なくなっています"
+
+          # 同じ Issue が open のままなら重複させない
+          EXISTING=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number' || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "既に Issue #$EXISTING が open です" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ "$STATE" = "missing" ]; then
+            BODY=$'research/themes.md が見つかりません。\n\n`weekly-research` をまだ一度も実行していない可能性があります。\n\n```\n/note-init   # まだアカウント設計が済んでいない場合\n```'
+          elif [ "$STATE" = "empty" ]; then
+            BODY=$'**在庫が空です。記事を生成できません。**\n\n`weekly-research` を手動で実行してください。\n\n在庫が空の状態で記事を書かないでください。その場でテーマを作ると、\nカテゴリの範囲チェックとスコアリングが飛びます。'
+          else
+            BODY=$"未使用のテーマが **${PENDING} 本** になりました（3本を下回っています）。\n\n次の月曜を待たず、\`weekly-research\` を手動で実行することを推奨します。\n\n在庫が切れると毎日投稿が止まります。"
+          fi
+
+          gh issue create --title "$TITLE" --body "$BODY" --label "stock" 2>/dev/null \
+            || gh issue create --title "$TITLE" --body "$BODY"

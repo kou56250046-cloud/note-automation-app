@@ -121,7 +121,7 @@ Routines は保存した設定を Anthropic のクラウド上で自動実行す
 
 | ワークフロー | トリガー | 中身 |
 |---|---|---|
-| `lint-and-dedup` | `notes/**` への push | `lint.py` + `dedup.py`。失敗時は Issue |
+| `lint-and-dedup` | `notes/**` への push | `lint.py` + `dedup.py`。両方走らせてから判定し、詳細を Job Summary に出す |
 | `fetch-metrics` | 毎朝 06:30 | note 公開APIから数値取得 → 暗号化 → `data/` 更新 |
 | `stock-alert` | 毎朝 07:00 | `themes.md` の未使用が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |

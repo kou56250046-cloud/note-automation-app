@@ -1,0 +1,61 @@
+name: deploy-dashboard
+
+# ダッシュボードを GitHub Pages に配信する。
+# data/ は暗号化済みなので public でよい。合言葉で復号する。
+#
+# preview/ は配信しない。有料noteの本文が含まれるため、
+# ローカルの localhost:5173 でしか開かない。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'note-factory-dashboard.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 配信物を組み立てる
+        run: |
+          mkdir -p _site
+          cp note-factory-dashboard.html _site/index.html
+
+          # 暗号化済みデータだけを配置する。
+          # 記事本文（notes/ や preview/）は絶対にコピーしない。
+          if [ -d data ]; then
+            mkdir -p _site/data
+            cp -r data/* _site/data/ 2>/dev/null || true
+          fi
+
+          # 念のため、記事本文が紛れ込んでいないか確認する
+          if find _site -name '*-draft.md' -o -name '*-letter.md' -o -name '*-final.md' | grep -q .; then
+            echo "::error::記事本文が配信物に含まれています。中止します"
+            exit 1
+          fi
+
+          echo "配信対象:" >> "$GITHUB_STEP_SUMMARY"
+          find _site -type f | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

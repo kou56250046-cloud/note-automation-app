@@ -1,0 +1,97 @@
+name: weekly-digest
+
+# 週次のサマリーを Issue にする。
+# 人間が過程を見ないので、週に一度だけ全体が見える場所を作る。
+
+on:
+  schedule:
+    - cron: '0 11 * * 0'   # UTC 日 11:00 = JST 日 20:00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 集計する
+        id: build
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, datetime, os, collections
+
+          root = pathlib.Path(".")
+          today = datetime.date.today()
+          week_ago = today - datetime.timedelta(days=7)
+
+          notes = []
+          for meta_path in sorted(root.glob("notes/*/meta.json")):
+              try:
+                  m = json.loads(meta_path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  continue
+              notes.append(m)
+
+          def in_week(m):
+              d = m.get("publishDate")
+              if not d:
+                  return False
+              try:
+                  return week_ago <= datetime.date.fromisoformat(d) <= today
+              except ValueError:
+                  return False
+
+          this_week = [m for m in notes if in_week(m)]
+          by_type = collections.Counter(m.get("type", "unknown") for m in this_week)
+          by_cat = collections.Counter(m.get("category", "未設定") for m in this_week)
+
+          themes = root / "research/themes.md"
+          pending = 0
+          if themes.exists():
+              pending = len(re.findall(r"^\s*status:\s*pending\s*$",
+                                       themes.read_text(encoding="utf-8"), re.M))
+
+          lines = [
+              f"## {week_ago.isoformat()} 〜 {today.isoformat()}",
+              "",
+              f"- 今週の記事: **{len(this_week)} 本**（無料 {by_type.get('free',0)} / 有料 {by_type.get('paid',0)}）",
+              f"- 累計: {len(notes)} 本",
+              f"- ネタ在庫: **{pending} 本**",
+              "",
+          ]
+
+          if by_cat:
+              lines += ["### カテゴリ別", ""]
+              for cat, n in by_cat.most_common():
+                  lines.append(f"- {cat}: {n} 本")
+              lines.append("")
+
+          if this_week:
+              lines += ["### 今週の記事", ""]
+              for m in sorted(this_week, key=lambda x: x.get("publishDate", "")):
+                  tag = "有料" if m.get("type") == "paid" else "無料"
+                  lines.append(f"- `{m.get('publishDate','?')}` [{tag}] {m.get('title','(タイトルなし)')}")
+              lines.append("")
+
+          if pending < 3:
+              lines += ["", "> **在庫が3本を切っています。** `weekly-research` を実行してください。"]
+
+          if len(this_week) < 5:
+              lines += ["", f"> 今週は {len(this_week)} 本でした。目標は週7本です。"]
+
+          pathlib.Path("digest.md").write_text("\n".join(lines), encoding="utf-8")
+          print("\n".join(lines))
+          PY
+          cat digest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Issue にする
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="週次サマリー $(date -u -d '+9 hours' +%Y-%m-%d)"
+          gh issue create --title "$TITLE" --body-file digest.md 2>/dev/null \
+            || echo "Issue の作成に失敗しました（権限を確認してください）"

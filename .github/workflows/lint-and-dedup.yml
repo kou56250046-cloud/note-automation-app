@@ -1,0 +1,84 @@
+name: lint-and-dedup
+
+# 記事が push されるたびに文体・記法・重複を機械判定する。
+# LLM を使わないのでトークンを消費しない。
+#
+# 有料部分（03-draft.md）は .gitignore 対象のためここには存在しない。
+# 有料noteの検査は /note-preview の実行時にローカルで行う。
+
+on:
+  push:
+    paths:
+      - 'notes/**'
+      - 'knowledge/voice.md'
+      - 'scripts/lint.py'
+      - 'scripts/dedup.py'
+  pull_request:
+    paths:
+      - 'notes/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 依存なしで書いてあるので pip install は不要。
+      # ubuntu-latest には python3 が入っている。
+      - name: Python のバージョンを確認
+        run: python3 --version
+
+      - name: 記事があるか確認
+        id: has_notes
+        run: |
+          if ls notes/*/01-draft.md notes/*/02-final.md notes/*/02-letter.md >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "検査対象の記事がありません" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: lint.py
+        if: steps.has_notes.outputs.found == 'true'
+        id: lint
+        continue-on-error: true
+        run: |
+          {
+            echo "## lint.py"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/lint.py --all | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: dedup.py
+        if: steps.has_notes.outputs.found == 'true'
+        id: dedup
+        continue-on-error: true
+        run: |
+          {
+            echo "## dedup.py"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/dedup.py --all | tee -a "$GITHUB_STEP_SUMMARY"
+          status=${PIPESTATUS[0]}
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      # 両方走らせてから落とす。片方で止めると、もう片方の結果が見えない
+      - name: 判定
+        if: steps.has_notes.outputs.found == 'true'
+        run: |
+          fail=0
+          [ "${{ steps.lint.outcome }}" = "failure" ] && { echo "::error::lint.py がエラーを検出しました"; fail=1; }
+          [ "${{ steps.dedup.outcome }}" = "failure" ] && { echo "::error::dedup.py が重複をブロックしました"; fail=1; }
+          exit $fail
