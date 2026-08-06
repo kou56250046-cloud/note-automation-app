@@ -533,9 +533,8 @@ note-factory/
 │   ├── serve.mjs
 │   ├── fetch-public.mjs
 │   ├── encrypt.mjs
-│   ├── lint.py
-│   ├── dedup.py
-│   └── requirements.txt
+│   ├── lint.py                   # 依存なし（標準ライブラリのみ）
+│   └── dedup.py                  # 依存なし（標準ライブラリのみ）
 ├── secrets/                      # passphrase.txt（.gitignore 対象）
 └── .github/workflows/            # 5本
 ```
