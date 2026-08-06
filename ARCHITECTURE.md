@@ -435,9 +435,10 @@ research/accounts/   ──┘                             │
 | `monthly-review` | Anthropic クラウド | 定期実行のみで完結 |
 | `lint.py` / `dedup.py` | GitHub Actions | **LLM を使わない。トークン0** |
 | `fetch-metrics` | GitHub Actions | 公開 API を叩くだけ |
-| **`build-preview.mjs`** | **ローカルのみ** | **public repo の artifact は誰でも取得できるため** |
+| **`build-preview.mjs --public`** | **ローカルのみ** | **暗号化に `03-draft.md` が要る。生成物をコミットして持ち込む** |
 | **`serve.mjs`（localhost:5173）** | **ローカルのみ** | **クリップボードAPIがセキュアコンテキストを要求するため** |
 | ダッシュボード表示 | GitHub Pages ＋ ローカル | `data/` は暗号化済みなので公開してよい |
+| **有料部分の暗号化** | **ローカルのみ** | **`03-draft.md` が Actions 上に無いため、そこでは暗号化できない** |
 
 **v2.0 にあった「Claude in Chrome によるブラウザ操作」は消滅した。**
 
@@ -455,18 +456,64 @@ research/accounts/   ──┘                             │
 
 ### 10.2 HTML コピペ方式
 
+出力は2系統ある。**スマホから投稿できるようにするため、公開版を別に作る。**
+
 ```
-notes/{slug}/02-final.md + meta.json
-  ↓ build-preview.mjs（Markdown → note互換HTML）
-preview/{slug}.html
-  ↓ /note-preview → serve.mjs → localhost:5173
-[人間] コピーボタン → note に貼る
+notes/{slug}/02-final.md（無料）/ 03-draft.md（有料）
+  ├─ build-preview.mjs          → preview/          有料部分は平文。git 管理外
+  └─ build-preview.mjs --public → preview/public/   有料部分は暗号化。追跡する
+                                    ↓ commit & push
+                                  deploy-pages → GitHub Pages
+[人間] PC は localhost:5173 / スマホは github.io/.../posts/
 ```
 
 | 画面 | 内容 |
 |---|---|
-| `preview/index.html` | 投稿待ち一覧。タイトル・カテゴリ・type・文字数・公開予定日。投稿済みチェック（localStorage） |
-| `preview/{slug}.html` | note のエディタに近い見た目でレンダリング。コピーボタン群 |
+| `index.html` | 投稿待ち一覧。タイトル・カテゴリ・type・文字数・公開予定日 |
+| `{slug}.html` | note のエディタに近い見た目でレンダリング。コピーボタン群 |
+
+### 10.3 有料部分の暗号化
+
+公開版の有料部分は **AES-GCM-256** で暗号化する。ダッシュボードと同じ形式である。
+
+```
+base64( salt[16] || iv[12] || ciphertext+tag )
+PBKDF2 / SHA-256 / 310,000回 / 鍵32バイト
+```
+
+ブラウザが Web Crypto API で復号する。**Node の `crypto` は認証タグを `getAuthTag()` で別に返すため、
+Web Crypto が期待する「ciphertext の末尾に連結」の形に組み直す必要がある。**
+ここを間違えると復号できない。
+
+**暗号化はローカルでしか行えない。** `03-draft.md` は `.gitignore` 対象で GitHub Actions 上に
+存在しないため、そこでは暗号化すらできない。生成物（`preview/public/`）をコミットして持ち込み、
+`deploy-pages` は配るだけにする。
+
+合言葉は `secrets/passphrase.txt`（`.gitignore` 対象）または環境変数 `DASHBOARD_PASSPHRASE`。
+`crypto-util.mjs` が8文字未満を拒否し、15文字未満で警告する。**暗号文が公開されるため、
+短いと辞書攻撃で破られる。**
+
+復号した合言葉は `sessionStorage` に持つ。同じタブの他の記事では入力不要になり、
+タブを閉じると消える。`localStorage` にしないのは端末に残さないためである。
+
+### 10.4 投稿済みの自動除外
+
+公開版は投稿済みを載せない。note の記事と同じ内容が2箇所に残らないようにするためである。
+
+| 判定 | 条件 |
+|---|---|
+| 明示 | `meta.json` の `posted: true` |
+| 自動 | `publishDate` が今日より前 |
+
+**静的サイトからサーバーに書き戻せないため、日付を唯一の自動判定材料にしている。**
+`weekly-research` が曜日を割り当てるので、予定日は正確に運用される。
+
+### 10.5 検索エンジンに拾わせない
+
+公開版には `noindex` メタタグを付け、サイトルートに `robots.txt`（`Disallow: /`）を置く。
+
+**note の記事より先にインデックスされると重複コンテンツ扱いになる。** これは実害があるため、
+`deploy-pages` が配信直前に `noindex` の有無を検査し、無ければ公開を止める。
 
 ### 10.3 書式が保持される仕組み
 
@@ -519,13 +566,17 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 
 v2.0 の未決事項には「検索で発見されにくいリポジトリ名」とあったが、これは対策にならない。URL を知れば誰でも読めるうえ、GitHub の検索にもかかる。**リポジトリ名で守るのではなく、ファイル単位で除外する。**
 
-| 対象 | 理由 |
-|---|---|
-| `notes/**/03-draft.md` | **有料部分の本文。これが漏れたら商品にならない** |
-| `preview/` | 生成HTMLに有料部分が含まれる |
-| `secrets/` | 合言葉 |
+| 対象 | 追跡 | 理由 |
+|---|:---:|---|
+| `notes/**/03-draft.md` | ✕ | **有料部分の本文。平文なので絶対に追跡しない** |
+| `preview/*`（直下） | ✕ | ローカル確認用。有料部分が平文で入る |
+| `secrets/` | ✕ | 合言葉 |
+| **`preview/public/`** | **○** | **有料部分は暗号化済み。Pages 配信に必要** |
+| `notes/**/02-letter.md` | ○ | note 上でも無料公開する部分 |
+| `data/` | ○ | 暗号化済み |
 
-`02-letter.md`（セールスレター）は note 上でも無料公開する部分なので追跡してよい。`data/` は暗号化してコミットするため public でよい。
+`.gitignore` は `preview/*` と `!preview/public/` の組で書く。`preview/` と書くと
+否定パターンが効かず、`public/` まで除外される。
 
 ### 11.2 この制約が決める2つのこと
 

@@ -77,11 +77,22 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 /note-preview
 ```
 
-`localhost:5173` が開く。投稿待ちの一覧から記事を選び、「本文をコピー」を押して note に貼るだけ。
+**PC からも、スマホからも投稿できる。**
+
+| どこから | URL |
+|---|---|
+| PC | `localhost:5173` |
+| **スマホ** | `https://kou56250046-cloud.github.io/note-automation-app/posts/` |
+
+投稿待ちの一覧から記事を選び、「本文をコピー」を押して note に貼るだけ。
 
 **書式は保持される。** クリップボードに `text/html` を書き込むので、見出し・太字・リスト・引用・区切り線がそのまま入る。
 
 有料noteは「無料部分をコピー」「有料部分をコピー」が分かれている。無料部分を貼る → note で有料エリアを設定 → 有料部分を貼る、の順で作業する。
+
+**公開ページの有料部分は暗号化されている。** 合言葉を1回入れると、同じタブの他の記事では入力不要になる（タブを閉じると消える）。
+
+**投稿したら何もしなくてよい。** 予定日を過ぎた記事は次のビルドで公開ページから自動的に消える。
 
 > **ブラウザ自動操作は使わない。** note のエディタは重く、スクリーンショットが画像トークンを食う（1本20〜40k tokens）。HTML からコピペするほうが速く、安く、落ちない。
 
@@ -103,7 +114,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 |---|---|
 | `/note-init` | 初回のみ。カテゴリとペルソナを自動決定する |
 | **`/note-daily`** | 今日の記事を1本作る（**「お願いします」でも起動する**） |
-| **`/note-preview`** | `localhost:5173` で投稿キューを開く（週1回の運用作業） |
+| **`/note-preview`** | 投稿キューを作る。**PC とスマホの両方から使える**（週1回の運用作業） |
 | `/note-revise {slug} "指示"` | 差し戻して再生成 |
 | `/note-letter {slug}` | 有料noteのレター診断ループを回す |
 
@@ -131,9 +142,11 @@ Pro プランの実行上限は5回/日。**最大消費は「月初が月曜と
 | `fetch-metrics` | 毎朝 06:30 | note の数値を取得して暗号化 |
 | `stock-alert` | 毎朝 07:00 | ネタ在庫が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
-| `deploy-dashboard` | `data/` への push | ダッシュボードを Pages にデプロイ |
+| `deploy-pages` | `preview/public/` `data/` への push | ダッシュボードと投稿キューを Pages へ |
 
-**プレビュー生成は Actions に置かない。** public repo の artifact は誰でもダウンロードできるため、`/note-preview` がローカルで生成する。
+**`deploy-pages` は暗号化しない。配るだけ。** `03-draft.md` は `.gitignore` 対象で Actions 上に存在しないため、暗号化はローカルの `build-preview.mjs --public` が行う。
+
+配信直前に検査し、**有料部分が平文だったり `noindex` が無ければ公開を止める。**
 
 > **Actions で記事生成はしない。** Claude Code Action は API キーによる従量課金でサブスク枠外になるため、生成は Routines かローカルに置く。
 
@@ -173,9 +186,10 @@ note-factory/
 ├── knowledge/             # account.md / profile.md / voice.md / learnings.md
 ├── research/              # themes.md（ネタ在庫）/ accounts/ / trends/
 ├── notes/{slug}/          # 記事単位の成果物
-├── preview/               # プレビューHTML（git 管理外）
+├── preview/               # プレビューHTML
+│   └── public/            # 公開用（有料部分は暗号化。これだけ追跡する）
 ├── data/                  # metrics.json / history.jsonl / revenue.json
-├── scripts/               # build-preview.mjs / serve.mjs / lint.py / dedup.py
+├── scripts/               # build-preview.mjs / serve.mjs / crypto-util.mjs / lint.py / dedup.py
 └── .github/workflows/     # 5本
 ```
 
@@ -205,18 +219,32 @@ public にすることで GitHub Pages と Actions（実行時間無制限）の
 
 | 対象 | 追跡 | 理由 |
 |---|:---:|---|
-| `notes/**/03-draft.md` | ✕ | **有料部分の本文** |
-| `preview/` | ✕ | 生成HTMLに有料部分が含まれる |
+| `notes/**/03-draft.md` | ✕ | **有料部分の本文。平文** |
+| `preview/*`（直下） | ✕ | ローカル確認用。有料部分が平文 |
 | `secrets/` | ✕ | 合言葉 |
+| **`preview/public/`** | **○** | **有料部分は暗号化済み。Pages 配信に必要** |
 | `notes/**/02-letter.md` | ○ | note 上でも無料公開する部分 |
 | `data/` | ○ | 暗号化済み |
 
 **この制約から2つが決まる。**
 
 1. **有料noteの生成はローカル実行のみ。** Routines はクラウドで動いてコミットするため、追跡しないファイルを手元に残せない。`daily-build` は無料記事だけ（月火水金土）を担当し、有料noteは木・日にローカルで作る
-2. **プレビューの生成もローカルのみ。** public repo の Actions artifact は誰でもダウンロードできる
+2. **公開版プレビューの生成もローカルのみ。** `03-draft.md` が Actions 上に無いので、そこでは暗号化すらできない
 
-ダッシュボードは `data/` が暗号化済みなので、GitHub Pages で公開してスマホから見られる。
+### 有料部分の暗号化
+
+公開ページの有料部分は **AES-GCM-256** で暗号化する。ダッシュボードと同じ形式である。
+
+```
+base64( salt[16] || iv[12] || ciphertext+tag )
+PBKDF2 / SHA-256 / 310,000回
+```
+
+合言葉は `secrets/passphrase.txt`（`.gitignore` 対象）に置く。**15文字以上にすること。**
+
+**公開URLは推測できる。** リポジトリが public なので `github.io/note-automation-app/` は誰でも辿れる。「見つかりにくいから安全」は成り立たない。**有料部分の防御は合言葉だけである。**
+
+公開ページには `noindex` と `robots.txt` を付ける。note の記事より先にインデックスされると重複コンテンツ扱いになるためである。
 
 ---
 

@@ -1,0 +1,150 @@
+name: deploy-pages
+
+# ダッシュボードと投稿キューを GitHub Pages に配信する。
+#
+# 配信するもの:
+#   /            ダッシュボード（data/ は暗号化済み）
+#   /posts/      投稿キュー。スマホからコピペするための画面
+#
+# 有料noteの本文は AES-GCM-256 で暗号化されている。
+# 03-draft.md は .gitignore 対象で Actions 上に存在しないため、
+# 暗号化はローカルの build-preview.mjs --public が行い、
+# 生成物（preview/public/）をコミットして持ち込む。
+#
+# このワークフローは暗号化しない。既に暗号化されたものを配るだけである。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'preview/public/**'
+      - 'note-factory-dashboard.html'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 配信物を組み立てる
+        run: |
+          mkdir -p _site
+
+          # ダッシュボード
+          cp note-factory-dashboard.html _site/index.html
+
+          # 暗号化済みの数値データ
+          if [ -d data ]; then
+            mkdir -p _site/data
+            cp -r data/* _site/data/ 2>/dev/null || true
+          fi
+
+          # 投稿キュー（ローカルで暗号化済み）
+          if [ -d preview/public ]; then
+            mkdir -p _site/posts
+            cp -r preview/public/* _site/posts/ 2>/dev/null || true
+          fi
+
+          # 検索エンジンに拾わせない。
+          # note の記事より先にインデックスされると重複コンテンツ扱いになる。
+          printf 'User-agent: *\nDisallow: /\n' > _site/robots.txt
+
+      - name: 合言葉のヒントを除去する
+        run: |
+          # 行ごと消すと <div class="hint"> の開始タグまで落ちて HTML が壊れる。
+          # 合言葉の記述だけを置換する。
+          python3 - <<'PY'
+          import pathlib, re
+          p = pathlib.Path("_site/index.html")
+          s = p.read_text(encoding="utf-8")
+          before = len(s)
+          s = re.sub(r"デモ用の合言葉.*?<br>\s*", "", s, flags=re.S)
+          p.write_text(s, encoding="utf-8")
+          print(f"{before - len(s)} 文字を除去しました")
+          PY
+
+      # 公開してよいものだけが残っているかを配信直前に検査する。
+      # ここで落ちたら公開しない。
+      - name: 配信物を検査する
+        run: |
+          fail=0
+
+          # 1. 記事のソース（Markdown）が紛れていないか
+          if find _site -name '*.md' | grep -q .; then
+            echo "::error::Markdown が配信物に含まれています"
+            find _site -name '*.md'
+            fail=1
+          fi
+
+          # 2. 合言葉の記述が残っていないか
+          if grep -rniE "note-factory-blueprint|passphrase\.txt|デモ用の合言葉" _site/ >/dev/null 2>&1; then
+            echo "::error::合言葉に関する記述が残っています"
+            grep -rniE "note-factory-blueprint|passphrase\.txt|デモ用の合言葉" _site/ || true
+            fail=1
+          fi
+
+          # 3. 有料部分が平文で入っていないか
+          #    公開版は必ず lockbox 形式になる。paywall（平文の区切り）が
+          #    出てくるのはローカル版をコピーしてしまったときだけ。
+          if grep -rl 'class="paywall"' _site/posts/ >/dev/null 2>&1; then
+            echo "::error::有料部分が平文の可能性があります（paywall を検出）"
+            grep -rl 'class="paywall"' _site/posts/ || true
+            fail=1
+          fi
+
+          # 4. 有料記事に暗号文が入っているか
+          if [ -d _site/posts ]; then
+            for f in _site/posts/*.html; do
+              [ -f "$f" ] || continue
+              if grep -q '有料エリア' "$f" && ! grep -q 'data-enc=' "$f"; then
+                echo "::error::$f に有料エリアがあるのに暗号文がありません"
+                fail=1
+              fi
+            done
+          fi
+
+          # 5. noindex が付いているか
+          if [ -d _site/posts ]; then
+            for f in _site/posts/*.html; do
+              [ -f "$f" ] || continue
+              grep -q 'name="robots"' "$f" || { echo "::error::$f に noindex がありません"; fail=1; }
+            done
+          fi
+
+          # 6. 平文とみられる数値データ
+          if grep -rlE '"revenue"|"sales"|"followers"' _site/data/ >/dev/null 2>&1; then
+            echo "::error::data/ に平文とみられるデータがあります"
+            fail=1
+          fi
+
+          if [ "$fail" = "0" ]; then
+            {
+              echo "## 検査を通過しました"
+              echo ""
+              echo "配信対象:"
+              find _site -type f | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $fail
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

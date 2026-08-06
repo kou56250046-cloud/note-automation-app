@@ -20,13 +20,22 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { encrypt, loadPassphrase, PASSPHRASE_HELP, ITERATIONS } from './crypto-util.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const NOTES = join(ROOT, 'notes');
-const OUT = join(ROOT, 'preview');
 
 const args = process.argv.slice(2);
 const RUN_LINT = !args.includes('--no-lint');
+
+/**
+ * --public: GitHub Pages 配信用。
+ *   - 有料部分（03-draft.md）を AES-GCM-256 で暗号化して埋め込む
+ *   - 投稿済みの記事を除外する
+ *   - noindex を付ける（note の記事より先にインデックスされると重複扱いになる）
+ */
+const PUBLIC = args.includes('--public');
+const OUT = PUBLIC ? join(ROOT, 'preview', 'public') : join(ROOT, 'preview');
 
 // ---------------------------------------------------------------------------
 // Markdown → HTML
@@ -35,13 +44,26 @@ const RUN_LINT = !args.includes('--no-lint');
 const esc = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/**
+ * URL が安全なスキームかを判定する。
+ *
+ * 本文全体は esc() 済みなので <script> は生成されないが、
+ * リンクの href だけは任意の文字列が入る。javascript: が書かれると
+ * 復号後に innerHTML へ流し込む公開版で XSS になるため、ここで弾く。
+ */
+function safeHref(url) {
+  const u = url.trim();
+  return /^(https?:\/\/|#|\/|mailto:)/i.test(u) ? u : '#';
+}
+
 /** インライン記法。note が解釈できるものだけに絞る。 */
 function inline(text) {
   let s = esc(text);
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
+    (_, label, url) => `<a href="${safeHref(url)}">${label}</a>`);
   return s;
 }
 
@@ -213,11 +235,29 @@ function collectNotes() {
       paid,
       // 有料部分は .gitignore 対象。クラウドで生成した記事には存在しない
       paidMissing: isPaid && !paid,
+      posted: isPosted(meta),
     });
   }
 
   items.sort((a, b) => (a.meta.publishDate ?? '').localeCompare(b.meta.publishDate ?? ''));
-  return items;
+
+  // 公開版では投稿済みを載せない。
+  // note の記事と同じ内容が2箇所に存在し続けるのを避ける。
+  return PUBLIC ? items.filter((it) => !it.posted) : items;
+}
+
+/**
+ * 投稿済みかどうか。
+ *
+ * meta.json の posted フラグが最優先。無い場合は publishDate で判定する。
+ * 予定日を過ぎていれば投稿したものとみなす。静的サイトからは
+ * サーバーに書き戻せないため、日付を唯一の自動判定材料にしている。
+ */
+function isPosted(meta) {
+  if (meta.posted === true) return true;
+  if (!meta.publishDate) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return meta.publishDate < today;
 }
 
 // ---------------------------------------------------------------------------
@@ -325,6 +365,14 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .toast.show{opacity:1}
 .warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
   border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 `;
 
 const COPY_JS = `
@@ -396,14 +444,75 @@ function render() {
 document.addEventListener('DOMContentLoaded', render);
 `;
 
+/**
+ * 有料部分の復号。ダッシュボードと完全に同じ形式で読む。
+ *   base64( salt[16] || iv[12] || ciphertext+tag )
+ */
+const DECRYPT_JS = `
+const ITER = ${ITERATIONS};
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    // タブを閉じたら消える。端末には残さない
+    sessionStorage.setItem(PASS_KEY, pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 同じタブで一度入れていれば、記事を移動しても入力し直さなくてよい
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem(PASS_KEY);
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+});
+`;
+
 function page(title, body, extraJs = '') {
+  // 公開版は必ず noindex にする。
+  // note の記事より先にインデックスされると重複コンテンツ扱いになる。
+  const robots = PUBLIC
+    ? '<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">\n'
+    : '';
   return `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title>
+${robots}<title>${esc(title)}</title>
 <style>${CSS}</style>
 <div class="wrap">${body}</div>
-<script>${COPY_JS}${extraJs}</script>
+<script>${COPY_JS}${PUBLIC ? DECRYPT_JS : ''}${extraJs}</script>
 `;
 }
 
@@ -466,7 +575,9 @@ ${items.length ? cards : '<div class="card">記事がありません。<code>お
   return page('投稿キュー — note-factory', body);
 }
 
-function buildArticle(it, gates) {
+const attr = (s) => esc(s).replace(/"/g, '&quot;');
+
+function buildArticle(it, gates, passphrase) {
   const m = it.meta;
   const freeHtml = mdToHtml(it.free);
   const freeText = mdToPlain(it.free);
@@ -475,11 +586,41 @@ function buildArticle(it, gates) {
   const isPaid = m.type === 'paid';
   const tags = (m.hashtags ?? []).map((t) => '#' + t).join(' ');
 
+  // 公開版では有料部分を暗号化する。平文で置くと商品価値が消える
+  const encPaid = (PUBLIC && it.paid)
+    ? encrypt(JSON.stringify({ html: paidHtml, text: paidText }), passphrase)
+    : null;
+
+  const paidBtn = it.paid
+    ? `<span id="paid-actions"${encPaid ? ' style="display:none"' : ''}>` +
+      `<button class="primary" onclick="copyRich(this,'paid')">有料部分をコピー</button></span>`
+    : '';
+
   const buttons = isPaid
-    ? `
-    <button class="primary" onclick="copyRich(this,'free')">無料部分をコピー</button>
-    ${it.paid ? `<button class="primary" onclick="copyRich(this,'paid')">有料部分をコピー</button>` : ''}`
+    ? `<button class="primary" onclick="copyRich(this,'free')">無料部分をコピー</button>${paidBtn}`
     : `<button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>`;
+
+  // 有料部分の格納先。公開版は data-enc（暗号文）、ローカルは data-html/data-text
+  const paidHolder = it.paid
+    ? (encPaid
+      ? `<div id="paid" data-enc="${attr(encPaid)}"></div>`
+      : `<div id="paid" data-html="${attr(paidHtml)}" data-text="${attr(paidText)}"></div>`)
+    : '';
+
+  // 本文中の有料エリア
+  const paidSection = !it.paid ? '' : (encPaid ? `
+<div class="lockbox" id="paid-lock">
+  <div class="lead">ここから有料エリア（暗号化されています）</div>
+  <label class="sr" for="pw">合言葉</label>
+  <input type="password" id="pw" placeholder="合言葉" autocomplete="off" spellcheck="false">
+  <div><button class="primary" onclick="unlockPaid()">表示する</button></div>
+  <div class="err" id="lockerr"></div>
+  <div class="note">AES-GCM-256。復号はこのブラウザの中だけで行われます。<br>
+    同じタブで一度入力すれば、他の記事でも入力し直す必要はありません。</div>
+</div>
+<div id="paid-body"></div>` : `
+<div class="paywall">ここから有料エリア</div>
+${paidHtml}`);
 
   const body = `
 <div class="sticky">
@@ -504,19 +645,19 @@ ${isPaid ? `<div class="warnbox">
 </div>` : ''}
 
 ${it.paidMissing ? `<div class="warnbox">
-  有料部分（<code>03-draft.md</code>）がローカルにありません。
-  このファイルは <code>.gitignore</code> 対象で、リポジトリが public のため追跡していません。
+  有料部分（<code>03-draft.md</code>）がありません。
+  <code>.gitignore</code> 対象のため、クラウドで生成した記事には含まれません。
   有料noteはローカルで生成してください。
 </div>` : ''}
 
 ${gateHtml(gates[it.slug])}
 
-<div id="free" data-html="${esc(freeHtml).replace(/"/g, '&quot;')}" data-text="${esc(freeText).replace(/"/g, '&quot;')}"></div>
-${it.paid ? `<div id="paid" data-html="${esc(paidHtml).replace(/"/g, '&quot;')}" data-text="${esc(paidText).replace(/"/g, '&quot;')}"></div>` : ''}
+<div id="free" data-html="${attr(freeHtml)}" data-text="${attr(freeText)}"></div>
+${paidHolder}
 
 <div class="article">
 ${freeHtml}
-${it.paid ? `<div class="paywall">ここから有料エリア</div>\n${paidHtml}` : ''}
+${paidSection}
 </div>`;
 
   return page(`${m.title ?? it.slug} — note-factory`, body);
@@ -528,20 +669,43 @@ ${it.paid ? `<div class="paywall">ここから有料エリア</div>\n${paidHtml}
 
 function main() {
   const items = collectNotes();
+  const passphrase = PUBLIC ? loadPassphrase() : null;
 
-  if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
-  mkdirSync(OUT, { recursive: true });
+  // 有料部分を平文で公開しない。合言葉が無ければビルドを止める
+  if (PUBLIC && items.some((it) => it.paid) && !passphrase) {
+    console.error('[preview] 有料部分を含む記事がありますが、合言葉が見つかりません。\n');
+    console.error(PASSPHRASE_HELP);
+    process.exit(1);
+  }
+
+  if (PUBLIC) {
+    if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
+    mkdirSync(OUT, { recursive: true });
+  } else {
+    mkdirSync(OUT, { recursive: true });
+    // 直下の .html だけを消す。preview/public/ は残す
+    for (const f of readdirSync(OUT)) {
+      if (f.endsWith('.html')) rmSync(join(OUT, f), { force: true });
+    }
+  }
 
   const gates = gateResults(items);
 
   writeFileSync(join(OUT, 'index.html'), buildIndex(items, gates), 'utf-8');
   for (const it of items) {
-    writeFileSync(join(OUT, `${it.slug}.html`), buildArticle(it, gates), 'utf-8');
+    writeFileSync(join(OUT, `${it.slug}.html`), buildArticle(it, gates, passphrase), 'utf-8');
   }
 
-  console.log(`[preview] ${items.length} 本を preview/ に出力しました`);
+  const dest = PUBLIC ? 'preview/public/' : 'preview/';
+  const encrypted = items.filter((it) => PUBLIC && it.paid).length;
+
+  console.log(`[preview] ${items.length} 本を ${dest} に出力しました`);
+  if (PUBLIC) {
+    console.log(`[preview] 有料部分 ${encrypted} 本を暗号化しました`);
+    console.log('[preview] 投稿済み（publishDate が過去）の記事は除外しています');
+  }
   if (!items.length) {
-    console.log('[preview] notes/ に meta.json を持つ記事がありません');
+    console.log('[preview] 対象の記事がありません');
   }
   if (!RUN_LINT) console.log('[preview] lint / dedup はスキップしました');
 }

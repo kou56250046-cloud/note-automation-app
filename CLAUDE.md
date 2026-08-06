@@ -186,18 +186,56 @@ Sonnet 5 は新トークナイザで、同じ日本語が旧モデル比で約30
 
 **ブラウザ自動操作は使わない。** 記事は HTML にレンダリングし、人間がコピーして note に貼る。
 
+出力は2系統ある。
+
+| 出力 | 場所 | 有料部分 | どこから使うか |
+|---|---|---|---|
+| ローカル | `preview/` | **平文** | PC。git 管理外 |
+| 公開 | `preview/public/` | **暗号化** | **スマホ**。GitHub Pages |
+
 ```
-記事生成 → notes/{slug}/02-final.md
-  ↓ scripts/build-preview.mjs
-preview/{slug}.html（note 互換 HTML）
-  ↓ /note-preview で localhost:5173 を開く
+記事生成 → notes/{slug}/02-final.md（無料）/ 03-draft.md（有料）
+  ↓ build-preview.mjs           → preview/            （ローカル確認）
+  ↓ build-preview.mjs --public  → preview/public/     （公開・暗号化）
+  ↓ commit & push → deploy-pages
 人間が「本文をコピー」を押す → note に貼る → 公開
 ```
 
 クリップボードには `text/html` と `text/plain` を同時に書き込む。
 note のエディタは `text/html` を読むので、見出し・太字・リスト・引用・区切り線が保持される。
 
-**`file://` では動かない。** `navigator.clipboard.write()` はセキュアコンテキストを要求するため、必ず `localhost` 経由で開く。
+**`file://` では動かない。** `navigator.clipboard.write()` はセキュアコンテキストを要求するため、必ず `localhost` か HTTPS 経由で開く。
+
+### 有料部分の暗号化
+
+**公開版の有料部分は AES-GCM-256 で暗号化する。合言葉はブラウザで復号する。**
+
+```
+base64( salt[16] || iv[12] || ciphertext+tag )
+PBKDF2 / SHA-256 / 310,000回 / AES-GCM-256
+```
+
+ダッシュボードと同じ形式である。合言葉は `secrets/passphrase.txt`（`.gitignore` 対象）。
+
+**暗号化はローカルでしか行えない。** `03-draft.md` は `.gitignore` 対象で GitHub Actions 上に存在しないため、暗号文をコミットして持ち込む。`deploy-pages` は暗号化せず、配るだけである。
+
+**合言葉が唯一の防御である。** 公開URLは推測できるので、15文字以上にする。
+
+### 投稿済みの扱い
+
+公開版は**投稿済みを自動で除外する。** note の記事と同じ内容が2箇所に残らないようにするためである。
+
+| 判定 | 条件 |
+|---|---|
+| `meta.json` の `posted: true` | 明示的に投稿済み |
+| `publishDate` が今日より前 | 予定日を過ぎている＝投稿したとみなす |
+
+静的サイトからサーバーに書き戻せないため、**日付を唯一の自動判定材料**にしている。
+
+### 検索エンジンに拾わせない
+
+公開版には `noindex` を付け、`robots.txt` で `Disallow: /` にする。
+note の記事より先にインデックスされると重複コンテンツ扱いになるからである。
 
 **note で崩れる記法は書かない。** `lint.py` が検出する。
 
@@ -218,20 +256,21 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 
 **ただし有料noteの本文を追跡してはならない。** public repo に置けば誰でも読め、商品価値が消える。以下を `.gitignore` で除外する。
 
-| 対象 | 理由 |
-|---|---|
-| `notes/**/03-draft.md` | **有料部分の本文。これが漏れたら商品にならない** |
-| `preview/` | 生成HTMLに有料部分が含まれる |
-| `secrets/` | 合言葉 |
-
-`02-letter.md`（セールスレター）は note 上でも無料公開する部分なので追跡してよい。
+| 対象 | 追跡 | 理由 |
+|---|:---:|---|
+| `notes/**/03-draft.md` | ✕ | **有料部分の本文。平文なので絶対に追跡しない** |
+| `preview/*`（直下） | ✕ | ローカル確認用。有料部分が平文で入る |
+| `secrets/` | ✕ | 合言葉 |
+| **`preview/public/`** | **○** | **有料部分は暗号化済み。Pages 配信に必要** |
+| `notes/**/02-letter.md` | ○ | note 上でも無料公開する部分 |
+| `data/` | ○ | 暗号化済み |
 
 **この制約から2つが決まる。**
 
 1. **有料noteの生成はローカル実行のみ。** Routines はクラウドで動いてコミットするため、追跡しないファイルを手元に残せない。`daily-build` は無料記事だけを担当し（月火水金土）、有料noteは木・日にローカルで作る。
-2. **プレビューの生成もローカルのみ。** public repo の Actions artifact は誰でもダウンロードできるため、`build-preview` を Actions に置かない。
+2. **公開版プレビューの生成もローカルのみ。** `03-draft.md` が Actions 上に存在しないため、そこでは暗号化すらできない。ローカルで暗号化し、生成物をコミットして持ち込む。
 
-`data/` は暗号化してコミットするため public でよい。ダッシュボードは GitHub Pages で配信できる。
+ダッシュボードと投稿キューは GitHub Pages で配信する。**スマホから投稿できる。**
 
 ---
 
