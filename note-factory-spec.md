@@ -125,11 +125,11 @@ Routines は保存した設定を Anthropic のクラウド上で自動実行す
 | `fetch-metrics` | 毎朝 06:30 | note 公開APIから数値取得 → 暗号化 → `data/` 更新 |
 | `stock-alert` | 毎朝 07:00 | `themes.md` の未使用が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
-| `deploy-dashboard` | `data/**` への push | ダッシュボードを GitHub Pages にデプロイ |
+| `deploy-pages` | `preview/public/**` `data/**` への push | ダッシュボードと投稿キューを Pages へ。**暗号化はせず配るだけ**（§7.3） |
 
 public repo なので実行時間は無制限。
 
-**`build-preview` を Actions に置かない。** public repo の artifact は誰でもダウンロードできるため、有料部分が漏れる。プレビュー生成はローカルのみ（§10.2）。
+**公開版プレビューの生成を Actions に置かない。** 暗号化には `03-draft.md` が要るが、それは `.gitignore` 対象で Actions 上に存在しない。ローカルで暗号化し、`preview/public/` をコミットして持ち込む（§7.3）。
 
 ---
 
@@ -462,7 +462,57 @@ preview/{slug}.html
 - **無料部分をコピー / 有料部分をコピー**（有料note。note は境界線を手で設定するため分割が必要）
 - ハッシュタグをコピー
 
-### 7.3 書式が保持される仕組み
+### 7.3 有料部分の暗号化（スマホ対応）
+
+公開ページの有料部分は **AES-GCM-256** で暗号化する。ダッシュボードと同じ形式である。
+
+```
+base64( salt[16] || iv[12] || ciphertext+tag )
+PBKDF2 / SHA-256 / 310,000回 / 鍵32バイト
+```
+
+| 出力 | 場所 | 有料部分 | 追跡 | どこから |
+|---|---|---|:---:|---|
+| ローカル | `preview/` | 平文 | ✕ | PC |
+| 公開 | `preview/public/` | 暗号化 | ○ | **スマホ** |
+
+**暗号化はローカルでしか行えない。** `03-draft.md` は `.gitignore` 対象で GitHub Actions 上に
+存在しないため、そこでは暗号化すらできない。生成物をコミットして持ち込み、
+`deploy-pages` は配るだけにする。
+
+**実装上の注意:** Node の `crypto` は認証タグを `getAuthTag()` で別に返す。
+Web Crypto API は ciphertext の末尾に含む仕様なので、連結しないと復号できない。
+
+合言葉は `secrets/passphrase.txt` または環境変数 `DASHBOARD_PASSPHRASE`。
+`crypto-util.mjs` が8文字未満を拒否し、15文字未満で警告する。
+**暗号文が公開されるため、短いと辞書攻撃で破られる。**
+
+復号した合言葉は `sessionStorage` に持つ。同じタブの他記事では入力不要になり、
+タブを閉じると消える。端末に残さないため `localStorage` は使わない。
+
+### 7.4 投稿済みの自動除外
+
+公開版は投稿済みを載せない。note の記事と同じ内容が2箇所に残らないようにするためである。
+
+| 判定 | 条件 |
+|---|---|
+| 明示 | `meta.json` の `posted: true` |
+| 自動 | `publishDate` が今日より前 |
+
+静的サイトからサーバーに書き戻せないため、日付を唯一の自動判定材料にしている。
+
+### 7.5 配信直前の検査
+
+`deploy-pages` は以下を検査し、1つでも該当したら**公開せずに失敗する。**
+
+1. Markdown が配信物に含まれていないか
+2. 合言葉の記述が残っていないか
+3. 有料部分が平文でないか（`class="paywall"` の検出）
+4. 有料記事に暗号文（`data-enc`）があるか
+5. 全ページに `noindex` があるか
+6. `data/` に平文とみられる売上データが無いか
+
+### 7.6 書式が保持される仕組み
 
 クリップボードに `text/html` と `text/plain` を同時に書き込む。note のエディタは `text/html` を読むため、**見出し・太字・リスト・引用・区切り線がそのまま入る。**
 
@@ -477,7 +527,7 @@ await navigator.clipboard.write([
 
 **`file://` では動かない。** `navigator.clipboard.write()` はセキュアコンテキストを要求する。HTMLファイルをダブルクリックで開くと使えないため、`serve.mjs` が `http://localhost:5173` で配信する。
 
-### 7.4 note で崩れる記法
+### 7.7 note で崩れる記法
 
 | 記法 | note | 対応 |
 |---|---|---|
@@ -672,9 +722,9 @@ Routines はクラウドで動いてコミットするため、`.gitignore` さ�
 
 副次的に Routines の消費が週7回から週5回に減り、Pro の枠にさらに余裕が出る。
 
-**2. プレビューの生成もローカルのみになる。**
+**2. 公開版プレビューの生成もローカルのみになる。**
 
-public repo の Actions artifact は誰でもダウンロードできる。したがって `build-preview` を Actions に置かない。`/note-preview` がローカルで生成し `serve.mjs` が `localhost:5173` で配信する。
+`03-draft.md` が Actions 上に存在しないため、そこでは暗号化すらできない。ローカルで暗号化し、`preview/public/` をコミットして持ち込む（§7.3）。
 
 これはクリップボードAPIのセキュアコンテキスト要件とも一致するため、どのみち localhost が必要だった。
 

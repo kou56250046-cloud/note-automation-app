@@ -111,7 +111,7 @@ v2.0 は `daily-trend-scan` を毎朝走らせる設計だった。1回あたり
 
 Claude Code Action は Anthropic API キーによる従量課金であり、**サブスク枠の外**になる。生成は Routines かローカルに置き、Actions は LLM を使わない処理だけを担当する。
 
-public repo なので Actions の実行時間は無制限。ただし**プレビュー生成は Actions に置かない**。public repo の artifact は誰でもダウンロードでき、有料部分が漏れるためである（§11.2）。
+public repo なので Actions の実行時間は無制限。ただし**公開版プレビューの生成は Actions に置かない**。暗号化には `03-draft.md` が要るが、それは `.gitignore` 対象で Actions 上に存在しないためである（§10.3）。
 
 ---
 
@@ -588,7 +588,7 @@ Routines はクラウドで動いてコミットするため、`.gitignore` さ�
 
 **2. プレビューの生成もローカルのみになる。**
 
-public repo の Actions artifact は誰でもダウンロードできる。したがって `build-preview` を Actions に置かない。`/note-preview` がローカルで生成し `localhost:5173` で配信する。
+暗号化には `03-draft.md` が要るが、それは `.gitignore` 対象で Actions 上に存在しない。したがってローカルで `build-preview.mjs --public` を実行し、生成物をコミットして持ち込む。`deploy-pages` は暗号化せず配るだけである（§10.3）。
 
 これは §10.3 のクリップボードAPI要件（セキュアコンテキスト）とも一致するため、どのみち localhost が必要だった。
 
@@ -762,7 +762,8 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 10. **在庫が空のときに、その場でテーマを作らない。**
 11. **GitHub Actions で記事を生成しない。** サブスク枠外の課金になる
 12. **有料部分（`03-draft.md`）を追跡しない。** public repo なので、コミットした瞬間に商品価値が消える
-13. **プレビューを Actions で生成しない。** public repo の artifact は誰でもダウンロードできる
+13. **公開版プレビューを Actions で生成しない。** 暗号化に必要な `03-draft.md` がそこには無い
+14. **`preview/` 直下をコミットしない。** 有料部分が平文で入っている。追跡してよいのは `preview/public/` だけ
 
 ---
 
