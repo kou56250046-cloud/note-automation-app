@@ -165,7 +165,7 @@ note-factory/
 ├── note-factory-spec.md   # 仕様書 v3.0
 │
 ├── .claude/
-│   ├── skills/            # 12スキル（research / editorial / exec）
+│   ├── skills/            # 15スキル（research / editorial / exec）
 │   ├── agents/            # 5サブエージェント
 │   └── commands/          # スラッシュコマンド
 │
@@ -240,15 +240,21 @@ Claude Code Pro（$20/月）に対して安全率1.6倍。インフラ費用は�
 
 | ステップ | 内容 | 状態 |
 |---|---|---|
-| 0 | `.gitignore` 整備（有料部分を除外）＋ remote 接続 | — |
-| 1 | `account-research` + `account-design` + `/note-init` | — |
-| 2 | `weekly-research` + 在庫管理 | — |
-| **3** | **`lint.py` + `dedup.py` + Actions** | — |
-| 4 | `daily-article` + `daily-build` | — |
-| 5 | `build-preview.mjs` + `/note-preview` | — |
-| 6 | `sales-letter` / `letter-audit` の型対応 | — |
+| 0 | `.gitignore` 整備（有料部分を除外）＋ remote 接続 | ✔ |
+| 1 | `account-research` + `account-design` + `/note-init` | ✔ |
+| 2 | `weekly-research` + 在庫管理 | ✔ |
+| **3** | **`lint.py` + `dedup.py` + Actions** | ✔ |
+| 4 | `daily-article` + `daily-build` | 一部 |
+| 5 | `build-preview.mjs` + `/note-preview` | ✔ |
+| 6 | `sales-letter` / `letter-audit` の型対応 | 一部 |
 | 7 | `fetch-metrics` + `profile-accumulator` | — |
 | 8 | 体験談型の解禁 + 営業部 | — |
+
+**スキルは 7 / 15 が実装済み。** 未実装の8本と、それぞれが何に影響するかは
+[ARCHITECTURE.md §17.1](./ARCHITECTURE.md) を参照。
+
+次に作るべきは `reader-feedback` と `build-report`。この2つは無料記事の日次フローが
+呼ぶため、無いと `/note-daily` が完全には動かない。
 
 **ステップ3を4より先にする理由:** 品質ゲートが動く前に毎日生成を始めると、重複記事とトーンのぶれた記事が積み上がる。**初期30本がアカウントの初期評価をほぼ決めてしまう。** 順番を入れ替えてはいけない。
 
@@ -282,4 +288,4 @@ Claude Code Pro（$20/月）に対して安全率1.6倍。インフラ費用は�
 |---|---|
 | [CLAUDE.md](./CLAUDE.md) | Claude Code が守る運用ルール |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 設計思想・レイヤ構造・データフロー |
-| [note-factory-spec.md](./note-factory-spec.md) | 仕様書 v3.0（全12スキルの定義とトークン試算） |
+| [note-factory-spec.md](./note-factory-spec.md) | 仕様書 v3.0（全15スキルの定義とトークン試算） |

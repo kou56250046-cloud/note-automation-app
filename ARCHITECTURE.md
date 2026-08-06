@@ -71,7 +71,7 @@ v2.0 は部署（リサーチ部・編集部・営業部）で分けていた。
 │  researcher / writer / letter-writer / critic / auditor      │
 │  → 何を見せないかが設計の本体                                │
 └──────────────────────────────────────────────────────────────┘
-┌─ Skills（判断基準の定義）── 12本 ───────────────────────────┐
+┌─ Skills（判断基準の定義）── 15本 ───────────────────────────┐
 │  → 生成手順ではなく「良し悪しを決める物差し」を持つ          │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -115,7 +115,7 @@ public repo なので Actions の実行時間は無制限。ただし**プレビ
 
 ---
 
-## 3. スキル一覧（全12本）
+## 3. スキル一覧（全15本）
 
 v2.0 の26本から14本を削減した。行き先は [仕様書 付録A](./note-factory-spec.md) を参照。
 
@@ -130,7 +130,7 @@ v2.0 の26本から14本を削減した。行き先は [仕様書 付録A](./not
 
 **R1 がフォロワー数で評価しない理由:** フォロワー数は参入時期と交絡している。2020年から書いている人のフォロワー数は、いま参入して勝てるかどうかを何も語らない。スキ率のほうがアカウントの質を正直に表す。
 
-### 3.2 生成層（6本）
+### 3.2 生成層（9本）
 
 | # | スキル | 判断基準 | 起動 |
 |---|---|---|---|
@@ -719,24 +719,55 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 
 | ステップ | 内容 | 状態 |
 |---|---|---|
-| 0 | `.gitignore`（`03-draft.md` / `preview/` / `secrets/`）と remote 接続 | 未着手 |
-| 1 | `account-research` + `account-design` + `/note-init` | 未着手 |
-| 2 | `weekly-research` + 在庫管理 | 未着手 |
-| **3** | **`lint.py` + `dedup.py` + Actions** | 未着手 |
-| 4 | `daily-article` + `daily-build` | 未着手 |
-| 5 | `build-preview.mjs` + `/note-preview` | 未着手 |
-| 6 | `sales-letter` / `letter-audit` の型対応 | **既存3スキルを改訂** |
+| 0 | `.gitignore`（`03-draft.md` / `preview/` / `secrets/`）と remote 接続 | **完了** |
+| 1 | `account-research` + `account-design` + `/note-init` | **完了** |
+| 2 | `weekly-research` + 在庫管理 | **完了** |
+| **3** | **`lint.py` + `dedup.py` + Actions** | **完了**（実データで検証済み） |
+| 4 | `daily-article` + `daily-build` | **一部**（`reader-feedback` / `build-report` が未実装） |
+| 5 | `build-preview.mjs` + `/note-preview` | **完了**（実起動で検証済み） |
+| 6 | `sales-letter` / `letter-audit` の型対応 | **一部**（`product-concept` / `draft-writing` / `title-design` が未実装） |
 | 7 | `fetch-metrics` + `profile-accumulator` | 未着手 |
 | 8 | 体験談型の解禁 + 営業部 | 未着手 |
 
-現在リポジトリに存在するもの:
+### 17.1 スキルの実装状況（7 / 15）
 
-```
-.claude/agents/     auditor.md / critic.md / letter-writer.md
-.claude/skills/editorial/  sales-letter/ / letter-audit/ / ethics-line/
-.claude/commands/   note-letter.md
-note-factory-dashboard.html
-```
+| 層 | スキル | 状態 | 影響 |
+|---|---|:---:|---|
+| リサーチ | `account-research` | ✔ | |
+| リサーチ | `account-design` | ✔ | |
+| リサーチ | `weekly-research` | ✔ | |
+| リサーチ | `pricing-strategy` | **未** | 有料noteの価格決定が手動になる |
+| 生成 | `daily-article` | ✔ | |
+| 生成 | `product-concept` | **未** | **有料noteのフローが始まらない。`productType` を決める工程** |
+| 生成 | `sales-letter` | ✔ | |
+| 生成 | `draft-writing` | **未** | **有料部分の本文が書けない** |
+| 生成 | `letter-audit` | ✔ | |
+| 生成 | `ethics-line` | ✔ | |
+| 生成 | `reader-feedback` | **未** | **無料記事のゲートが1つ欠ける**（`daily-build` が呼ぶ） |
+| 生成 | `title-design` | **未** | 有料noteのタイトルが手動になる |
+| 生成 | `build-report` | **未** | **判断ログの形式が定義されていない**（`daily-build` が呼ぶ） |
+| 経営 | `profile-accumulator` | **未** | 実績が蓄積されず `experience` を解禁できない |
+| 経営 | `revenue-maximizer` | **未** | `monthly-review` が暫定版のまま |
+
+**優先順位:** `reader-feedback` と `build-report` を先に作る。この2つは無料記事の日次フローが呼ぶため、
+無いと `daily-build` が完全には動かない。次に `product-concept` / `draft-writing` / `title-design`
+（有料noteのフロー）、最後に `pricing-strategy` と経営層2本。
+
+> コマンドと Routine には手順が書かれているため動作自体はするが、**判断基準（物差し）が
+> 定義されていない状態である。** これは CLAUDE.md ルール1に反するため、暫定的な状態と扱う。
+
+### 17.2 スキル以外の実装状況
+
+| 種別 | 状態 |
+|---|---|
+| サブエージェント | **5/5 完了**（researcher / writer / letter-writer / critic / auditor） |
+| スラッシュコマンド | **5/5 完了**（note-init / note-daily / note-preview / note-revise / note-letter） |
+| GitHub Actions | **5/5 完了**（うち `fetch-metrics` は依存スクリプト待ちで no-op） |
+| Routines プロンプト | **3/3 完了**（`monthly-review` は暫定版） |
+| Python 判定器 | **2/2 完了**（実データで検証済み） |
+| プレビュー機能 | **2/2 完了**（実起動で検証済み） |
+| `scripts/fetch-public.mjs` | 未実装（ステップ7） |
+| `scripts/encrypt.mjs` | 未実装（ステップ7） |
 
 **ステップ3を4より先にする理由:** 品質ゲートが動く前に毎日生成を始めると、重複記事とトーンのぶれた記事が積み上がる。**初期30本がアカウントの初期評価をほぼ決める。** 順番を入れ替えてはいけない。
 
