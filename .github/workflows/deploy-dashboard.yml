@@ -12,6 +12,7 @@ on:
     paths:
       - 'data/**'
       - 'note-factory-dashboard.html'
+      - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 
 permissions:
@@ -44,14 +45,53 @@ jobs:
             cp -r data/* _site/data/ 2>/dev/null || true
           fi
 
-          # 念のため、記事本文が紛れ込んでいないか確認する
-          if find _site -name '*-draft.md' -o -name '*-letter.md' -o -name '*-final.md' | grep -q .; then
-            echo "::error::記事本文が配信物に含まれています。中止します"
-            exit 1
-          fi
-
           echo "配信対象:" >> "$GITHUB_STEP_SUMMARY"
           find _site -type f | sed 's/^/- /' >> "$GITHUB_STEP_SUMMARY"
+
+      # ローカル開発では合言葉が見えたほうが便利だが、
+      # 公開版に残すと誰でもダッシュボードを開けてしまう。
+      - name: 合言葉のヒントを除去する
+        run: |
+          # 行ごと消すと <div class="hint"> の開始タグまで落ちて HTML が壊れる。
+          # 合言葉の記述だけを置換する。
+          python3 - <<'PY'
+          import pathlib, re
+          p = pathlib.Path("_site/index.html")
+          s = p.read_text(encoding="utf-8")
+          before = len(s)
+          s = re.sub(r"デモ用の合言葉.*?<br>\s*", "", s, flags=re.S)
+          p.write_text(s, encoding="utf-8")
+          print(f"{before - len(s)} 文字を除去しました")
+          PY
+          echo "合言葉のヒントを除去しました" >> "$GITHUB_STEP_SUMMARY"
+
+      # 公開してよいものだけが残っているかを最後に検査する。
+      # ここで落ちたら公開しない。
+      - name: 配信物を検査する
+        run: |
+          fail=0
+
+          # 記事本文
+          if find _site \( -name '*-draft.md' -o -name '*-letter.md' -o -name '*-final.md' \) | grep -q .; then
+            echo "::error::記事本文が配信物に含まれています"
+            fail=1
+          fi
+
+          # 合言葉・秘密情報
+          if grep -rniE "note-factory-blueprint|passphrase.txt|デモ用の合言葉" _site/ >/dev/null 2>&1; then
+            echo "::error::合言葉に関する記述が残っています"
+            grep -rniE "note-factory-blueprint|passphrase.txt|デモ用の合言葉" _site/ || true
+            fail=1
+          fi
+
+          # 平文の売上データ（暗号化していれば JSON の生キーは出ない）
+          if grep -rlE '"revenue"|"sales"|"followers"' _site/data/ >/dev/null 2>&1; then
+            echo "::error::data/ に平文とみられるデータがあります。encrypt.mjs を通してください"
+            fail=1
+          fi
+
+          [ "$fail" = "0" ] && echo "検査を通過しました" >> "$GITHUB_STEP_SUMMARY"
+          exit $fail
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
