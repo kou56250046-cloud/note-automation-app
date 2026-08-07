@@ -23,10 +23,17 @@ description: セールスレターを書いて、合格するまで診断ルー�
 | ファイル | tool | experience |
 |---|:---:|:---:|
 | `notes/$1/00-concept.md` | 必須 | 必須 |
+| **`notes/$1/pricing.json`** | **必須** | **必須** |
 | `knowledge/account.md` | 必須 | 必須 |
 | `knowledge/voice.md` | 必須 | 必須 |
-| `research/accounts/{genre}.md` | 必須 | 必須 |
+| `research/accounts/{genre}.md` | 任意 | 任意 |
 | `knowledge/profile.md` の実数値 | 参照のみ | **必須** |
+
+**`pricing.json` が無ければ停止し、`pricing-strategy` の実行を促します。**
+価格と天井が決まっていないと C3（今買う理由）と C4（高い）を判定できません。
+
+`research/accounts/{genre}.md` は現行カテゴリ向けの調査がまだありません。
+無い場合は警告して続行し、`market/{date}.md` の有料率と上位記事で代替します。
 
 `type: experience` で `profile.md` に実数値がなければ**停止**します。
 数字のないレターは再現性を作れません。
@@ -39,6 +46,10 @@ description: セールスレターを書いて、合格するまで診断ルー�
 - `type: tool` では `letter-meta.json` に `toolEvidence` を必ず出力する
 
 ### 4. 診断ループ（最大2周）
+
+**`critic` に `pricing.json` を渡さないでください。** 価格はレター本文に書かれており、
+critic は読者と同じ情報だけで C3（今買う理由）と C4（高い）を判定します。
+価格の狙いを渡すと、判定が売り手の都合に寄ります（CLAUDE.md「サブエージェントに渡してよい情報」）。
 
 ```
 letter-audit を critic サブエージェント（Opus 5）で実行

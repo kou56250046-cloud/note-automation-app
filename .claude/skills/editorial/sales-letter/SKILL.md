@@ -42,8 +42,8 @@ description: 有料noteの無料部分（＝セールスレター）を設計・
 | `notes/{slug}/00-concept.md` | `productType`、商品コンセプト、約束すること | 必須 | 必須 |
 | `knowledge/account.md` | ペルソナ（何を信じ／何を欲しがり／何を感じているか） | 必須 | 必須 |
 | `knowledge/voice.md` | 文体・禁止表現 | 必須 | 必須 |
-| `research/accounts/{genre}.md` | 競合が言っていること（＝外の選択肢として消す対象） | 必須 | 必須 |
-| 価格 | pricing-strategy の出力 | 必須 | 必須 |
+| `research/accounts/{genre}.md` | 競合が言っていること（＝外の選択肢として消す対象） | 任意 | 任意 |
+| **`notes/{slug}/pricing.json`** | **価格・天井・根拠**（`pricing-strategy` の出力） | **必須** | **必須** |
 | `knowledge/profile.md` | 実績・具体的な数字・ダメだった頃の話 | **参照のみ** | **必須** |
 
 **`type: experience` で profile.md に実数値がない場合は執筆を開始しない。** 数字のないレターは再現性を作れない。

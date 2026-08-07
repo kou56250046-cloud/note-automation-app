@@ -379,7 +379,9 @@ notes/{slug}/
   # 有料noteのときだけ追加される
   00-concept.md       productType を含む
   02-letter.md        無料部分（セールスレター）。追跡してよい
+  pricing.json        価格・天井・根拠（pricing-strategy の出力）
   letter-meta.json    レターの構造メタ
+  07-titles.md        タイトル8案と採点（title-design の出力）
   03-draft.md         有料部分。★.gitignore 対象。ローカルにのみ存在する
   audit.json          letter-audit の判定結果
   ethics.json         ethics-line の検出結果

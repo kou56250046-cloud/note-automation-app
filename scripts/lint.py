@@ -521,12 +521,23 @@ def check_paragraph_length(body: list[tuple[int, str]], rules: dict) -> list[Fin
 # 実行
 # --------------------------------------------------------------------------
 
+def is_free_article(path: Path) -> bool:
+    """無料記事の本文かどうか。
+
+    文字数（2500〜4000字）と実物の必須化は無料記事の型に対する規定であり、
+    有料noteのレター（2000字）や有料部分（5000〜8000字）には当てはまらない。
+    note で崩れる記法や文体のルールは、どちらにも同じように適用する。
+    """
+    return path.name in ("01-draft.md", "02-final.md")
+
+
 def lint_file(path: Path, voice: Voice) -> dict:
     lines = path.read_text(encoding="utf-8").splitlines()
     body = strip_code_blocks(lines)
 
     text = "".join(raw for _, raw in body)
     char_count = len(re.sub(r"\s", "", text))
+    free = is_free_article(path)
 
     findings: list[Finding] = []
     findings += check_sentence_length(body, voice.rules)
@@ -537,9 +548,12 @@ def lint_file(path: Path, voice: Voice) -> dict:
     findings += check_note_incompatible(lines)
     findings += check_style_consistency(body)
     findings += check_paragraph_length(body, voice.rules)
-    findings += check_artifact(lines, voice.rules)
     findings += check_unverified_claim(body)
-    findings += check_char_count(char_count, voice.rules)
+
+    # 無料記事の型に対する規定。レターと有料部分には適用しない
+    if free:
+        findings += check_artifact(lines, voice.rules)
+        findings += check_char_count(char_count, voice.rules)
 
     findings.sort(key=lambda f: (f.line, f.rule))
 
@@ -547,6 +561,7 @@ def lint_file(path: Path, voice: Voice) -> dict:
         "file": display_path(path),
         "charCount": char_count,
         "codeBlocks": count_fences(lines),
+        "freeArticle": free,
         # ethics-line（auditor）を起動すべきかの一次判定。
         # 無料記事で毎回 Opus を呼ばないための信号である。
         "needsAudit": any(f.rule == "unverified-claim" for f in findings),
@@ -597,7 +612,10 @@ def main() -> int:
 
     targets: list[Path] = []
     if args.all:
-        for pat in ("notes/*/01-draft.md", "notes/*/02-final.md", "notes/*/02-letter.md"):
+        # 03-draft.md（有料部分）も note に貼るので記法検査の対象にする。
+        # .gitignore 対象なのでローカル実行時にしか存在しない。無くても落ちない
+        for pat in ("notes/*/01-draft.md", "notes/*/02-final.md",
+                    "notes/*/02-letter.md", "notes/*/03-draft.md"):
             targets += [Path(p) for p in glob.glob(str(REPO_ROOT / pat))]
     for p in args.paths:
         targets += [Path(x) for x in glob.glob(p)] or [Path(p)]

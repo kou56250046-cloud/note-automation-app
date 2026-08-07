@@ -838,32 +838,36 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | **3** | **`lint.py` + `dedup.py` + Actions** | **完了**（実データで検証済み） |
 | 4 | `daily-article` + `daily-build` | **完了**（日次フローの4スキルが揃った） |
 | 5 | `build-preview.mjs` + `/note-preview` | **完了**（実起動で検証済み） |
-| 6 | `sales-letter` / `letter-audit` の型対応 | **一部**（`product-concept` / `draft-writing` / `title-design` が未実装） |
-| 7 | `fetch-metrics` + `profile-accumulator` | 未着手 |
+| 6 | `sales-letter` / `letter-audit` の型対応 | **完了**（`product-concept` / `pricing-strategy` / `draft-writing` / `title-design` を実装し、有料フローが繋がった） |
+| 7 | `fetch-metrics` + `profile-accumulator` | **一部**（`note_market.py --update-profile` が note の実測値を書き込む。販売実績の蓄積は未実装） |
 | 8 | 体験談型の解禁 + 営業部 | 未着手 |
 
-### 17.1 スキルの実装状況（9 / 15）
+### 17.1 スキルの実装状況（13 / 15）
 
 | 層 | スキル | 状態 | 影響 |
 |---|---|:---:|---|
 | リサーチ | `account-research` | ✔ | |
 | リサーチ | `account-design` | ✔ | |
 | リサーチ | `weekly-research` | ✔ | |
-| リサーチ | `pricing-strategy` | **未** | 有料noteの価格決定が手動になる |
+| リサーチ | `pricing-strategy` | ✔ | market の価格中央値と有料率を根拠にする |
 | 生成 | `daily-article` | ✔ | |
-| 生成 | `product-concept` | **未** | **有料noteのフローが始まらない。`productType` を決める工程** |
+| 生成 | `product-concept` | ✔ | `productType` の判定手順と「渡すもの」5項目を物差しに持つ |
 | 生成 | `sales-letter` | ✔ | |
-| 生成 | `draft-writing` | **未** | **有料部分の本文が書けない** |
+| 生成 | `draft-writing` | ✔ | 道具型の必須4項目（中身・動作条件・最初の1歩・できないこと） |
 | 生成 | `letter-audit` | ✔ | |
 | 生成 | `ethics-line` | ✔ | |
 | 生成 | `reader-feedback` | ✔ | |
-| 生成 | `title-design` | **未** | 有料noteのタイトルが手動になる |
+| 生成 | `title-design` | ✔ | 5タイプ×8案。`ng` 該当は採点前に除外する |
 | 生成 | `build-report` | ✔ | |
 | 経営 | `profile-accumulator` | **未** | 実績が蓄積されず `experience` を解禁できない |
 | 経営 | `revenue-maximizer` | **未** | `monthly-review` が暫定版のまま |
 
-**残り6本の内訳:** 有料noteのフローに4本（`product-concept` / `draft-writing` / `title-design` / `pricing-strategy`）、
-経営層に2本（`profile-accumulator` / `revenue-maximizer`）。
+**残り2本はどちらも経営層である**（`profile-accumulator` / `revenue-maximizer`）。
+**有料noteのフローは繋がった。**
+
+> `profile-accumulator` の代わりに、`note_market.py --update-profile` が
+> note の実測値（記事数・フォロワー数・スキ中央値）を前提つきで `profile.md` に
+> 書き込む。販売実績の蓄積だけが未実装である。
 
 **無料記事の日次フローは完成している。** `daily-article` → `lint.py`（一次判定）→
 検出時のみ `ethics-line` → `build-report` が揃っているため、`/note-daily` は仕様どおり動く。

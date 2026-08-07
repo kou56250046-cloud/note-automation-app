@@ -56,16 +56,27 @@ themes.md から status: pending かつ day が今日の曜日 のものを探�
 1. product-concept
      → 00-concept.md（productType を必ず確定する）
      → profile.md が空なら productType: tool 以外を選ばない
-2. sales-letter（letter-writer）
+     → 「渡すもの」の5項目が埋まらなければ停止する
+2. pricing-strategy
+     → pricing.json（価格 + 天井 + 根拠）
+     → research/market/{最新}.json の価格中央値を必ず引用する
+     → 情報密度が「低」なら有料にせず上流に戻す
+3. sales-letter（letter-writer）
      → 02-letter.md, letter-meta.json
-3. draft-writing（writer）
-     → 03-draft.md
-4. letter-audit（critic / Opus 5）最大2周
+4. draft-writing（writer）
+     → 03-draft.md（★追跡しない。ローカルにのみ残る）
+5. letter-audit（critic / Opus 5）最大2周
      → ×が残れば failures だけ渡して sales-letter に差し戻す
      → 2周で通らなければ打ち切り、疑わしい上流工程を報告する
-5. ethics-line（auditor / full モード）上限なし
-6. title-design（8案）
+6. ethics-line（auditor / full モード）上限なし
+     → **有料noteでは必ず実行する。** 無料記事の「検出時のみ」は適用しない
+7. title-design（8案）
+     → 07-titles.md、採用案を meta.json の title に書く
 ```
+
+**`pricing-strategy` を飛ばさない。** 価格と天井が決まっていないと
+`letter-audit` の C3（今買う理由）と C4（高い）が判定できず、
+`draft-writing` も約束の範囲を知らないまま書くことになる。
 
 ### 4. 共通の仕上げ
 
