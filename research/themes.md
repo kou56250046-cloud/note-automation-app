@@ -245,3 +245,253 @@
     - https://qiita.com/nogataka/items/4787c956aeb547b1421c
   productTypeHint: tool
   status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
+
+# ============================================================
+# 2026-W33（2026-08-07 仕込み）
+# 新カテゴリ「生成AIで人に見せられる成果物を作る」の初回在庫。
+# 市場性は research/market/2026-08-07.md の実測を引用している。
+# 4軸スコア（強み / 市場性 / 支払い意欲 / artifact）。artifact 2以下は入れない。
+# ============================================================
+
+- id: 2026-W33-01
+  title: AIが作った管理画面を「余白・階層・色数」の3箇所だけ直す
+  type: free
+  day: mon
+  category: 生成AIで見せられる成果物を作る / AI×Webデザイン
+  hashtags: [Webデザイン, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 3
+    artifact: 5
+    total: 18
+  rationale: |
+    strength5: account.md のペルソナ「作れたが画面がテンプレ丸出しで見せられない人」に直撃する。
+    サブ①のど真ん中。
+    market5: market/2026-08-07.md のタグ「Webデザイン」は需要374 / 供給47.9件/日で比 7.801、
+    「UIデザイン」は 88.5 / 14.6 で比 6.07。どちらも計測した14タグ中の最上位帯である。
+    クラスタ #9（デザイン / AI / UI）はスキ中央値156、記事数28で比 5.5714。
+    willingness3: 情報を知れば手元で直せる。成果物の受け渡しは木曜の有料noteに寄せる。
+    artifact5: before/after のデモページ、変更点の CSS、指示したプロンプト全文の3点すべてを出せる。
+    次点: 「Claude Code に design.md を書かせる」は市場性は同等だが、
+    artifact が設定ファイル1つに留まり before/after を見せられないため木曜の有料note側に回した。
+  artifactPlan: |
+    notes/{slug}/demo/before.html と after.html を作り、build-demo.mjs で並置ビューを生成する。
+    記事には デモURL ＋ 変更した CSS の差分 ＋ Claude Code に投げたプロンプト全文 を載せる。
+  angle: 「デザインを学ぶ」ではなく「AIの出力を3箇所だけ直す」。
+    直す箇所を数え上げられる形にして、読者が自分の画面で再現できるようにする。
+  sources:
+    - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
+    - https://qiita.com/sarap422/items/36fdabedda0fb8693b3f
+    - https://zenn.dev/rescuenow/articles/08b9496054a86a
+  status: pending
+
+- id: 2026-W33-02
+  title: Gemini + GAS で議事録を要約する。コードとプロンプトの全文
+  type: free
+  day: tue
+  category: 生成AIで見せられる成果物を作る / Gemini+GASの自動化
+  hashtags: [GAS, GoogleAppsScript, 業務効率化, Gemini]
+  score:
+    strength: 4
+    market: 5
+    willingness: 4
+    artifact: 5
+    total: 18
+  rationale: |
+    strength4: サブ②のど真ん中。手元で動かして確認できる。
+    market5: market/2026-08-07.md のタグ「GAS」は需要118 / 供給19.7件/日で比 5.985、
+    「GoogleAppsScript」は 84 / 14.2 で比 5.908。さらに有料率が GAS 10% /
+    GoogleAppsScript 13% と、計測タグの中で高い部類にある。売れている領域である。
+    willingness4: コードを丸ごと渡せる。時間の削減に直結する。
+    artifact5: GASコード全文、プロンプト全文、動作条件（トリガー・スコープ・APIキーの置き場）を出せる。
+    次点: 「Gemini API のモデル選択」は情報としては近いが、実物がコード断片に留まり
+    artifact が3止まりのため落とした。
+  artifactPlan: |
+    UrlFetchApp で Gemini API を叩く GAS を動く単位で全文掲載する。
+    APIキーは PropertiesService に置く形にし、ハードコードしない書き方をそのまま見せる。
+    動作条件（必要なスコープ、トリガー設定、実行時間の上限）を明記する。
+  angle: 「GASでAIが使える」という紹介ではなく、議事録要約という1用途に絞ってコードを完成させる。
+    汎用フレームワークを作らない。1つのことをする短いコードを渡す。
+  sources:
+    - https://qiita.com/btncon/items/d6c241b58818b062ba2d
+    - https://qiita.com/kazukichi_0914/items/4e21ddfaaf961b526f8e
+    - https://qiita.com/kazukichi_0914/items/0ab3e790f860a8850dff
+    - https://codelabs.developers.google.com/codelabs/gemini-workspace?hl=ja
+  status: pending
+
+- id: 2026-W33-03
+  title: NotebookLM のカスタム指示で、出力のブレを止める
+  type: free
+  day: wed
+  category: 生成AIで見せられる成果物を作る / NotebookLM・精度向上
+  hashtags: [NotebookLM, Gemini, プロンプト, 生成AI]
+  score:
+    strength: 4
+    market: 5
+    willingness: 3
+    artifact: 4
+    total: 16
+  rationale: |
+    strength4: サブ③の軸。account.md が「プロンプト」「ClaudeCode」を主語にせず
+    NotebookLM 側から名乗る方針にしているため、この切り口は範囲のど真ん中にある。
+    market5: market/2026-08-07.md のタグ「NotebookLM」は需要277 / 供給44.1件/日で比 6.276。
+    需要の絶対値がタグ中2位（Webデザイン374に次ぐ）。クラスタ #4（NotebookLM / note / Gemini）は
+    記事数83・スキ中央値156。参照タグの「プロンプト」は比 0.266 で埋もれるため主軸にしない。
+    willingness3: 設定を知れば手元で再現できる。日曜の有料noteでフロー全体を渡す。
+    artifact4: カスタム指示の全文と、適用前後の出力の実物を並べられる。
+    コードではないため5には届かない。
+    次点: 「NotebookLM で音声解説を作る」は市場性が高いが、成果物が音声で
+    note の記事内に実物を置けないため artifact 2 と判定して落とした。
+  artifactPlan: |
+    カスタム指示のテキスト全文（コピーしてそのまま貼れる形）と、
+    同じ質問に対する「指示なし」「指示あり」の出力を並べて載せる。
+  angle: 機能紹介ではなく「同じ質問で出力が毎回変わる」という具体的な症状から入り、
+    カスタム指示を止血策として提示する。
+  sources:
+    - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
+    - https://note.com/re_birth_ai/n/nf22eb4aa5d93
+    - https://www.i3design.jp/in-pocket/how-to-use-notebooklm/
+  status: pending
+
+- id: 2026-W33-04
+  title: AIにUIを作らせる指示テンプレート集（design.md 雛形つき）
+  type: paid
+  day: thu
+  execution: local
+  category: 生成AIで見せられる成果物を作る / AI×Webデザイン
+  hashtags: [Webデザイン, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 5
+    artifact: 5
+    total: 20
+  rationale: |
+    strength5: サブ①の中核。無料記事（月・金）で見せた直し方を、
+    「毎回同じ品質で出させる型」としてまとめられる。
+    market5: Webデザイン 比7.801 / UIデザイン 比6.07。ただし有料率は
+    Webデザイン4% / UIデザイン1% と低い。売っている人が少ない領域である。
+    LP制作は有料率16%で比3.427。デザイン系で有料が成立している前例はここにある。
+    willingness5: テンプレートを丸ごと渡せる。毎回プロンプトを書き直す手間が消える。
+    artifact5: design.md の雛形、指示テンプレート、before/after の作例をすべて渡せる。
+    次点: 「Claude Design と Claude Code の使い分け」は市場性は高いが、
+    渡せる成果物が手順書だけになり willingness 3 と判定した。
+  productTypeHint: tool
+  artifactPlan: |
+    design.md の雛形（コピーして使える完全版）、
+    用途別の指示テンプレート（LP / 管理画面 / ダッシュボード / フォーム）、
+    before/after の作例、動作条件（どのモデル・どの参照方法で効くか）、
+    最初の1歩（まず design.md を置いて @参照する）、
+    できないこと（既存デザインの完全再現は扱わない）。
+  angle: 「デザインの原則を教える」のではなく「AIに毎回同じ品質を出させる型を渡す」。
+    出し惜しみせず雛形の全文を有料部分に置く。無料部分では1テンプレートを丸ごと公開する。
+  sources:
+    - https://manabinoyakata.com/2026/04/24/design-md-guide
+    - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
+    - https://www.divx.co.jp/media/395
+    - https://ai-pedia.jp/guides/claude-design-tutorial/
+  status: pending
+
+- id: 2026-W33-05
+  title: LP のファーストビューを、AIの出力から3手で直す
+  type: free
+  day: fri
+  category: 生成AIで見せられる成果物を作る / AI×Webデザイン
+  hashtags: [LP制作, Webデザイン, UIデザイン, 生成AI]
+  score:
+    strength: 5
+    market: 4
+    willingness: 3
+    artifact: 5
+    total: 17
+  rationale: |
+    strength5: サブ①。月曜が管理画面、金曜が LP と対象を分けることで
+    dedup.py の重複判定を避けつつ、同じサブカテゴリを週3本に配分できる。
+    market4: market/2026-08-07.md のタグ「LP制作」は需要38.5 / 供給11.2件/日で比 3.427。
+    Webデザイン(7.801) より低いが、有料率16%と計測タグ中3位で、買われている領域である。
+    需要の絶対値が小さいため5ではなく4とした。
+    willingness3: 無料記事の範囲。テンプレート化は木曜の有料noteに寄せる。
+    artifact5: before/after のデモ、CSS の差分、プロンプト全文を出せる。
+    次点: 「LPの構成テンプレート」は artifact は高いが、木曜の有料noteと
+    正面から重なるため無料記事には回さなかった。
+  artifactPlan: |
+    ファーストビュー単体の before.html / after.html を作り、デモページで並置する。
+    変更した CSS と、AI に投げた修正指示の全文を載せる。
+  angle: ページ全体を扱わない。ファーストビューという1画面に絞り、
+    3手（余白・視線誘導・コントラスト）に限定する。
+  sources:
+    - https://www.furi-ten.com/claude-code-for-web-design/
+    - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
+    - https://qiita.com/sarap422/items/36fdabedda0fb8693b3f
+  status: pending
+
+- id: 2026-W33-06
+  title: GAS のトリガーと権限で止まる3箇所。動くコードつき
+  type: free
+  day: sat
+  category: 生成AIで見せられる成果物を作る / Gemini+GASの自動化
+  hashtags: [GAS, GoogleAppsScript, 業務効率化, Gemini]
+  score:
+    strength: 4
+    market: 4
+    willingness: 3
+    artifact: 5
+    total: 16
+  rationale: |
+    strength4: サブ②。火曜が「作る」、土曜が「動かし続ける」で対象を分ける。
+    market4: GAS 比5.985 / GoogleAppsScript 比5.908。火曜と同じタグ帯だが、
+    同一タグで週2本を出すため市場性は同値ではなく1段下げて評価した。
+    dedup.py の重複判定を通すため angle を明確に分けている。
+    willingness3: 設定を知れば直せる。成果物の受け渡しは限定的。
+    artifact5: 動作確認用の短い GAS、トリガー設定の手順、権限スコープの記述を全文で出せる。
+    次点: 「GAS の実行時間6分制限を回避する」は artifact は高いが、
+    火曜・土曜と合わせて3本目の GAS 記事になり週の配分が偏るため見送った。
+  artifactPlan: |
+    トリガーが動いているかを確認する短い GAS（ログ出力のみ）を全文掲載する。
+    appsscript.json のスコープ記述、時間主導トリガーの設定手順、
+    実行ログの読み方を実物で示す。
+  angle: エラー一覧ではなく「上から順に見る3箇所」という切り分け手順にする。
+    火曜の記事（作る）で動かなかった人が、土曜（直す）に来る導線にする。
+  sources:
+    - https://qiita.com/kazukichi_0914/items/0ab3e790f860a8850dff
+    - https://codelabs.developers.google.com/codelabs/gemini-workspace?hl=ja
+    - https://smartcodes.jp/education/articles/apps-script-gemini-ai-assistant/
+  status: pending
+
+- id: 2026-W33-07
+  title: NotebookLM と Deep Research をつなぐ調査フロー一式
+  type: paid
+  day: sun
+  execution: local
+  category: 生成AIで見せられる成果物を作る / NotebookLM・精度向上
+  hashtags: [NotebookLM, Gemini, プロンプト, 生成AI]
+  score:
+    strength: 4
+    market: 5
+    willingness: 4
+    artifact: 4
+    total: 17
+  rationale: |
+    strength4: サブ③。水曜のカスタム指示を土台に、調査から出力までの
+    フロー全体を渡す形にできる。
+    market5: NotebookLM 比6.276、需要277はタグ中2位。有料率7%。
+    クラスタ #4 は記事数83・スキ中央値156 で、読まれている領域である。
+    willingness4: フローとプロンプト一式を丸ごと渡せる。
+    artifact4: プロンプト集と設定の全文、実際の出力例を渡せる。
+    コードではないため5には届かない。
+    次点: 「Gemini Deep Research の使い方」単体は市場性が高いが、
+    Gemini タグの比が 0.203 と埋もれる帯にあり、NotebookLM 側から
+    名乗るほうが到達すると判断した（account.md の方針と一致）。
+  productTypeHint: tool
+  artifactPlan: |
+    調査テーマの分解プロンプト、Deep Research への投げ方、
+    結果を NotebookLM に取り込む手順、カスタム指示の全文、出力テンプレート。
+    動作条件（必要なプラン）と、できないこと（一次情報の正確性は保証しない）を明記する。
+  angle: ツール紹介ではなく「1つの調査を最後まで通す1本の線」として渡す。
+    水曜の無料記事でカスタム指示だけを公開し、フロー全体を有料にする。
+  sources:
+    - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
+    - https://manabinoba.blog/complete-guide-to-notebooklm/
+    - https://rutinelabo.com/notebooklm-guide-2026/
+  status: pending

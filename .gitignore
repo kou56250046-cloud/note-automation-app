@@ -30,6 +30,11 @@ secrets/
 # ローカル設定（環境依存の許可設定が入る）
 .claude/settings.local.json
 
+# ブラウザ検証の作業ファイル
+#   デモの見た目を目視確認するときに出る。成果物ではない
+.playwright-mcp/
+/*.png
+
 # 依存
 node_modules/
 __pycache__/

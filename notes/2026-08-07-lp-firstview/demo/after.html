@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>after — 3手で削り、1手で効かせたファーストビュー</title>
+<style>
+  /* ==================================================================
+     色は「作業時間が熱として消えていく」という主題から決めている。
+     暗い面の上で、琥珀のブロックが1つずつ抜けていく。
+     ================================================================== */
+  :root {
+    --bg:      #12111b;   /* 夜の作業画面 */
+    --surface: #1c1b28;
+    --line:    #2e2b40;
+    --fg:      #edebf4;
+    --fg-2:    #918da8;
+    --amber:   #ffb43d;   /* 定型作業に消えている5分 */
+    --amber-d: #b87516;   /* ブロックの側面。厚みを作る */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 48px 40px;
+    overflow-x: hidden;
+  }
+
+  /* 画面の隅にだけ光を置く。全面グラデーションにはしない */
+  body::before {
+    content: "";
+    position: fixed;
+    top: -20%; right: -10%;
+    width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(255,180,61,.10) 0%, transparent 62%);
+    pointer-events: none;
+  }
+
+  .hero {
+    position: relative;
+    width: 100%;
+    max-width: 1060px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 64px;
+    align-items: center;
+  }
+
+  /* ---------- 左: 言葉 ---------- */
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Consolas, "Noto Sans Mono", monospace;
+    font-size: 11px;
+    letter-spacing: .16em;
+    color: var(--amber);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-size: clamp(30px, 3.6vw, 44px);
+    font-weight: 700;
+    line-height: 1.32;
+    letter-spacing: -.025em;
+    margin-bottom: 22px;
+  }
+  /* 強調は色ではなく、線を引く位置で作る */
+  h1 em {
+    font-style: normal;
+    position: relative;
+    white-space: nowrap;
+  }
+  h1 em::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: .1em;
+    height: 3px;
+    background: var(--amber);
+    border-radius: 2px;
+  }
+
+  .lead {
+    font-size: 15px;
+    line-height: 1.95;
+    color: var(--fg-2);
+    max-width: 30em;
+    margin-bottom: 40px;
+  }
+
+  .cta-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+
+  .cta {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1508;
+    background: var(--amber);
+    border: none;
+    padding: 14px 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(255,180,61,.28); }
+  .cta:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+
+  .note {
+    font-family: ui-monospace, "SF Mono", Consolas, "Noto Sans Mono", monospace;
+    font-size: 11.5px;
+    color: var(--fg-2);
+  }
+
+  /* ---------- 右: signature ----------
+     1ブロック = 5分。週5日 × 1日3ブロック。
+     アイソメトリックに寝かせた面の上で、1つずつ抜けていく。      */
+
+  .stage { perspective: 1000px; }
+
+  .deck {
+    display: grid;
+    grid-template-columns: repeat(5, 40px);
+    gap: 12px;
+    padding: 26px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    /* 立体は transform だけで作る。画像もライブラリも使わない */
+    transform: rotateX(52deg) rotateZ(-40deg);
+    transform-style: preserve-3d;
+  }
+
+  .col { display: grid; gap: 12px; }
+
+  .block {
+    width: 40px;
+    height: 40px;
+    background: var(--amber);
+    border-radius: 3px;
+    /* 側面の影で厚みを出す。box-shadow を積むだけで箱に見える */
+    box-shadow:
+      2px 2px 0 var(--amber-d),
+      4px 4px 0 var(--amber-d),
+      6px 6px 0 var(--amber-d),
+      8px 8px 14px rgba(0, 0, 0, .45);
+    animation: drain 7s cubic-bezier(.4, 0, .2, 1) infinite;
+    animation-delay: calc(var(--i) * .18s);
+  }
+
+  /* 消えていく5分。
+     見えている時間を長く取る。消えている状態が既定になると、
+     最初に目に入る画面が暗いだけの格子になってしまう */
+  @keyframes drain {
+    0%, 58%   { opacity: 1;   transform: translateZ(0); }
+    76%, 88%  { opacity: .18; transform: translateZ(-16px); }
+    100%      { opacity: 1;   transform: translateZ(0); }
+  }
+
+  .legend {
+    margin-top: 26px;
+    font-family: ui-monospace, "SF Mono", Consolas, "Noto Sans Mono", monospace;
+    font-size: 11px;
+    letter-spacing: .06em;
+    color: var(--fg-2);
+    text-align: center;
+  }
+  .legend b { color: var(--fg); font-weight: 600; }
+
+  /* 動きを止める設定を尊重する。止めても意味は伝わる形にしてある */
+  @media (prefers-reduced-motion: reduce) {
+    .block { animation: none; }
+    .cta { transition: none; }
+  }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; gap: 48px; }
+    .deck { transform: rotateX(46deg) rotateZ(-34deg) scale(.86); }
+  }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div>
+      <p class="eyebrow">定型作業の自動化</p>
+
+      <h1>毎日15分ずつ、<br><em>同じ作業に</em>時間を渡している</h1>
+
+      <p class="lead">
+        メールの定型返信、日報の集計、議事録の要約。
+        1回はすぐ終わるので気づきませんが、週で見ると半日ぶんになります。
+      </p>
+
+      <div class="cta-row">
+        <button class="cta">自分の作業を測る</button>
+        <span class="note">登録不要 / 2分で終わります</span>
+      </div>
+    </div>
+
+    <!-- signature: 1ブロック5分。週5日分が1つずつ抜けていく -->
+    <div class="stage">
+      <div class="deck" role="img"
+           aria-label="月曜から金曜までの記録。1ブロック5分で、1日15分、週で75分が定型作業に使われている">
+        <div class="col">
+          <span class="block" style="--i:0"></span>
+          <span class="block" style="--i:1"></span>
+          <span class="block" style="--i:2"></span>
+        </div>
+        <div class="col">
+          <span class="block" style="--i:3"></span>
+          <span class="block" style="--i:4"></span>
+          <span class="block" style="--i:5"></span>
+        </div>
+        <div class="col">
+          <span class="block" style="--i:6"></span>
+          <span class="block" style="--i:7"></span>
+          <span class="block" style="--i:8"></span>
+        </div>
+        <div class="col">
+          <span class="block" style="--i:9"></span>
+          <span class="block" style="--i:10"></span>
+          <span class="block" style="--i:11"></span>
+        </div>
+        <div class="col">
+          <span class="block" style="--i:12"></span>
+          <span class="block" style="--i:13"></span>
+          <span class="block" style="--i:14"></span>
+        </div>
+      </div>
+
+      <p class="legend">1 BLOCK = 5 MIN &nbsp;/&nbsp; MON — FRI &nbsp;/&nbsp; <b>週 75 分</b></p>
+    </div>
+  </div>
+</body>
+</html>

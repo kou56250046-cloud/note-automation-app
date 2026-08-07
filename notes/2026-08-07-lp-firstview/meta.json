@@ -1,0 +1,13 @@
+{
+  "slug": "2026-08-07-lp-firstview",
+  "themeId": "2026-W33-05",
+  "type": "free",
+  "title": "AIが出したLPのファーストビューを、3箇所だけ直す",
+  "category": "生成AIで見せられる成果物を作る / AI×Webデザイン",
+  "hashtags": ["LP制作", "Webデザイン", "UIデザイン", "生成AI"],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-07-lp-firstview/",
+  "artifacts": ["beforeAfter", "code", "prompt"],
+  "publishDate": "2026-08-08",
+  "charCount": 2700,
+  "createdAt": "2026-08-07T09:50:00+09:00"
+}

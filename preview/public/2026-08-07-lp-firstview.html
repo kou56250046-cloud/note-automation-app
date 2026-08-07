@@ -1,0 +1,1080 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>AIが出したLPのファーストビューを、3箇所だけ直す — note-factory</title>
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, "AIが出したLPのファーストビューを、3箇所だけ直す")">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, "#LP制作 #Webデザイン #UIデザイン #生成AI")">ハッシュタグをコピー</button>
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>AIが出したLPのファーストビューを、3箇所だけ直す</h1>
+  <div class="muted">生成AIで見せられる成果物を作る / AI×Webデザイン ／ 2026-08-08 ／ #LP制作 #Webデザイン #UIデザイン #生成AI</div>
+</header>
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 3 件</div><ul><li class="warn">L31 一文が 85 文字（目安 60）</li><li class="warn">L289 前の見出しから 175 文字（目安 300）。見出しが多すぎる</li><li class="warn">L380 前の見出しから 286 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;AI に LP を作らせると、それらしいものが出てきます。&lt;/p&gt;
+&lt;p&gt;紫のグラデーション、中央寄せの大きな見出し、絵文字つきのバッジ、影のついたボタン。&lt;/p&gt;
+&lt;p&gt;動いてはいるのに、人に見せる気になれない。&lt;/p&gt;
+&lt;p&gt;ここで多くの人は「引き算」をします。色を減らし、影を消し、余白を整える。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;それだけだと、整った代わりに退屈になります。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;削るのは3手。そのあとに、効かせる1手が要ります。&lt;/p&gt;
+&lt;h2&gt;「それらしい」で止まる理由&lt;/h2&gt;
+&lt;p&gt;生成された画面を見て、どこが悪いのか言葉にできないことがあります。&lt;/p&gt;
+&lt;p&gt;崩れてはいません。文字も読めます。ボタンも押せます。&lt;/p&gt;
+&lt;p&gt;それでも、自分で作ったものとして人に出すには足りない。&lt;/p&gt;
+&lt;p&gt;この状態のとき、多くの場合は&lt;strong&gt;要素が足りないのではなく、多すぎます。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;AI は指示された情報をすべて画面に載せようとします。バッジも、見出しも、&lt;br&gt;リード文も、特徴の3項目も、ボタンも、注意書きも、全部を同じ強さで置きます。&lt;/p&gt;
+&lt;p&gt;結果として、どこから読めばいいのか分からない画面になります。&lt;/p&gt;
+&lt;p&gt;作例を用意しました。左が AI の出力そのまま、右が直したものです。&lt;/p&gt;
+&lt;p&gt;https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-07-lp-firstview/&lt;/p&gt;
+&lt;p&gt;同じ情報量ではありません。&lt;strong&gt;右は削って、そのぶんを1箇所に足しています。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;順番は、余白、視線、色、そして最後に足す1手です。&lt;/p&gt;
+&lt;p&gt;色から手を付けると、配色を変えるたびに全体の印象が変わって、&lt;br&gt;どこが効いたのか分からなくなります。構造を整えてから色を決めます。&lt;/p&gt;
+&lt;h2&gt;手1: 余白に緩急をつける&lt;/h2&gt;
+&lt;p&gt;最初に見るのは余白です。&lt;/p&gt;
+&lt;p&gt;理由は2つあります。1つは、余白がいちばん多く画面を占めているからです。&lt;br&gt;もう1つは、余白の指定が&lt;strong&gt;機械的に数えられる&lt;/strong&gt;からです。&lt;/p&gt;
+&lt;p&gt;「この配色は良いか」は判断が要りますが、「マージンが全部同じ値か」は数えれば分かります。&lt;/p&gt;
+&lt;p&gt;判断の要らないところから手を付けます。&lt;/p&gt;
+&lt;p&gt;作例の before では、こうなっていました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.badge { margin-bottom: 20px; }
+h1     { margin-bottom: 20px; }
+.lead  { margin-bottom: 20px; }
+.points{ margin-bottom: 20px; }
+.cta   { margin-bottom: 20px; }&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;すべて 20px です。&lt;/p&gt;
+&lt;p&gt;余白が均一だと、どの要素とどの要素が仲間なのかが分かりません。&lt;br&gt;読む人は上から順に、同じ重さで全部を読むことになります。&lt;/p&gt;
+&lt;p&gt;after では距離を3種類に分けました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.eyebrow { margin-bottom: 18px; }  /* 見出しと近い。セットで読ませる */
+h1       { margin-bottom: 22px; }  /* リード文と近い */
+.lead    { margin-bottom: 40px; }  /* ここで大きく開ける */&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;やっていることは1つです。&lt;strong&gt;関係が強いものを近づけ、弱いものを離す。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;数字そのものに意味はありません。&lt;strong&gt;差があることに意味があります。&lt;/strong&gt;&lt;/p&gt;
+&lt;h2&gt;手2: 中央寄せをやめて、左端を1本に揃える&lt;/h2&gt;
+&lt;p&gt;次に見るのは、視線の入口です。&lt;/p&gt;
+&lt;p&gt;AI はほぼ確実に中央寄せを選びます。指定しなければ &lt;code&gt;text-align: center&lt;/code&gt; が付きます。&lt;/p&gt;
+&lt;p&gt;中央寄せが選ばれるのは、それが無難だからです。&lt;br&gt;要素の幅がまちまちでも、中央に置けば形になります。&lt;/p&gt;
+&lt;p&gt;ただし中央寄せは、行の長さが変わるたびに文の始まりの位置が動きます。&lt;/p&gt;
+&lt;p&gt;読む人の目は、1行読むごとに左端を探し直すことになります。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/* before */
+.hero { text-align: center; max-width: 800px; }
+
+/* after: 左右2カラムにして、テキストの左端を1本に固定する */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 56px;
+  align-items: center;
+}
+.lead { max-width: 30em; }&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;text-align&lt;/code&gt; を消し、リード文に &lt;code&gt;max-width: 30em&lt;/code&gt; を掛けています。&lt;/p&gt;
+&lt;p&gt;横に長い行は、目が戻るときに行を見失います。&lt;/p&gt;
+&lt;p&gt;同じ手のなかで、&lt;strong&gt;要素も削りました。&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!-- before: 特徴を3つ並べていた --&amp;gt;
+&amp;lt;div class=&quot;points&quot;&amp;gt;
+  &amp;lt;div class=&quot;point&quot;&amp;gt;✨ かんたん導入&amp;lt;/div&amp;gt;
+  &amp;lt;div class=&quot;point&quot;&amp;gt;⚡ 高速処理&amp;lt;/div&amp;gt;
+  &amp;lt;div class=&quot;point&quot;&amp;gt;🔒 安心のセキュリティ&amp;lt;/div&amp;gt;
+&amp;lt;/div&amp;gt;
+
+&amp;lt;!-- after: 丸ごと削除 --&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;ファーストビューで読ませるものは1つに絞ります。&lt;/p&gt;
+&lt;p&gt;3つ並べると、読む人はどれが主役か判断できません。判断できないものは読み飛ばされます。&lt;/p&gt;
+&lt;h2&gt;手3: 色数を絞って、アクセントを1箇所にする&lt;/h2&gt;
+&lt;p&gt;before では色が5系統ありました。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;背景のグラデーション（青紫〜紫）&lt;/li&gt;
+&lt;li&gt;見出しの白と影&lt;/li&gt;
+&lt;li&gt;バッジの半透明の白&lt;/li&gt;
+&lt;li&gt;ボタンのグラデーション（黄〜オレンジ）&lt;/li&gt;
+&lt;li&gt;特徴パネルの半透明の白&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;after では、色を&lt;strong&gt;主題から決め直しました。&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/* before: 意味のないグラデーション */
+body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.cta { background: linear-gradient(90deg, #f6d365 0%, #fda085 100%);
+       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+
+/* after: 夜の作業画面と、熱として消えていく時間 */
+:root {
+  --bg:      #12111b;   /* 夜の作業画面 */
+  --surface: #1c1b28;
+  --line:    #2e2b40;
+  --fg:      #edebf4;
+  --fg-2:    #918da8;
+  --amber:   #ffb43d;   /* 定型作業に消えている5分 */
+  --amber-d: #b87516;   /* ブロックの側面。厚みを作る */
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;紫を別の色に置き換えたのではありません。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;扱っている題材から色を持ってきています。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;この製品が扱うのは「作業時間が少しずつ消えていくこと」です。&lt;br&gt;だから背景は夜の作業画面、消えていく時間は熱を持った琥珀にしました。&lt;/p&gt;
+&lt;p&gt;「落ち着いた色にする」と考えると、どのサイトも同じ薄いグレーになります。&lt;br&gt;「この製品は何の世界の話か」から決めると、色に理由が生まれます。&lt;/p&gt;
+&lt;p&gt;グラデーションを全部やめたわけではありません。1箇所だけ残しています。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/* 画面の隅にだけ光を置く。全面グラデーションにはしない */
+body::before {
+  content: &quot;&quot;;
+  position: fixed;
+  top: -20%; right: -10%;
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle, rgba(255,180,61,.10) 0%, transparent 62%);
+  pointer-events: none;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;全面に敷くと、どこを見ればいいのか分からなくなります。&lt;br&gt;隅に置くと、視線が向かう先だけが明るくなります。&lt;/p&gt;
+&lt;h2&gt;手4: 削った余力を、1箇所に集中させる&lt;/h2&gt;
+&lt;p&gt;ここまでが引き算です。&lt;strong&gt;引き算だけで終えると、整った代わりに退屈になります。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;削って空いたぶんを、&lt;strong&gt;1箇所にだけ&lt;/strong&gt;投下します。&lt;/p&gt;
+&lt;p&gt;作例では、右側の立体ブロックがそれです。&lt;/p&gt;
+&lt;p&gt;1ブロックが5分。週5日 × 1日3ブロックで15個。それが1つずつ抜けていきます。&lt;/p&gt;
+&lt;p&gt;まず、面を寝かせて立体にします。&lt;strong&gt;画像もライブラリも使いません。&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.stage { perspective: 1000px; }
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 12px;
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transform: rotateX(52deg) rotateZ(-40deg);
+  transform-style: preserve-3d;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;rotateX&lt;/code&gt; で手前に倒し、&lt;code&gt;rotateZ&lt;/code&gt; で回します。この2行だけで机の上の面になります。&lt;/p&gt;
+&lt;p&gt;ブロックの厚みは、影を重ねて作ります。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.block {
+  width: 40px; height: 40px;
+  background: var(--amber);
+  border-radius: 3px;
+  /* 側面の影を段階的に積むと、平面が箱に見える */
+  box-shadow:
+    2px 2px 0 var(--amber-d),
+    4px 4px 0 var(--amber-d),
+    6px 6px 0 var(--amber-d),
+    8px 8px 14px rgba(0, 0, 0, .45);
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;同じ方向に少しずつずらした影を4枚重ねているだけです。&lt;/p&gt;
+&lt;p&gt;最後に、消えていく動きを付けます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.block {
+  animation: drain 7s cubic-bezier(.4, 0, .2, 1) infinite;
+  animation-delay: calc(var(--i) * .18s);
+}
+
+@keyframes drain {
+  0%, 58%   { opacity: 1;   transform: translateZ(0); }
+  76%, 88%  { opacity: .18; transform: translateZ(-16px); }
+  100%      { opacity: 1;   transform: translateZ(0); }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;span class=&quot;block&quot; style=&quot;--i:0&quot;&amp;gt;&amp;lt;/span&amp;gt;
+&amp;lt;span class=&quot;block&quot; style=&quot;--i:1&quot;&amp;gt;&amp;lt;/span&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;--i&lt;/code&gt; を HTML 側で渡して、&lt;code&gt;animation-delay&lt;/code&gt; をずらしています。&lt;br&gt;15個ぶんの CSS を書かずに、順番に抜けていく動きが作れます。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;キーフレームの配分に注意してください。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;最初は「消えている時間」を長く取っていました。すると画面を開いた瞬間、&lt;br&gt;ほとんどのブロックが暗い状態で目に入ります。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;0%, 58%&lt;/code&gt; を「見えている」に割り当てて、消えるのは一瞬にしました。&lt;br&gt;アニメーションは、&lt;strong&gt;止まっているときの見た目のほうが長く目に触れます。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;動きを止める設定も尊重します。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;@media (prefers-reduced-motion: reduce) {
+  .block { animation: none; }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;止めても意味が伝わる形にしてあります。動きは補助であって、情報そのものではありません。&lt;/p&gt;
+&lt;h3&gt;なぜ数字を大きく置かなかったか&lt;/h3&gt;
+&lt;p&gt;「週75分」と書けば1行で済みます。&lt;/p&gt;
+&lt;p&gt;そうしなかったのは、大きい数字と小さいラベルの組み合わせが、&lt;br&gt;どのLPにもあるからです。AI に「目を引く要素を作って」と頼むと、まずこれが出ます。&lt;/p&gt;
+&lt;p&gt;ブロックにすると、読む人は&lt;strong&gt;数えます。&lt;/strong&gt; 数えた時点で、&lt;br&gt;自分の1週間に置き換えて考えています。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;目を引く要素は1つでいい。&lt;/strong&gt; 2つ置くと、どちらも弱くなります。&lt;/p&gt;
+&lt;h2&gt;実際に投げたプロンプト&lt;/h2&gt;
+&lt;p&gt;after を作るときに使った指示の全文です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;このファーストビューを直してください。手順を分けます。
+
+■ 削る（1〜3）
+
+1. 余白の緩急
+   要素間のマージンが全部 20px で均一です。
+   関係が強い要素どうしは近づけ（18〜22px）、
+   意味の切れ目では大きく開けて（40px以上）ください。
+
+2. 視線の入口
+   text-align: center をやめ、左右2カラムの grid にしてください。
+   テキストの左端を1本に固定します。
+   リード文には max-width: 30em を掛けて1行を短くします。
+   ファーストビューで読ませる要素を1つに絞るため、
+   特徴を3つ並べたブロックは削除してください。
+
+3. 色
+   全面グラデーションと text-shadow をやめてください。
+   そのうえで、色を「落ち着いた色」から選ばないでください。
+   この製品が扱う題材は「作業時間が少しずつ消えていくこと」です。
+   その主題から背景とアクセントを決め、CSS 変数で定義してください。
+   光を使う場合は画面の隅に1箇所だけ置き、全面には敷かないでください。
+
+■ 足す（4）
+
+4. 目を引く要素を1つだけ作る
+   削って空いた領域に、この製品の主題を一目で伝える要素を置きます。
+   条件は4つです。
+   - 大きな数字とラベルの組み合わせにしない（どのLPにもあるため）
+   - 読む人が数えたり目で追ったりできる形にする
+   - 外部ライブラリを使わず、CSS の transform と box-shadow だけで作る
+   - 手3で決めた色の世界と地続きにする
+
+   1ブロック5分の立体を週5日 × 3個で並べ、
+   perspective と rotateX / rotateZ で寝かせてください。
+   厚みは同方向にずらした box-shadow を重ねて作ります。
+
+   ブロックが1つずつ抜けていくアニメーションを付けます。
+   animation-delay は HTML 側の --i 変数からずらしてください。
+   キーフレームは「見えている時間」を6割以上に配分します。
+   prefers-reduced-motion では動きを止めてください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;指示を4つに区切っているのは、&lt;strong&gt;どこを直したか後から確認するため&lt;/strong&gt;です。&lt;/p&gt;
+&lt;p&gt;「もっとおしゃれにして」と頼むと、AI は全部を作り直します。&lt;br&gt;そうなると、良くなったのか悪くなったのかを比べられません。&lt;/p&gt;
+&lt;p&gt;手4だけは、条件を4つ書いています。&lt;/p&gt;
+&lt;p&gt;ここを曖昧にすると、AI は大きな数字とグラデーションのカードを出します。&lt;br&gt;&lt;strong&gt;避けたい形を名指しで書くほうが早いです。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;「外部ライブラリを使わない」と書いているのは、&lt;br&gt;放っておくと Three.js を持ち出してくるからです。&lt;/p&gt;
+&lt;p&gt;立体を作るだけなら &lt;code&gt;transform&lt;/code&gt; と &lt;code&gt;box-shadow&lt;/code&gt; で足ります。&lt;br&gt;読み込むものが増えると、記事を読んだ人が自分の画面に持ち帰れなくなります。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;3つあります。&lt;/p&gt;
+&lt;p&gt;1つ目は、&lt;strong&gt;引き算で止めてしまうこと&lt;/strong&gt;です。&lt;/p&gt;
+&lt;p&gt;色を減らし影を消した時点で、画面は「整って」見えます。&lt;/p&gt;
+&lt;p&gt;そこで手を止めると、読みやすいけれど印象に残らない画面になります。&lt;br&gt;削るのは、足すための準備です。&lt;/p&gt;
+&lt;p&gt;2つ目は、&lt;strong&gt;目を引く要素を2つ以上置くこと&lt;/strong&gt;です。&lt;/p&gt;
+&lt;p&gt;格子を作ったあと、ボタンにもアニメーションを付けたくなります。&lt;/p&gt;
+&lt;p&gt;2つ置くと視線が割れて、どちらも弱くなります。&lt;/p&gt;
+&lt;p&gt;3つ目は、&lt;strong&gt;数値をそのまま真似すること&lt;/strong&gt;です。&lt;/p&gt;
+&lt;p&gt;この記事の 18px / 22px / 40px は、この作例で決めた値です。&lt;/p&gt;
+&lt;p&gt;覚えるのは数字ではなく、&lt;strong&gt;3種類に分ける&lt;/strong&gt;という考え方のほうです。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;手元の画面のマージンを、grep で数えてみてください。&lt;/strong&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;grep -o &quot;margin-bottom: [0-9]*px&quot; your-styles.css | sort | uniq -c&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;同じ値が5個以上並んでいたら、余白に緩急がありません。&lt;/p&gt;
+&lt;p&gt;そこが最初に直す場所です。&lt;/p&gt;
+&lt;p&gt;ただし、そこで止めないでください。&lt;/p&gt;
+&lt;p&gt;削ったあとに何を1つ足すかで、印象に残るかどうかが決まります。&lt;/p&gt;" data-text="AI に LP を作らせると、それらしいものが出てきます。
+
+紫のグラデーション、中央寄せの大きな見出し、絵文字つきのバッジ、影のついたボタン。
+
+動いてはいるのに、人に見せる気になれない。
+
+ここで多くの人は「引き算」をします。色を減らし、影を消し、余白を整える。
+
+それだけだと、整った代わりに退屈になります。
+
+削るのは3手。そのあとに、効かせる1手が要ります。
+
+
+「それらしい」で止まる理由
+
+生成された画面を見て、どこが悪いのか言葉にできないことがあります。
+
+崩れてはいません。文字も読めます。ボタンも押せます。
+
+それでも、自分で作ったものとして人に出すには足りない。
+
+この状態のとき、多くの場合は要素が足りないのではなく、多すぎます。
+
+AI は指示された情報をすべて画面に載せようとします。バッジも、見出しも、
+リード文も、特徴の3項目も、ボタンも、注意書きも、全部を同じ強さで置きます。
+
+結果として、どこから読めばいいのか分からない画面になります。
+
+作例を用意しました。左が AI の出力そのまま、右が直したものです。
+
+https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-07-lp-firstview/
+
+同じ情報量ではありません。右は削って、そのぶんを1箇所に足しています。
+
+順番は、余白、視線、色、そして最後に足す1手です。
+
+色から手を付けると、配色を変えるたびに全体の印象が変わって、
+どこが効いたのか分からなくなります。構造を整えてから色を決めます。
+
+
+手1: 余白に緩急をつける
+
+最初に見るのは余白です。
+
+理由は2つあります。1つは、余白がいちばん多く画面を占めているからです。
+もう1つは、余白の指定が機械的に数えられるからです。
+
+「この配色は良いか」は判断が要りますが、「マージンが全部同じ値か」は数えれば分かります。
+
+判断の要らないところから手を付けます。
+
+作例の before では、こうなっていました。
+
+.badge { margin-bottom: 20px; }
+h1     { margin-bottom: 20px; }
+.lead  { margin-bottom: 20px; }
+.points{ margin-bottom: 20px; }
+.cta   { margin-bottom: 20px; }
+
+
+すべて 20px です。
+
+余白が均一だと、どの要素とどの要素が仲間なのかが分かりません。
+読む人は上から順に、同じ重さで全部を読むことになります。
+
+after では距離を3種類に分けました。
+
+.eyebrow { margin-bottom: 18px; }  /* 見出しと近い。セットで読ませる */
+h1       { margin-bottom: 22px; }  /* リード文と近い */
+.lead    { margin-bottom: 40px; }  /* ここで大きく開ける */
+
+
+やっていることは1つです。関係が強いものを近づけ、弱いものを離す。
+
+数字そのものに意味はありません。差があることに意味があります。
+
+
+手2: 中央寄せをやめて、左端を1本に揃える
+
+次に見るのは、視線の入口です。
+
+AI はほぼ確実に中央寄せを選びます。指定しなければ text-align: center が付きます。
+
+中央寄せが選ばれるのは、それが無難だからです。
+要素の幅がまちまちでも、中央に置けば形になります。
+
+ただし中央寄せは、行の長さが変わるたびに文の始まりの位置が動きます。
+
+読む人の目は、1行読むごとに左端を探し直すことになります。
+
+/* before */
+.hero { text-align: center; max-width: 800px; }
+
+/* after: 左右2カラムにして、テキストの左端を1本に固定する */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 56px;
+  align-items: center;
+}
+.lead { max-width: 30em; }
+
+
+text-align を消し、リード文に max-width: 30em を掛けています。
+
+横に長い行は、目が戻るときに行を見失います。
+
+同じ手のなかで、要素も削りました。
+
+&lt;!-- before: 特徴を3つ並べていた --&gt;
+&lt;div class=&quot;points&quot;&gt;
+  &lt;div class=&quot;point&quot;&gt;✨ かんたん導入&lt;/div&gt;
+  &lt;div class=&quot;point&quot;&gt;⚡ 高速処理&lt;/div&gt;
+  &lt;div class=&quot;point&quot;&gt;🔒 安心のセキュリティ&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- after: 丸ごと削除 --&gt;
+
+
+ファーストビューで読ませるものは1つに絞ります。
+
+3つ並べると、読む人はどれが主役か判断できません。判断できないものは読み飛ばされます。
+
+
+手3: 色数を絞って、アクセントを1箇所にする
+
+before では色が5系統ありました。
+
+- 背景のグラデーション（青紫〜紫）
+- 見出しの白と影
+- バッジの半透明の白
+- ボタンのグラデーション（黄〜オレンジ）
+- 特徴パネルの半透明の白
+
+after では、色を主題から決め直しました。
+
+/* before: 意味のないグラデーション */
+body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.cta { background: linear-gradient(90deg, #f6d365 0%, #fda085 100%);
+       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+
+/* after: 夜の作業画面と、熱として消えていく時間 */
+:root {
+  --bg:      #12111b;   /* 夜の作業画面 */
+  --surface: #1c1b28;
+  --line:    #2e2b40;
+  --fg:      #edebf4;
+  --fg-2:    #918da8;
+  --amber:   #ffb43d;   /* 定型作業に消えている5分 */
+  --amber-d: #b87516;   /* ブロックの側面。厚みを作る */
+}
+
+
+紫を別の色に置き換えたのではありません。
+
+扱っている題材から色を持ってきています。
+
+この製品が扱うのは「作業時間が少しずつ消えていくこと」です。
+だから背景は夜の作業画面、消えていく時間は熱を持った琥珀にしました。
+
+「落ち着いた色にする」と考えると、どのサイトも同じ薄いグレーになります。
+「この製品は何の世界の話か」から決めると、色に理由が生まれます。
+
+グラデーションを全部やめたわけではありません。1箇所だけ残しています。
+
+/* 画面の隅にだけ光を置く。全面グラデーションにはしない */
+body::before {
+  content: &quot;&quot;;
+  position: fixed;
+  top: -20%; right: -10%;
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle, rgba(255,180,61,.10) 0%, transparent 62%);
+  pointer-events: none;
+}
+
+
+全面に敷くと、どこを見ればいいのか分からなくなります。
+隅に置くと、視線が向かう先だけが明るくなります。
+
+
+手4: 削った余力を、1箇所に集中させる
+
+ここまでが引き算です。引き算だけで終えると、整った代わりに退屈になります。
+
+削って空いたぶんを、1箇所にだけ投下します。
+
+作例では、右側の立体ブロックがそれです。
+
+1ブロックが5分。週5日 × 1日3ブロックで15個。それが1つずつ抜けていきます。
+
+まず、面を寝かせて立体にします。画像もライブラリも使いません。
+
+.stage { perspective: 1000px; }
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 12px;
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transform: rotateX(52deg) rotateZ(-40deg);
+  transform-style: preserve-3d;
+}
+
+
+rotateX で手前に倒し、rotateZ で回します。この2行だけで机の上の面になります。
+
+ブロックの厚みは、影を重ねて作ります。
+
+.block {
+  width: 40px; height: 40px;
+  background: var(--amber);
+  border-radius: 3px;
+  /* 側面の影を段階的に積むと、平面が箱に見える */
+  box-shadow:
+    2px 2px 0 var(--amber-d),
+    4px 4px 0 var(--amber-d),
+    6px 6px 0 var(--amber-d),
+    8px 8px 14px rgba(0, 0, 0, .45);
+}
+
+
+同じ方向に少しずつずらした影を4枚重ねているだけです。
+
+最後に、消えていく動きを付けます。
+
+.block {
+  animation: drain 7s cubic-bezier(.4, 0, .2, 1) infinite;
+  animation-delay: calc(var(--i) * .18s);
+}
+
+@keyframes drain {
+  0%, 58%   { opacity: 1;   transform: translateZ(0); }
+  76%, 88%  { opacity: .18; transform: translateZ(-16px); }
+  100%      { opacity: 1;   transform: translateZ(0); }
+}
+
+
+&lt;span class=&quot;block&quot; style=&quot;--i:0&quot;&gt;&lt;/span&gt;
+&lt;span class=&quot;block&quot; style=&quot;--i:1&quot;&gt;&lt;/span&gt;
+
+
+--i を HTML 側で渡して、animation-delay をずらしています。
+15個ぶんの CSS を書かずに、順番に抜けていく動きが作れます。
+
+キーフレームの配分に注意してください。
+
+最初は「消えている時間」を長く取っていました。すると画面を開いた瞬間、
+ほとんどのブロックが暗い状態で目に入ります。
+
+0%, 58% を「見えている」に割り当てて、消えるのは一瞬にしました。
+アニメーションは、止まっているときの見た目のほうが長く目に触れます。
+
+動きを止める設定も尊重します。
+
+@media (prefers-reduced-motion: reduce) {
+  .block { animation: none; }
+}
+
+
+止めても意味が伝わる形にしてあります。動きは補助であって、情報そのものではありません。
+
+なぜ数字を大きく置かなかったか
+
+「週75分」と書けば1行で済みます。
+
+そうしなかったのは、大きい数字と小さいラベルの組み合わせが、
+どのLPにもあるからです。AI に「目を引く要素を作って」と頼むと、まずこれが出ます。
+
+ブロックにすると、読む人は数えます。 数えた時点で、
+自分の1週間に置き換えて考えています。
+
+目を引く要素は1つでいい。 2つ置くと、どちらも弱くなります。
+
+
+実際に投げたプロンプト
+
+after を作るときに使った指示の全文です。
+
+このファーストビューを直してください。手順を分けます。
+
+■ 削る（1〜3）
+
+1. 余白の緩急
+   要素間のマージンが全部 20px で均一です。
+   関係が強い要素どうしは近づけ（18〜22px）、
+   意味の切れ目では大きく開けて（40px以上）ください。
+
+2. 視線の入口
+   text-align: center をやめ、左右2カラムの grid にしてください。
+   テキストの左端を1本に固定します。
+   リード文には max-width: 30em を掛けて1行を短くします。
+   ファーストビューで読ませる要素を1つに絞るため、
+   特徴を3つ並べたブロックは削除してください。
+
+3. 色
+   全面グラデーションと text-shadow をやめてください。
+   そのうえで、色を「落ち着いた色」から選ばないでください。
+   この製品が扱う題材は「作業時間が少しずつ消えていくこと」です。
+   その主題から背景とアクセントを決め、CSS 変数で定義してください。
+   光を使う場合は画面の隅に1箇所だけ置き、全面には敷かないでください。
+
+■ 足す（4）
+
+4. 目を引く要素を1つだけ作る
+   削って空いた領域に、この製品の主題を一目で伝える要素を置きます。
+   条件は4つです。
+   - 大きな数字とラベルの組み合わせにしない（どのLPにもあるため）
+   - 読む人が数えたり目で追ったりできる形にする
+   - 外部ライブラリを使わず、CSS の transform と box-shadow だけで作る
+   - 手3で決めた色の世界と地続きにする
+
+   1ブロック5分の立体を週5日 × 3個で並べ、
+   perspective と rotateX / rotateZ で寝かせてください。
+   厚みは同方向にずらした box-shadow を重ねて作ります。
+
+   ブロックが1つずつ抜けていくアニメーションを付けます。
+   animation-delay は HTML 側の --i 変数からずらしてください。
+   キーフレームは「見えている時間」を6割以上に配分します。
+   prefers-reduced-motion では動きを止めてください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。
+
+
+指示を4つに区切っているのは、どこを直したか後から確認するためです。
+
+「もっとおしゃれにして」と頼むと、AI は全部を作り直します。
+そうなると、良くなったのか悪くなったのかを比べられません。
+
+手4だけは、条件を4つ書いています。
+
+ここを曖昧にすると、AI は大きな数字とグラデーションのカードを出します。
+避けたい形を名指しで書くほうが早いです。
+
+「外部ライブラリを使わない」と書いているのは、
+放っておくと Three.js を持ち出してくるからです。
+
+立体を作るだけなら transform と box-shadow で足ります。
+読み込むものが増えると、記事を読んだ人が自分の画面に持ち帰れなくなります。
+
+
+つまずきどころ
+
+3つあります。
+
+1つ目は、引き算で止めてしまうことです。
+
+色を減らし影を消した時点で、画面は「整って」見えます。
+
+そこで手を止めると、読みやすいけれど印象に残らない画面になります。
+削るのは、足すための準備です。
+
+2つ目は、目を引く要素を2つ以上置くことです。
+
+格子を作ったあと、ボタンにもアニメーションを付けたくなります。
+
+2つ置くと視線が割れて、どちらも弱くなります。
+
+3つ目は、数値をそのまま真似することです。
+
+この記事の 18px / 22px / 40px は、この作例で決めた値です。
+
+覚えるのは数字ではなく、3種類に分けるという考え方のほうです。
+
+
+今日できること
+
+手元の画面のマージンを、grep で数えてみてください。
+
+grep -o &quot;margin-bottom: [0-9]*px&quot; your-styles.css | sort | uniq -c
+
+
+同じ値が5個以上並んでいたら、余白に緩急がありません。
+
+そこが最初に直す場所です。
+
+
+ただし、そこで止めないでください。
+
+削ったあとに何を1つ足すかで、印象に残るかどうかが決まります。"></div>
+
+
+<div class="article">
+<p>AI に LP を作らせると、それらしいものが出てきます。</p>
+<p>紫のグラデーション、中央寄せの大きな見出し、絵文字つきのバッジ、影のついたボタン。</p>
+<p>動いてはいるのに、人に見せる気になれない。</p>
+<p>ここで多くの人は「引き算」をします。色を減らし、影を消し、余白を整える。</p>
+<p><strong>それだけだと、整った代わりに退屈になります。</strong></p>
+<p>削るのは3手。そのあとに、効かせる1手が要ります。</p>
+<h2>「それらしい」で止まる理由</h2>
+<p>生成された画面を見て、どこが悪いのか言葉にできないことがあります。</p>
+<p>崩れてはいません。文字も読めます。ボタンも押せます。</p>
+<p>それでも、自分で作ったものとして人に出すには足りない。</p>
+<p>この状態のとき、多くの場合は<strong>要素が足りないのではなく、多すぎます。</strong></p>
+<p>AI は指示された情報をすべて画面に載せようとします。バッジも、見出しも、<br>リード文も、特徴の3項目も、ボタンも、注意書きも、全部を同じ強さで置きます。</p>
+<p>結果として、どこから読めばいいのか分からない画面になります。</p>
+<p>作例を用意しました。左が AI の出力そのまま、右が直したものです。</p>
+<p>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-07-lp-firstview/</p>
+<p>同じ情報量ではありません。<strong>右は削って、そのぶんを1箇所に足しています。</strong></p>
+<p>順番は、余白、視線、色、そして最後に足す1手です。</p>
+<p>色から手を付けると、配色を変えるたびに全体の印象が変わって、<br>どこが効いたのか分からなくなります。構造を整えてから色を決めます。</p>
+<h2>手1: 余白に緩急をつける</h2>
+<p>最初に見るのは余白です。</p>
+<p>理由は2つあります。1つは、余白がいちばん多く画面を占めているからです。<br>もう1つは、余白の指定が<strong>機械的に数えられる</strong>からです。</p>
+<p>「この配色は良いか」は判断が要りますが、「マージンが全部同じ値か」は数えれば分かります。</p>
+<p>判断の要らないところから手を付けます。</p>
+<p>作例の before では、こうなっていました。</p>
+<pre><code>.badge { margin-bottom: 20px; }
+h1     { margin-bottom: 20px; }
+.lead  { margin-bottom: 20px; }
+.points{ margin-bottom: 20px; }
+.cta   { margin-bottom: 20px; }</code></pre>
+<p>すべて 20px です。</p>
+<p>余白が均一だと、どの要素とどの要素が仲間なのかが分かりません。<br>読む人は上から順に、同じ重さで全部を読むことになります。</p>
+<p>after では距離を3種類に分けました。</p>
+<pre><code>.eyebrow { margin-bottom: 18px; }  /* 見出しと近い。セットで読ませる */
+h1       { margin-bottom: 22px; }  /* リード文と近い */
+.lead    { margin-bottom: 40px; }  /* ここで大きく開ける */</code></pre>
+<p>やっていることは1つです。<strong>関係が強いものを近づけ、弱いものを離す。</strong></p>
+<p>数字そのものに意味はありません。<strong>差があることに意味があります。</strong></p>
+<h2>手2: 中央寄せをやめて、左端を1本に揃える</h2>
+<p>次に見るのは、視線の入口です。</p>
+<p>AI はほぼ確実に中央寄せを選びます。指定しなければ <code>text-align: center</code> が付きます。</p>
+<p>中央寄せが選ばれるのは、それが無難だからです。<br>要素の幅がまちまちでも、中央に置けば形になります。</p>
+<p>ただし中央寄せは、行の長さが変わるたびに文の始まりの位置が動きます。</p>
+<p>読む人の目は、1行読むごとに左端を探し直すことになります。</p>
+<pre><code>/* before */
+.hero { text-align: center; max-width: 800px; }
+
+/* after: 左右2カラムにして、テキストの左端を1本に固定する */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 56px;
+  align-items: center;
+}
+.lead { max-width: 30em; }</code></pre>
+<p><code>text-align</code> を消し、リード文に <code>max-width: 30em</code> を掛けています。</p>
+<p>横に長い行は、目が戻るときに行を見失います。</p>
+<p>同じ手のなかで、<strong>要素も削りました。</strong></p>
+<pre><code>&lt;!-- before: 特徴を3つ並べていた --&gt;
+&lt;div class="points"&gt;
+  &lt;div class="point"&gt;✨ かんたん導入&lt;/div&gt;
+  &lt;div class="point"&gt;⚡ 高速処理&lt;/div&gt;
+  &lt;div class="point"&gt;🔒 安心のセキュリティ&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- after: 丸ごと削除 --&gt;</code></pre>
+<p>ファーストビューで読ませるものは1つに絞ります。</p>
+<p>3つ並べると、読む人はどれが主役か判断できません。判断できないものは読み飛ばされます。</p>
+<h2>手3: 色数を絞って、アクセントを1箇所にする</h2>
+<p>before では色が5系統ありました。</p>
+<ul>
+<li>背景のグラデーション（青紫〜紫）</li>
+<li>見出しの白と影</li>
+<li>バッジの半透明の白</li>
+<li>ボタンのグラデーション（黄〜オレンジ）</li>
+<li>特徴パネルの半透明の白</li>
+</ul>
+<p>after では、色を<strong>主題から決め直しました。</strong></p>
+<pre><code>/* before: 意味のないグラデーション */
+body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.cta { background: linear-gradient(90deg, #f6d365 0%, #fda085 100%);
+       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+
+/* after: 夜の作業画面と、熱として消えていく時間 */
+:root {
+  --bg:      #12111b;   /* 夜の作業画面 */
+  --surface: #1c1b28;
+  --line:    #2e2b40;
+  --fg:      #edebf4;
+  --fg-2:    #918da8;
+  --amber:   #ffb43d;   /* 定型作業に消えている5分 */
+  --amber-d: #b87516;   /* ブロックの側面。厚みを作る */
+}</code></pre>
+<p>紫を別の色に置き換えたのではありません。</p>
+<p><strong>扱っている題材から色を持ってきています。</strong></p>
+<p>この製品が扱うのは「作業時間が少しずつ消えていくこと」です。<br>だから背景は夜の作業画面、消えていく時間は熱を持った琥珀にしました。</p>
+<p>「落ち着いた色にする」と考えると、どのサイトも同じ薄いグレーになります。<br>「この製品は何の世界の話か」から決めると、色に理由が生まれます。</p>
+<p>グラデーションを全部やめたわけではありません。1箇所だけ残しています。</p>
+<pre><code>/* 画面の隅にだけ光を置く。全面グラデーションにはしない */
+body::before {
+  content: "";
+  position: fixed;
+  top: -20%; right: -10%;
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle, rgba(255,180,61,.10) 0%, transparent 62%);
+  pointer-events: none;
+}</code></pre>
+<p>全面に敷くと、どこを見ればいいのか分からなくなります。<br>隅に置くと、視線が向かう先だけが明るくなります。</p>
+<h2>手4: 削った余力を、1箇所に集中させる</h2>
+<p>ここまでが引き算です。<strong>引き算だけで終えると、整った代わりに退屈になります。</strong></p>
+<p>削って空いたぶんを、<strong>1箇所にだけ</strong>投下します。</p>
+<p>作例では、右側の立体ブロックがそれです。</p>
+<p>1ブロックが5分。週5日 × 1日3ブロックで15個。それが1つずつ抜けていきます。</p>
+<p>まず、面を寝かせて立体にします。<strong>画像もライブラリも使いません。</strong></p>
+<pre><code>.stage { perspective: 1000px; }
+
+.deck {
+  display: grid;
+  grid-template-columns: repeat(5, 40px);
+  gap: 12px;
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transform: rotateX(52deg) rotateZ(-40deg);
+  transform-style: preserve-3d;
+}</code></pre>
+<p><code>rotateX</code> で手前に倒し、<code>rotateZ</code> で回します。この2行だけで机の上の面になります。</p>
+<p>ブロックの厚みは、影を重ねて作ります。</p>
+<pre><code>.block {
+  width: 40px; height: 40px;
+  background: var(--amber);
+  border-radius: 3px;
+  /* 側面の影を段階的に積むと、平面が箱に見える */
+  box-shadow:
+    2px 2px 0 var(--amber-d),
+    4px 4px 0 var(--amber-d),
+    6px 6px 0 var(--amber-d),
+    8px 8px 14px rgba(0, 0, 0, .45);
+}</code></pre>
+<p>同じ方向に少しずつずらした影を4枚重ねているだけです。</p>
+<p>最後に、消えていく動きを付けます。</p>
+<pre><code>.block {
+  animation: drain 7s cubic-bezier(.4, 0, .2, 1) infinite;
+  animation-delay: calc(var(--i) * .18s);
+}
+
+@keyframes drain {
+  0%, 58%   { opacity: 1;   transform: translateZ(0); }
+  76%, 88%  { opacity: .18; transform: translateZ(-16px); }
+  100%      { opacity: 1;   transform: translateZ(0); }
+}</code></pre>
+<pre><code>&lt;span class="block" style="--i:0"&gt;&lt;/span&gt;
+&lt;span class="block" style="--i:1"&gt;&lt;/span&gt;</code></pre>
+<p><code>--i</code> を HTML 側で渡して、<code>animation-delay</code> をずらしています。<br>15個ぶんの CSS を書かずに、順番に抜けていく動きが作れます。</p>
+<p><strong>キーフレームの配分に注意してください。</strong></p>
+<p>最初は「消えている時間」を長く取っていました。すると画面を開いた瞬間、<br>ほとんどのブロックが暗い状態で目に入ります。</p>
+<p><code>0%, 58%</code> を「見えている」に割り当てて、消えるのは一瞬にしました。<br>アニメーションは、<strong>止まっているときの見た目のほうが長く目に触れます。</strong></p>
+<p>動きを止める設定も尊重します。</p>
+<pre><code>@media (prefers-reduced-motion: reduce) {
+  .block { animation: none; }
+}</code></pre>
+<p>止めても意味が伝わる形にしてあります。動きは補助であって、情報そのものではありません。</p>
+<h3>なぜ数字を大きく置かなかったか</h3>
+<p>「週75分」と書けば1行で済みます。</p>
+<p>そうしなかったのは、大きい数字と小さいラベルの組み合わせが、<br>どのLPにもあるからです。AI に「目を引く要素を作って」と頼むと、まずこれが出ます。</p>
+<p>ブロックにすると、読む人は<strong>数えます。</strong> 数えた時点で、<br>自分の1週間に置き換えて考えています。</p>
+<p><strong>目を引く要素は1つでいい。</strong> 2つ置くと、どちらも弱くなります。</p>
+<h2>実際に投げたプロンプト</h2>
+<p>after を作るときに使った指示の全文です。</p>
+<pre><code>このファーストビューを直してください。手順を分けます。
+
+■ 削る（1〜3）
+
+1. 余白の緩急
+   要素間のマージンが全部 20px で均一です。
+   関係が強い要素どうしは近づけ（18〜22px）、
+   意味の切れ目では大きく開けて（40px以上）ください。
+
+2. 視線の入口
+   text-align: center をやめ、左右2カラムの grid にしてください。
+   テキストの左端を1本に固定します。
+   リード文には max-width: 30em を掛けて1行を短くします。
+   ファーストビューで読ませる要素を1つに絞るため、
+   特徴を3つ並べたブロックは削除してください。
+
+3. 色
+   全面グラデーションと text-shadow をやめてください。
+   そのうえで、色を「落ち着いた色」から選ばないでください。
+   この製品が扱う題材は「作業時間が少しずつ消えていくこと」です。
+   その主題から背景とアクセントを決め、CSS 変数で定義してください。
+   光を使う場合は画面の隅に1箇所だけ置き、全面には敷かないでください。
+
+■ 足す（4）
+
+4. 目を引く要素を1つだけ作る
+   削って空いた領域に、この製品の主題を一目で伝える要素を置きます。
+   条件は4つです。
+   - 大きな数字とラベルの組み合わせにしない（どのLPにもあるため）
+   - 読む人が数えたり目で追ったりできる形にする
+   - 外部ライブラリを使わず、CSS の transform と box-shadow だけで作る
+   - 手3で決めた色の世界と地続きにする
+
+   1ブロック5分の立体を週5日 × 3個で並べ、
+   perspective と rotateX / rotateZ で寝かせてください。
+   厚みは同方向にずらした box-shadow を重ねて作ります。
+
+   ブロックが1つずつ抜けていくアニメーションを付けます。
+   animation-delay は HTML 側の --i 変数からずらしてください。
+   キーフレームは「見えている時間」を6割以上に配分します。
+   prefers-reduced-motion では動きを止めてください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。</code></pre>
+<p>指示を4つに区切っているのは、<strong>どこを直したか後から確認するため</strong>です。</p>
+<p>「もっとおしゃれにして」と頼むと、AI は全部を作り直します。<br>そうなると、良くなったのか悪くなったのかを比べられません。</p>
+<p>手4だけは、条件を4つ書いています。</p>
+<p>ここを曖昧にすると、AI は大きな数字とグラデーションのカードを出します。<br><strong>避けたい形を名指しで書くほうが早いです。</strong></p>
+<p>「外部ライブラリを使わない」と書いているのは、<br>放っておくと Three.js を持ち出してくるからです。</p>
+<p>立体を作るだけなら <code>transform</code> と <code>box-shadow</code> で足ります。<br>読み込むものが増えると、記事を読んだ人が自分の画面に持ち帰れなくなります。</p>
+<h2>つまずきどころ</h2>
+<p>3つあります。</p>
+<p>1つ目は、<strong>引き算で止めてしまうこと</strong>です。</p>
+<p>色を減らし影を消した時点で、画面は「整って」見えます。</p>
+<p>そこで手を止めると、読みやすいけれど印象に残らない画面になります。<br>削るのは、足すための準備です。</p>
+<p>2つ目は、<strong>目を引く要素を2つ以上置くこと</strong>です。</p>
+<p>格子を作ったあと、ボタンにもアニメーションを付けたくなります。</p>
+<p>2つ置くと視線が割れて、どちらも弱くなります。</p>
+<p>3つ目は、<strong>数値をそのまま真似すること</strong>です。</p>
+<p>この記事の 18px / 22px / 40px は、この作例で決めた値です。</p>
+<p>覚えるのは数字ではなく、<strong>3種類に分ける</strong>という考え方のほうです。</p>
+<h2>今日できること</h2>
+<p><strong>手元の画面のマージンを、grep で数えてみてください。</strong></p>
+<pre><code>grep -o "margin-bottom: [0-9]*px" your-styles.css | sort | uniq -c</code></pre>
+<p>同じ値が5個以上並んでいたら、余白に緩急がありません。</p>
+<p>そこが最初に直す場所です。</p>
+<p>ただし、そこで止めないでください。</p>
+<p>削ったあとに何を1つ足すかで、印象に残るかどうかが決まります。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+</script>

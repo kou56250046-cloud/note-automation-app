@@ -106,7 +106,11 @@ class Finding:
 class Voice:
     rules: dict = field(default_factory=lambda: dict(DEFAULT_RULES))
     ng: list[tuple[str, str]] = field(default_factory=list)        # (表現, コメント)
-    normalize: list[tuple[str, str]] = field(default_factory=list)  # (誤, 正)
+    # (誤, 正, 形式名詞か)
+    # 形式名詞（事・時・為・物）は voice.md で行頭に "- " を付けて書く。
+    # 「記事を」の中の「事を」のように、熟語の一部に当たる誤検出を防ぐため
+    # 直前が漢字のときは検出しない、という扱いに切り替える目印である。
+    normalize: list[tuple[str, str, bool]] = field(default_factory=list)
 
 
 # --------------------------------------------------------------------------
@@ -145,14 +149,16 @@ def parse_voice(path: Path) -> Voice:
 
         elif lang == "normalize":
             for line in body.splitlines():
-                # 「- 事が -> ことが」のように行頭に - が付く形式も許容する
-                line = line.strip().lstrip("- ").strip()
+                # 行頭の "- " は形式名詞（事・時・為・物）の目印である
+                raw = line.strip()
+                formal = raw.startswith("- ")
+                line = raw.lstrip("- ").strip()
                 if "->" not in line:
                     continue
                 wrong, _, right = line.partition("->")
                 wrong, right = wrong.strip(), right.strip()
                 if wrong and right:
-                    voice.normalize.append((wrong, right))
+                    voice.normalize.append((wrong, right, formal))
 
     return voice
 
@@ -255,16 +261,32 @@ def check_ng_expressions(body: list[tuple[int, str]], ng: list[tuple[str, str]])
     return findings
 
 
-def check_normalize(body: list[tuple[int, str]], pairs: list[tuple[str, str]]) -> list[Finding]:
+def check_normalize(body: list[tuple[int, str]],
+                    pairs: list[tuple[str, str, bool]]) -> list[Finding]:
+    """表記ゆれ。
+
+    形式名詞（事・時・為・物）は熟語の一部に当たりやすい。
+    「記事を」の中の「事を」、「時間を」の中の「時を」が典型で、
+    どちらもこのリポジトリの頻出語である。
+    直前が漢字なら熟語の一部とみなして検出しない。
+    """
     findings = []
     for lineno, raw in body:
-        for wrong, right in pairs:
-            if wrong in raw:
+        for wrong, right, formal in pairs:
+            start = 0
+            while True:
+                i = raw.find(wrong, start)
+                if i < 0:
+                    break
+                start = i + 1
+                if formal and i > 0 and KANJI.match(raw[i - 1]):
+                    continue    # 熟語の一部。「記事を」「時間を」など
                 findings.append(Finding(
                     "warning", "normalize", lineno,
                     f"「{wrong}」→「{right}」に開く",
                     raw.strip()[:60],
                 ))
+                break           # 1行につき1件でよい
     return findings
 
 
