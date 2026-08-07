@@ -839,10 +839,10 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | 4 | `daily-article` + `daily-build` | **完了**（日次フローの4スキルが揃った） |
 | 5 | `build-preview.mjs` + `/note-preview` | **完了**（実起動で検証済み） |
 | 6 | `sales-letter` / `letter-audit` の型対応 | **完了**（`product-concept` / `pricing-strategy` / `draft-writing` / `title-design` を実装し、有料フローが繋がった） |
-| 7 | `fetch-metrics` + `profile-accumulator` | **一部**（`note_market.py --update-profile` が note の実測値を書き込む。販売実績の蓄積は未実装） |
-| 8 | 体験談型の解禁 + 営業部 | 未着手 |
+| 7 | `fetch-metrics` + `profile-accumulator` | **一部**（`profile-accumulator` は実装済み。`fetch-public.mjs` が未実装で `data/metrics.json` が埋まらない） |
+| 8 | 体験談型の解禁 + 営業部 | **判定機構のみ完了**（`profile-accumulator` が3条件で解禁を判定する。実績が貯まるまで `tool` のまま。営業部は凍結） |
 
-### 17.1 スキルの実装状況（13 / 15）
+### 17.1 スキルの実装状況（15 / 15 — 完了）
 
 | 層 | スキル | 状態 | 影響 |
 |---|---|:---:|---|
@@ -859,15 +859,18 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | 生成 | `reader-feedback` | ✔ | |
 | 生成 | `title-design` | ✔ | 5タイプ×8案。`ng` 該当は採点前に除外する |
 | 生成 | `build-report` | ✔ | |
-| 経営 | `profile-accumulator` | **未** | 実績が蓄積されず `experience` を解禁できない |
-| 経営 | `revenue-maximizer` | **未** | `monthly-review` が暫定版のまま |
+| 経営 | `profile-accumulator` | ✔ | 出所と前提を必須にし、`experience` 解禁を3条件で判定する |
+| 経営 | `revenue-maximizer` | ✔ | 3因数を市場比で見て、ボトルネックと次の1手を1つに絞る |
 
-**残り2本はどちらも経営層である**（`profile-accumulator` / `revenue-maximizer`）。
-**有料noteのフローは繋がった。**
+**15本すべてが揃った。** 無料記事・有料note・経営の3フローが繋がっている。
 
-> `profile-accumulator` の代わりに、`note_market.py --update-profile` が
-> note の実測値（記事数・フォロワー数・スキ中央値）を前提つきで `profile.md` に
-> 書き込む。販売実績の蓄積だけが未実装である。
+> `profile.md` の更新は2系統ある。`note_market.py --update-profile` が
+> note の公開データ（記事数・フォロワー数・スキ中央値）を AUTO ブロックに書き、
+> `profile-accumulator` がそれ以外（販売実績・運用ログ由来の事実・第三者の結果）を
+> ブロックの外側に追記する。**AUTO ブロックの中は手で編集しない。**
+
+**残るのは `scripts/fetch-public.mjs`（`data/metrics.json` の取得）だけである。**
+無くても `market` データの自己計測が基準線になるため、`revenue-maximizer` は動く。
 
 **無料記事の日次フローは完成している。** `daily-article` → `lint.py`（一次判定）→
 検出時のみ `ethics-line` → `build-report` が揃っているため、`/note-daily` は仕様どおり動く。
@@ -881,9 +884,9 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 | 種別 | 状態 |
 |---|---|
 | サブエージェント | **5/5 完了**（researcher / writer / letter-writer / critic / auditor） |
-| スラッシュコマンド | **5/5 完了**（note-init / note-daily / note-preview / note-revise / note-letter） |
+| スラッシュコマンド | **6/6 完了**（note-init / note-daily / note-preview / note-revise / note-letter / **note-review**） |
 | GitHub Actions | **6/6 完了**（`market-research` を追加。`fetch-metrics` は依存スクリプト待ちで no-op） |
-| Routines プロンプト | **3/3 完了**（`monthly-review` は暫定版） |
+| Routines プロンプト | **3/3 完了**（`monthly-review` も完成版になった） |
 | Python 判定器 | **3/3 完了**（`lint.py` / `dedup.py` / **`note_market.py`**。実データで検証済み） |
 | プレビュー機能 | **3/3 完了**（`build-preview.mjs` / `serve.mjs` / **`build-demo.mjs`**。実起動で検証済み） |
 | `scripts/fetch-public.mjs` | 未実装（ステップ7） |
