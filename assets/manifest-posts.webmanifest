@@ -1,0 +1,27 @@
+{
+  "name": "note-factory 投稿キュー",
+  "short_name": "投稿キュー",
+  "description": "本文をコピーして note に貼るための画面。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F7F7F5",
+  "theme_color": "#2B6CB0",
+  "icons": [
+    { "src": "../assets/icons/posts-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../assets/icons/posts-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../assets/icons/posts-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "ダッシュボード",
+      "short_name": "管理",
+      "description": "数値と自動運転ログを見る",
+      "url": "../",
+      "icons": [{ "src": "../assets/icons/dash-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

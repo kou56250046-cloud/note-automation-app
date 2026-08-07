@@ -2,8 +2,21 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>note-factory — 夜の製図室</title>
+
+<!-- PWA。ホーム画面に置いて、合言葉を保存しておけばオフラインでも開く。
+     ENC が HTML に埋まっている自己完結型なので、この1枚が取れれば全機能が動く。
+     パスは配信ルート（/note-automation-app/）からの相対で書く。 -->
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#050D16">
+<link rel="icon" href="./assets/icons/dash-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./assets/icons/dash-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="note-factory">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;600;700&family=Noto+Sans+JP:wght@300;400;500&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -70,6 +83,13 @@ input,textarea{width:100%;font-family:var(--mono);font-weight:300;font-size:13px
   transition:border-color .2s,box-shadow .2s}
 input::placeholder,textarea::placeholder{color:var(--tx3)}
 input:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,74,.13)}
+/* 合言葉を保存するかの選択。上の input 一括指定を打ち消す */
+.remember{display:flex;align-items:flex-start;gap:9px;margin:13px 1px 0;text-align:left;
+  font-family:var(--sans);font-size:12px;line-height:1.5;color:var(--tx2);cursor:pointer;
+  -webkit-user-select:none;user-select:none}
+.remember input[type=checkbox]{width:15px;height:15px;flex:none;margin:1px 0 0;padding:0;
+  background:transparent;border:0;border-radius:0;accent-color:var(--gold);cursor:pointer}
+.remember input[type=checkbox]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;box-shadow:none}
 button{font-family:var(--sans);font-weight:400;font-size:13px;cursor:pointer;border-radius:3px;border:1px solid transparent;
   background:linear-gradient(160deg,var(--gold2),var(--gold) 55%,var(--goldd));color:#12100A;
   padding:12px 20px;letter-spacing:.05em;transition:filter .2s,transform .12s;
@@ -252,12 +272,16 @@ textarea{font-size:11px;line-height:1.7;min-height:150px;resize:vertical}
     <div class="sub">NIGHT DRAFTING ROOM</div>
     <div class="lead">執筆と販売の設計図。<br>合言葉を入力してください。</div>
     <label class="sr" for="pw">合言葉</label>
-    <input type="password" id="pw" placeholder="passphrase" autocomplete="off" spellcheck="false">
+    <input type="password" id="pw" placeholder="passphrase" autocomplete="current-password" spellcheck="false">
+    <label class="remember" for="remember">
+      <input type="checkbox" id="remember" checked>
+      <span>この端末に保存して、次回から自動で開く</span>
+    </label>
     <div style="height:14px"></div>
     <button id="go" style="width:100%">開く</button>
     <div class="err" id="err"></div>
     <div class="hint">AES-GCM-256 で暗号化。復号はこのブラウザの中だけで行われます。<br>
-      一度入力すれば、次回以降は自動で開きます。</div>
+      保存すると合言葉がこの端末に残ります。共用の端末では外してください。</div>
   </div>
 </div>
 
@@ -297,24 +321,40 @@ async function unlock(pass){
     km, {name:'AES-GCM',length:256}, false, ['decrypt']);
   return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, ct)));
 }
-/* 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
-   端末に残るため、共用端末では画面右上の「合言葉を消す」を押すこと。 */
+/* 合言葉の保存は選択制にしている。
+   チェックが入っているときだけ localStorage に残し、次回から自動で開く。
+   外したときはその場で消すので、次に開くと手入力に戻る。
+
+   **合言葉が唯一の防御である。** 公開URLは推測できるため、
+   共用端末では必ず外すか、開いたあとに「合言葉を消す」を押すこと。
+   選択そのもの（nf-remember）は合言葉ではないので、外した場合も記憶しておく。 */
 const PASS_KEY = 'nf-pass';
-const savePass = p => { try{ localStorage.setItem(PASS_KEY, p); }catch(_){} };
-const readPass = () => { try{ return localStorage.getItem(PASS_KEY); }catch(_){ return null; } };
-function forgetPass(){ try{ localStorage.removeItem(PASS_KEY); }catch(_){} location.reload(); }
+const REMEMBER_KEY = 'nf-remember';
+const ls = {
+  get: k => { try{ return localStorage.getItem(k); }catch(_){ return null; } },
+  set: (k, v) => { try{ localStorage.setItem(k, v); }catch(_){} },
+  del: k => { try{ localStorage.removeItem(k); }catch(_){} },
+};
+const readPass = () => ls.get(PASS_KEY);
+const wantsRemember = () => { const c = $('#remember'); return c ? c.checked : true; };
+
+function applyRemember(pw){
+  if(wantsRemember()){ ls.set(PASS_KEY, pw); ls.set(REMEMBER_KEY, '1'); }
+  else { ls.del(PASS_KEY); ls.set(REMEMBER_KEY, '0'); }
+}
+function forgetPass(){ ls.del(PASS_KEY); ls.set(REMEMBER_KEY, '0'); location.reload(); }
 
 async function tryUnlock(pw, quiet){
   const e = $('#err');
   if(!quiet){ $('#go').disabled = true; e.textContent = '復号しています…'; }
   try{
     D = await unlock(pw);
-    savePass(pw);
+    applyRemember(pw);
     $('#lock').style.display = 'none'; $('#app').style.display = 'block'; boot();
     return true;
   }catch(_){
     // 保存済みで失敗したら古い合言葉が残っている。消して入力に戻す
-    if(quiet){ try{ localStorage.removeItem(PASS_KEY); }catch(_){} }
+    if(quiet){ ls.del(PASS_KEY); }
     else { e.textContent = '開けませんでした。合言葉を確認してください。'; $('#go').disabled = false; }
     return false;
   }
@@ -327,8 +367,26 @@ $('#go').onclick = () => {
 };
 $('#pw').addEventListener('keydown', ev => { if(ev.key === 'Enter') $('#go').click(); });
 
-/* 保存済みなら自動で開く */
-(() => { const saved = readPass(); if(saved) tryUnlock(saved, true); })();
+/* 前回の選択を戻してから、保存済みなら自動で開く */
+(() => {
+  if(ls.get(REMEMBER_KEY) === '0'){ const c = $('#remember'); if(c) c.checked = false; }
+  const saved = readPass();
+  if(saved) tryUnlock(saved, true);
+})();
+
+/* チェックを外した時点で、既に保存されているものを消す。
+   「開く」を押し直さないと消えないと、外したのに残っていることになる。 */
+$('#remember').addEventListener('change', () => {
+  if(!wantsRemember()){ ls.del(PASS_KEY); ls.set(REMEMBER_KEY, '0'); }
+  else { ls.set(REMEMBER_KEY, '1'); }
+});
+
+/* PWA。ホーム画面に置くと、合言葉を保存してある限りオフラインでも開く。
+   file:// で開くと SecurityError になるため、セキュアコンテキストのときだけ登録する。
+   isSecureContext は https と localhost / 127.0.0.1 で true、file:// では false になる。 */
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
+}
 
 const TABS = [['home','ホーム'],['posts','記事'],['ladder','商品ライン'],['flow','フロー'],['log','自動運転ログ'],['input','入力']];
 function boot(){

@@ -554,6 +554,34 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 `;
 
+// PWA。公開版だけに入れる。
+//
+// ローカル版（preview/）にも入れると、localhost:5173 に Service Worker が
+// 居座って古い画面を返すようになる。確認用の画面がキャッシュされると困るので、
+// 配信されるほうにだけ付ける。
+//
+// このファイル群は posts/ 直下に出るため、manifest は同階層、
+// アイコンと sw.js は1つ上（配信ルート）を指す。
+const PWA_HEAD = `<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+`;
+
+// sw.js は配信ルートに置く。scope はスクリプトの場所と同じ
+// /note-automation-app/ になり、ダッシュボードと投稿キューの両方を受け持つ。
+// scope がスクリプトの階層より上でなければ Service-Worker-Allowed は要らない。
+// isSecureContext は https と localhost / 127.0.0.1 で true、file:// では false。
+// 直接ファイルを開いたときに SecurityError を出さないための条件である。
+const PWA_JS = `
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+`;
+
 function page(title, body, extraJs = '') {
   // 公開版は必ず noindex にする。
   // note の記事より先にインデックスされると重複コンテンツ扱いになる。
@@ -562,11 +590,11 @@ function page(title, body, extraJs = '') {
     : '';
   return `<!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 ${robots}<title>${esc(title)}</title>
-<style>${CSS}</style>
+${PUBLIC ? PWA_HEAD : ''}<style>${CSS}</style>
 <div class="wrap">${body}</div>
-<script>${COPY_JS}${PUBLIC ? DECRYPT_JS : ''}${extraJs}</script>
+<script>${COPY_JS}${PUBLIC ? DECRYPT_JS : ''}${extraJs}${PUBLIC ? PWA_JS : ''}</script>
 `;
 }
 

@@ -307,6 +307,51 @@ PBKDF2 / SHA-256 / 310,000回 / AES-GCM-256
 
 静的サイトからサーバーに書き戻せないため、**日付を唯一の自動判定材料**にしている。
 
+### ホーム画面に置く（PWA）
+
+**ダッシュボードと投稿キューは、それぞれ別のアプリとしてホーム画面に入る。**
+
+| アプリ | URL | manifest | アイコン |
+|---|---|---|---|
+| note-factory（ダッシュボード） | `/` | `manifest.webmanifest` | 金のコンパス |
+| 投稿キュー | `/posts/` | `posts/manifest.webmanifest` | 青の書類 |
+
+`start_url` が違えば別アプリとして扱われるため、2つ並べて置ける。
+アイコンの配色を画面と揃えてあるので、ホーム画面で見分けられる。
+
+**Service Worker は1つで足りる。** `assets/sw.js` を配信ルートに置くと
+scope が `/note-automation-app/` になり、両方を受け持つ。
+scope がスクリプトの階層より上でなければ `Service-Worker-Allowed` は要らないので、
+`/posts/` から `../sw.js` を登録してよい。
+
+キャッシュ戦略は2つだけである。
+
+| 対象 | 戦略 | 理由 |
+|---|---|---|
+| HTML | network-first | 記事も数値も push のたびに変わる。落ちたときだけキャッシュで開く |
+| アイコン・manifest | cache-first | 変わらない |
+
+**オフラインで動くのは自己完結型だからである。** ダッシュボードは `ENC` を、
+記事は `data-enc` を HTML に埋め込んでいるので、その1枚が取れれば全機能が動く。
+**キャッシュに入るのは暗号文だけで、平文は増えない。**
+
+`sw.js` の `__BUILD__` は `deploy-pages` がコミット SHA に置換する。
+置換されないとキャッシュ名が変わらず更新が届かないため、配信前の検査で止めている。
+
+アイコンは `scripts/make_icons.py`（Pillow）で生成し、生成物ごと追跡する。
+Actions で作らないのは、そのために Pillow を入れる必要が出るからである。
+
+### 合言葉の保存は選択制
+
+ロック画面の「この端末に保存して、次回から自動で開く」で選ぶ。既定は ON。
+
+チェックを外した時点で保存済みのものも消える。「開く」を押し直すまで
+消えないと、外したのに残っていることになるからである。
+
+**合言葉が唯一の防御であることは変わらない。** PWA にしてホーム画面から開く以上、
+保存しておかないと毎回入力になる。だからこそ共用端末では外す。
+選択そのもの（`nf-remember`）は合言葉ではないので、外した場合も記憶する。
+
 ### 検索エンジンに拾わせない
 
 公開版には `noindex` を付け、`robots.txt` で `Disallow: /` にする。
@@ -437,8 +482,13 @@ notes/{slug}/demo/    before.html / after.html。★AI×Webデザインの記事
 demo/{slug}/          build-demo.mjs の出力。**Pages で配信する。追跡する**
 preview/              build-preview.mjs の出力（.gitignore 対象）
 data/                 metrics.json / history.jsonl / revenue.json
+assets/               PWA の素材。deploy-pages が配信物に組み込む
+  manifest-dash.webmanifest    ダッシュボード用（配信時に /manifest.webmanifest）
+  manifest-posts.webmanifest   投稿キュー用（配信時に /posts/manifest.webmanifest）
+  sw.js               Service Worker。配信ルートに置いて両方を受け持つ
+  icons/              make_icons.py の出力。生成物ごと追跡する
 scripts/              build-preview.mjs / build-demo.mjs / serve.mjs / fetch-public.mjs
-                      encrypt.mjs / lint.py / dedup.py / note_market.py
+                      encrypt.mjs / lint.py / dedup.py / note_market.py / make_icons.py
 routines/             Routines のプロンプト定義（自己完結形式）
 ```
 

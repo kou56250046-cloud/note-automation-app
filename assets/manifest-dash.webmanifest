@@ -1,0 +1,27 @@
+{
+  "name": "note-factory — 夜の製図室",
+  "short_name": "note-factory",
+  "description": "執筆と販売の設計図。合言葉で開く自己完結型のダッシュボード。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050D16",
+  "theme_color": "#050D16",
+  "icons": [
+    { "src": "./assets/icons/dash-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/dash-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/dash-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "投稿キュー",
+      "short_name": "投稿",
+      "description": "今日貼る記事を開く",
+      "url": "./posts/",
+      "icons": [{ "src": "./assets/icons/posts-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

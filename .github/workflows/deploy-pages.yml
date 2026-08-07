@@ -22,6 +22,7 @@ on:
       - 'demo/**'
       - 'notes/**/demo/**'
       - 'note-factory-dashboard.html'
+      - 'assets/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -70,6 +71,26 @@ jobs:
             mkdir -p _site/posts
             cp -r preview/public/* _site/posts/ 2>/dev/null || true
           fi
+
+          # PWA。ダッシュボードと投稿キューを別々のアプリとしてホーム画面に置ける。
+          #
+          # manifest は2つに分ける。start_url が違えば別アプリとして扱われるため、
+          # 「note-factory」と「投稿キュー」が並んで入る。
+          # Service Worker は1つで足りる。配信ルートに置くと scope が
+          # /note-automation-app/ になり、両方を受け持てる。
+          mkdir -p _site/assets
+          cp -r assets/icons _site/assets/
+          cp assets/manifest-dash.webmanifest _site/manifest.webmanifest
+          cp assets/sw.js _site/sw.js
+          if [ -d _site/posts ]; then
+            cp assets/manifest-posts.webmanifest _site/posts/manifest.webmanifest
+          fi
+
+          # キャッシュ名にコミットを埋める。
+          # 変わるたびに activate で古いキャッシュを捨てるので、
+          # push した内容が次の起動で必ず反映される。
+          sed -i "s/__BUILD__/${GITHUB_SHA:0:7}/" _site/sw.js
+          echo "sw.js のビルド識別子: ${GITHUB_SHA:0:7}"
 
           # before/after のライブデモ。
           # 記事から読者がリンクを踏む先。暗号化しないので Actions で組み直してよい。
@@ -162,6 +183,31 @@ jobs:
             echo "::error::data/ に平文とみられるデータがあります"
             fail=1
           fi
+
+          # 8. PWA が成立しているか。
+          #    どれか欠けるとホーム画面に追加できないか、追加しても白い枠になる。
+          for f in _site/manifest.webmanifest _site/sw.js \
+                   _site/assets/icons/dash-192.png _site/assets/icons/dash-512.png \
+                   _site/assets/icons/dash-maskable-512.png \
+                   _site/assets/icons/posts-192.png _site/assets/icons/posts-512.png \
+                   _site/assets/icons/posts-maskable-512.png; do
+            [ -f "$f" ] || { echo "::error::$f がありません（PWA が成立しません）"; fail=1; }
+          done
+          if [ -d _site/posts ] && [ ! -f _site/posts/manifest.webmanifest ]; then
+            echo "::error::_site/posts/manifest.webmanifest がありません"
+            fail=1
+          fi
+          # 置換に失敗すると全端末が同じキャッシュ名を使い続け、更新が届かなくなる
+          if grep -q '__BUILD__' _site/sw.js; then
+            echo "::error::sw.js のビルド識別子が置換されていません"
+            fail=1
+          fi
+          # manifest が壊れていると黙って無視される。構文だけ見ておく
+          for m in _site/manifest.webmanifest _site/posts/manifest.webmanifest; do
+            [ -f "$m" ] || continue
+            python3 -c "import json,sys; json.load(open(sys.argv[1],encoding='utf-8'))" "$m" \
+              || { echo "::error::$m が JSON として壊れています"; fail=1; }
+          done
 
           if [ "$fail" = "0" ]; then
             {
