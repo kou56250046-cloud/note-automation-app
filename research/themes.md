@@ -7,7 +7,7 @@
 # 日次生成はここから1本引くだけ。web 検索はしない。
 #
 # ============================================================
-# 2026-08-07 在庫を全て rejected にした
+# 2026-08-07 W32 を全て rejected にした
 # ------------------------------------------------------------
 # 主カテゴリを「Claude Code の運用と保守」から
 # 「生成AIで見せられる成果物を作る」に改訂したため、
@@ -18,8 +18,20 @@
 # カテゴリごと破棄している。理由は knowledge/learnings.md の
 # 「カテゴリ改訂の記録」に残した。
 #
-# **pending が0本なので、記事を書く前に weekly-research が要る。**
-# 空の在庫を埋めるために、その場でテーマを作らないこと。
+# **同日に W33 を7本仕込み、在庫は復旧している。** 下の W33 を参照。
+# ============================================================
+#
+# ============================================================
+# 2026-08-07 weekly-research を手動実行（在庫 6 → 7）
+# ------------------------------------------------------------
+# W33-05 が記事化済み（notes/2026-08-07-lp-firstview/meta.json の
+# themeId）にもかかわらず status: pending のままだったため used に直した。
+# 実質在庫が6本になっていたので、手順2「7本になるまで補充」に従い
+# W33-08 を1本だけ足している。7本を無条件に足してはいない。
+#
+# 補充枠をサブ③にしたのは、木(サブ①paid) と土(サブ②) に挟まれる
+# 金曜にサブ①を置くと木と連続するためである（手順8）。
+# 実行順のサブカテゴリは 土2 → 日3 → 月1 → 火2 → 水3 → 木1 → 金3 で連続なし。
 # ============================================================
 
 - id: 2026-W32-01
@@ -424,7 +436,7 @@
     - https://www.furi-ten.com/claude-code-for-web-design/
     - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
     - https://qiita.com/sarap422/items/36fdabedda0fb8693b3f
-  status: pending
+  status: used   # 2026-08-07 notes/2026-08-07-lp-firstview として記事化（公開予定 08-08）
 
 - id: 2026-W33-06
   title: GAS のトリガーと権限で止まる3箇所。動くコードつき
@@ -494,4 +506,56 @@
     - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
     - https://manabinoba.blog/complete-guide-to-notebooklm/
     - https://rutinelabo.com/notebooklm-guide-2026/
+  status: pending
+
+# ------------------------------------------------------------
+# 2026-08-07 の手動補充分（W33-05 の消化に対する1本）
+# ------------------------------------------------------------
+
+- id: 2026-W33-08
+  title: NotebookLM は入れる前に決まる——ソースを整形してから読ませる
+  type: free
+  day: fri
+  category: 生成AIで見せられる成果物を作る / NotebookLM・精度向上
+  hashtags: [NotebookLM, Gemini, プロンプト, 生成AI]
+  score:
+    strength: 5
+    market: 4
+    willingness: 3
+    artifact: 5
+    total: 17
+  rationale: |
+    strength5: account.md のサブ③が「出力精度を上げるテクニック（設定・プロンプト・前処理）」を
+    明示しており、その前処理側にあたる。手元で NotebookLM に同じ質問を投げ、
+    整形前後の回答を並べるだけで書ける。外部の実績や体験を要さない。
+    market4: market/2026-08-07.md で NotebookLM は需要277 / 供給44.1件/日、比 6.276 で計測タグ2位。
+    ただし総記事数25,288で、上位例（スライド生成・音声化）は既に厚い。
+    「スライド生成プロンプト集」は16サイトをまとめた記事まで存在し飽和している。
+    投入前のソース整形は、言及はあってもテンプレート化した記事が見当たらないため4とした。
+    需要の絶対値が Webデザイン(374) に劣るため5にはしない。
+    willingness3: 無料記事の範囲。整形テンプレートを配って終わる。
+    NotebookLM で金を取る形は日曜の W33-07（Deep Research との調査フロー一式）に寄せてある。
+    artifact5: 整形プロンプト全文＋整形前/後のソース＋同じ質問への回答の before/after を出せる。
+    次点: 「NotebookLM のスライド生成を制御する」は artifact は高いが、
+    プロンプト集が既に多数あり market が 2 まで落ちるため在庫に入れなかった。
+    次点2: 「大きい PDF を分割して読ませる」は前処理の一種だが、
+    ファイルサイズ制限の話に寄り、成果物が残らないため落とした。
+  artifactPlan: |
+    整形用プロンプト全文（AI に元テキストを渡して構造化させる形）と、
+    整形前のソース（べた書きテキスト）／整形後のソース（見出し＋Key-Value）を全文で載せる。
+    同じ質問を両方のノートブックに投げ、回答と引用範囲の差を並置する。
+  angle: |
+    カスタム指示（出力側）を扱わない。W33-03 が出力側を担当するため、
+    こちらは投入側だけに絞る。「ゴミを入れればゴミが出る」で終わっている既存記事に対し、
+    何をどう書き換えるかをテンプレートで固定する点で差別化する。
+    第三者が出した精度向上の数値（例: マークダウン整形で正確性が約40%向上）は
+    出典を明記して引用するに留め、自分の実測として書かない。
+    手元で確認できるのは引用範囲の広さと回答の当たり外れだけであり、
+    そこは数値化せず before/after の並置で見せる。
+  sources:
+    - https://note.com/large_bear7730/n/n9fbe2b15daa2
+    - https://zenn.dev/sonicmoov/articles/bf6e52ad2fabb3
+    - https://www.lifehacker.jp/article/2603simple-note-taking-tweaks-make-notebooklm-smart/
+    - https://note.com/ai_komon/n/ndd2a1fdc500b
+    - https://zenn.dev/kauchi/articles/read-book-with-notebook-lm
   status: pending
