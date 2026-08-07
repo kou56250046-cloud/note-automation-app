@@ -87,6 +87,7 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
 API_HASHTAG = "https://note.com/api/v3/hashtags/{tag}/notes"
 API_CREATOR = "https://note.com/api/v2/creators/{urlname}"
 API_CONTENTS = "https://note.com/api/v2/creators/{urlname}/contents"
+API_NOTE = "https://note.com/api/v3/notes/{key}"
 
 REQUEST_INTERVAL = 1.5   # 秒。相手のサーバに負荷をかけない
 MAX_REQUESTS = 50        # 1回の実行で叩く上限
@@ -639,7 +640,35 @@ DASHBOARD_PATH = DATA_DIR / "dashboard.json"
 NOTES_DIR = REPO_ROOT / "notes"
 
 
-def build_dashboard(me: dict, date: str) -> str:
+def fetch_note_details(fetcher: Fetcher, notes: list[dict]) -> dict[str, dict]:
+    """自分の記事の詳細を1本ずつ取る。
+
+    一覧 API（`/contents`）はスキ数しか返さない。コメント数とシェア数は
+    記事詳細（`/api/v3/notes/{key}`）にしかない。
+
+    **ビュー数（PV）は公開 API に無い。** 記事詳細の120フィールドを調べても
+    view / pv に当たるものが存在しない。note の管理画面でしか見られない。
+    取れないものを推定で埋めない（CLAUDE.md ルール3）。
+
+    記事数ぶんリクエストするので、呼ぶのは `--write-dashboard` のときだけにする。
+    """
+    out: dict[str, dict] = {}
+    for n in notes:
+        if fetcher.exhausted:
+            break
+        payload = fetcher.get(API_NOTE.format(key=n["key"]))
+        d = (payload or {}).get("data") or {}
+        if not d:
+            continue
+        out[n["key"]] = {
+            "comments": int(d.get("comment_count") or 0),
+            "shares": int(d.get("note_share_total_count") or 0),
+            "anonymousLikes": int(d.get("anonymous_like_count") or 0),
+        }
+    return out
+
+
+def build_dashboard(me: dict, date: str, details: dict[str, dict] | None = None) -> str:
     """ダッシュボードが読む JSON を作る。
 
     埋め込みは `node scripts/encrypt.mjs --from data/dashboard.json` が行う。
@@ -654,9 +683,12 @@ def build_dashboard(me: dict, date: str) -> str:
     if not notes:
         return "自アカウントの記事を取得できなかったため dashboard.json を書かなかった"
 
+    details = details or {}
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     today = datetime.now(JST).strftime("%Y-%m-%d")
     likes_total = sum(n["like"] for n in notes)
+    comments_total = sum(details.get(n["key"], {}).get("comments", 0) for n in notes)
+    shares_total = sum(details.get(n["key"], {}).get("shares", 0) for n in notes)
 
     # ---- 履歴を積む。1日1行。同じ日は上書きする ----
     rows: dict[str, dict] = {}
@@ -673,6 +705,8 @@ def build_dashboard(me: dict, date: str) -> str:
         "followers": me.get("followerCount") or 0,
         "noteCount": me.get("noteCount") or len(notes),
         "totalLikes": likes_total,
+        "totalComments": comments_total,
+        "totalShares": shares_total,
     }
     with HISTORY_PATH.open("w", encoding="utf-8") as f:
         for k in sorted(rows):
@@ -691,6 +725,7 @@ def build_dashboard(me: dict, date: str) -> str:
         hype = any(re.search(p, title) for p in HYPE_PATTERNS)
         concrete = any(re.search(p, title) for p in CONCRETE_PATTERNS)
 
+        det = details.get(n["key"], {})
         articles.append({
             "key": n["key"],
             "slug": n["key"],
@@ -699,8 +734,9 @@ def build_dashboard(me: dict, date: str) -> str:
             "isPaid": n["price"] > 0,
             "price": n["price"],
             "likes": n["like"],
-            # note の公開 API はコメント数を返さない
-            "comments": 0,
+            # 記事詳細 API から取る。--write-dashboard のときだけ埋まる
+            "comments": det.get("comments", 0),
+            "shares": det.get("shares", 0),
             "titleType": "hype" if hype else ("concrete" if concrete else "plain"),
             # 公開時点のフォロワー数は遡って取れない
             "followersAtPublish": None,
@@ -756,10 +792,14 @@ def build_dashboard(me: dict, date: str) -> str:
         },
         "totals": {
             "likes": likes_total,
-            "comments": 0,
+            "comments": comments_total,
+            "shares": shares_total,
+            # ビュー数は note の公開 API に無い。取れないものを推定で埋めない
+            "views": None,
             "paidCount": sum(1 for n in notes if n["price"] > 0),
             "freeCount": sum(1 for n in notes if n["price"] == 0),
         },
+        "hasDetails": bool(details),
         "articles": articles,
         "followerHistory": [
             {"date": r["date"], "followers": r["followers"]} for r in history
@@ -956,7 +996,14 @@ def main() -> int:
         print(f"[market] {update_profile(me, date)}")
 
     if args.write_dashboard:
-        print(f"[market] {build_dashboard(me, date)}")
+        # コメント数とシェア数は記事詳細にしかない。記事数ぶん叩くので
+        # ここでリクエスト枠を足す（タグの計測とは別勘定にする）
+        details = {}
+        if me.get("notes"):
+            fetcher.max_requests = fetcher.count + len(me["notes"]) + 2
+            details = fetch_note_details(fetcher, me["notes"])
+            print(f"[market] 記事詳細 {len(details)} 本を取得しました")
+        print(f"[market] {build_dashboard(me, date, details)}")
 
     return 0
 
