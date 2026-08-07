@@ -283,8 +283,13 @@ themes.md の id: 2026-W33-01
      ↓
 4. reader-feedback（critic）は週1本だけ。日曜の有料note生成に併せて実行する
      ↓
-5. build-report → report.md
+5. thumbnail-prompt → 06-thumbnail.md（見出し画像のプロンプト）
+     ↓
+6. build-report → report.md
 ```
+
+**`thumbnail-prompt` は記事が確定してから実行する。** 本文が変われば被写体も変わる。
+`demo/after.html` があるときは、そこから配色を取って記事とサムネの色を揃える。
 
 ### なぜ毎回 critic と auditor を呼ばないのか
 

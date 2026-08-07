@@ -81,10 +81,16 @@ themes.md から status: pending かつ day が今日の曜日 のものを探�
 ### 4. 共通の仕上げ
 
 ```
-1. build-report → notes/{slug}/report.md
-2. themes.md の該当エントリを status: used に更新
-3. git add / commit / push
+1. thumbnail-prompt → notes/{slug}/06-thumbnail.md
+     → 見出し画像のプロンプト。人間が Gemini に貼る
+     → demo/after.html があれば、そこから配色を取って記事と揃える
+2. build-report → notes/{slug}/report.md
+3. themes.md の該当エントリを status: used に更新
+4. git add / commit / push
 ```
+
+**`thumbnail-prompt` は記事が確定してから実行してください。**
+本文が変われば被写体も変わります。
 
 **`03-draft.md` は `.gitignore` で除外されるため、push しても含まれません。** 正常です。
 

@@ -381,7 +381,8 @@ notes/{slug}/
   00-theme.md         themes.md から引いた1本と選定理由
   01-draft.md         本文
   02-final.md         修正・レイアウト済み
-  meta.json           タイトル / カテゴリ / ハッシュタグ / type / 公開予定日
+  meta.json           タイトル / カテゴリ / ハッシュタグ / type / 公開予定日 / demo / artifacts
+  06-thumbnail.md     見出し画像のプロンプト。プレビューからコピーして Gemini に貼る
   report.md           判断ログ
 
   # 有料noteのときだけ追加される

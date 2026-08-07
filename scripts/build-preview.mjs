@@ -236,6 +236,8 @@ function collectNotes() {
       // 有料部分は .gitignore 対象。クラウドで生成した記事には存在しない
       paidMissing: isPaid && !paid,
       posted: isPosted(meta),
+      // 見出し画像のプロンプト。人間が Gemini に貼る
+      thumbPrompt: readThumbnailPrompt(slug),
     });
   }
 
@@ -385,6 +387,19 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .demo-frame iframe{display:block;border:0;width:200%;height:200%;
   transform:scale(.5);transform-origin:0 0}
 .demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
 .lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
   border:1px dashed var(--warn);border-radius:10px;text-align:center}
 .lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
@@ -592,6 +607,20 @@ function gateHtml(g) {
 const demoPath = (slug) => (PUBLIC ? `../demo/${slug}/` : `/demo/${slug}/`);
 
 /**
+ * 06-thumbnail.md から見出し画像のプロンプト本文だけを取り出す。
+ *
+ * 人間は Gemini に貼るだけでよい状態にしたい。判断の記録（なぜその被写体か）は
+ * ファイルに残しつつ、画面にはコピーできる本文だけを出す。
+ */
+function readThumbnailPrompt(slug) {
+  const p = join(ROOT, 'notes', slug, '06-thumbnail.md');
+  if (!existsSync(p)) return null;
+  // 最初のフェンス付きコードブロックがプロンプト全文
+  const m = readFileSync(p, 'utf-8').match(/```[a-z]*\n([\s\S]*?)```/);
+  return m ? m[1].trim() : null;
+}
+
+/**
  * account.md の「note プロフィール」節から、差し替え用の文案を読む。
  *
  * note のプロフィールは API で書き換えられない。人間が設定画面に1回貼る。
@@ -773,6 +802,22 @@ ${m.demo ? `<details class="demo-embed" open>
     記事に載せているURL → <code>${esc(m.demo)}</code>
   </div>
 </details>` : ''}
+
+${it.thumbPrompt ? `<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, ${JSON.stringify(it.thumbPrompt)})">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">${esc(it.thumbPrompt)}</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>` : ''}
 
 ${isPaid ? `<div class="warnbox">
   <strong>有料noteの貼り方</strong><br>

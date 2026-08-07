@@ -72,6 +72,19 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .demo-frame iframe{display:block;border:0;width:200%;height:200%;
   transform:scale(.5);transform-origin:0 0}
 .demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
 .lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
   border:1px dashed var(--warn);border-radius:10px;text-align:center}
 .lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
@@ -84,7 +97,7 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 <div class="wrap">
 <header class="top">
   <h1>投稿キュー</h1>
-  <div class="muted">1 本 ／ 生成 2026/8/7 10:38:40</div>
+  <div class="muted">1 本 ／ 生成 2026/8/7 10:53:38</div>
   <div class="row">
     <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
   </div>

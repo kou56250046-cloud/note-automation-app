@@ -72,6 +72,19 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .demo-frame iframe{display:block;border:0;width:200%;height:200%;
   transform:scale(.5);transform-origin:0 0}
 .demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
 .lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
   border:1px dashed var(--warn);border-radius:10px;text-align:center}
 .lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
@@ -120,6 +133,61 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
     記事に載せているURL → <code>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-07-lp-firstview/</code>
   </div>
 </details>
+
+<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, "あなたは note の見出し画像を専門とするアートディレクターです。\n以下の条件で16:9の画像を1枚作ってください。\n\n## 被写体（最重要）\n暗い作業机の上に、2枚の薄いガラス板が少し間隔をあけて立てかけられている。\n・手前の板：琥珀色に発光する小さな立方体が整然と格子状に並んでいる。輪郭がはっきりしている\n・奥の板：紫と青の光がにじんでいて、形が曖昧。ピントが合っていない\n2枚の板は同じ大きさ・同じ角度で、手前が主役だと分かる配置。\n\n## 構図\n・2枚の板を画面の左寄りに配置する\n・右側の約4割を、平坦で暗い余白として空ける\n・視線が奥の板から手前の板へ自然に移動する角度\n・浅い被写界深度。奥の板と背景は軽くぼかす\n\n## 色\n・背景の基調: #12111b（わずかに紫を含む暗色）\n・アクセント: #ffb43d（琥珀）。この1色だけを使う\n・コントラストを強く。中間色を多用しない\n・紫はぼけた奥の板にだけ許可する\n\n## 質感とライティング\n・Apple の製品ページのようなプロダクト写真\n・斜め右上からの単一光源。影の方向をすべて揃える\n・ガラスの厚みと縁の反射を描写する\n・高精細、ノイズなし、4K品質\n\n## テキスト\n画像内に文字を一切入れないでください。\nnote ではタイトルが画像の上に重なるため、\n右側に文字を置ける平坦な余白を確保してください。\n\n## 避けるもの\n・グラデーションを全面に敷くこと\n・複数の光源で影の方向がばらつくこと\n・要素を3つ以上並べること\n・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク\n・ノートPCの前に座る人物\n・カラフルなUIパーツが空中に散乱している構図\n・板の中に実際の文字やUIラベルを描き込むこと")">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">あなたは note の見出し画像を専門とするアートディレクターです。
+以下の条件で16:9の画像を1枚作ってください。
+
+## 被写体（最重要）
+暗い作業机の上に、2枚の薄いガラス板が少し間隔をあけて立てかけられている。
+・手前の板：琥珀色に発光する小さな立方体が整然と格子状に並んでいる。輪郭がはっきりしている
+・奥の板：紫と青の光がにじんでいて、形が曖昧。ピントが合っていない
+2枚の板は同じ大きさ・同じ角度で、手前が主役だと分かる配置。
+
+## 構図
+・2枚の板を画面の左寄りに配置する
+・右側の約4割を、平坦で暗い余白として空ける
+・視線が奥の板から手前の板へ自然に移動する角度
+・浅い被写界深度。奥の板と背景は軽くぼかす
+
+## 色
+・背景の基調: #12111b（わずかに紫を含む暗色）
+・アクセント: #ffb43d（琥珀）。この1色だけを使う
+・コントラストを強く。中間色を多用しない
+・紫はぼけた奥の板にだけ許可する
+
+## 質感とライティング
+・Apple の製品ページのようなプロダクト写真
+・斜め右上からの単一光源。影の方向をすべて揃える
+・ガラスの厚みと縁の反射を描写する
+・高精細、ノイズなし、4K品質
+
+## テキスト
+画像内に文字を一切入れないでください。
+note ではタイトルが画像の上に重なるため、
+右側に文字を置ける平坦な余白を確保してください。
+
+## 避けるもの
+・グラデーションを全面に敷くこと
+・複数の光源で影の方向がばらつくこと
+・要素を3つ以上並べること
+・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク
+・ノートPCの前に座る人物
+・カラフルなUIパーツが空中に散乱している構図
+・板の中に実際の文字やUIラベルを描き込むこと</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>
 
 
 
