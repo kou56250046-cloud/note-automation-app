@@ -365,6 +365,26 @@ button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
 .toast.show{opacity:1}
 .warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
   border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
 .lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
   border:1px dashed var(--warn);border-radius:10px;text-align:center}
 .lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
@@ -562,6 +582,16 @@ function gateHtml(g) {
 }
 
 /**
+ * before/after のデモへのパス。
+ *
+ * ローカル（serve.mjs）は /demo/ をルート直下で配信し、
+ * 公開版（Pages）は /posts/ と /demo/ が並ぶ。基準が違うので切り替える。
+ * meta.demo の絶対URLは記事本文に載せる用で、ここでは使わない
+ * （デプロイ前でも手元で確認できるようにするため）。
+ */
+const demoPath = (slug) => (PUBLIC ? `../demo/${slug}/` : `/demo/${slug}/`);
+
+/**
  * account.md の「note プロフィール」節から、差し替え用の文案を読む。
  *
  * note のプロフィールは API で書き換えられない。人間が設定画面に1回貼る。
@@ -633,6 +663,7 @@ function buildIndex(items, gates) {
   ${gateHtml(gates[it.slug])}
   <div class="row">
     <a href="./${esc(it.slug)}.html"><button class="primary">開く</button></a>
+    ${m.demo ? `<a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener"><button>before / after を見る</button></a>` : ''}
     <button class="toggle" onclick="togglePosted('${esc(it.slug)}', this)">投稿済みにする</button>
   </div>
 </div>`;
@@ -710,6 +741,7 @@ ${paidHtml}`);
     <button onclick="copyText(this, ${JSON.stringify(m.title ?? '')})">タイトルをコピー</button>
     ${buttons}
     ${tags ? `<button onclick="copyText(this, ${JSON.stringify(tags)})">ハッシュタグをコピー</button>` : ''}
+    ${m.demo ? `<a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener"><button>before / after を開く</button></a>` : ''}
     ${PUBLIC ? '<button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>' : ''}
   </div>
 </div>
@@ -718,6 +750,29 @@ ${paidHtml}`);
   <h1>${esc(m.title ?? it.slug)}</h1>
   <div class="muted">${esc(m.category ?? '')} ／ ${esc(m.publishDate ?? '')} ／ ${esc(tags)}</div>
 </header>
+
+${m.demo ? `<details class="demo-embed" open>
+  <summary>読者が見る before / after</summary>
+  <div class="demo-pair">
+    <div class="demo-pane">
+      <span class="demo-tag">BEFORE</span>
+      <div class="demo-frame">
+        <iframe src="${esc(demoPath(it.slug))}before.html" title="before" loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="demo-pane">
+      <span class="demo-tag after">AFTER</span>
+      <div class="demo-frame">
+        <iframe src="${esc(demoPath(it.slug))}after.html" title="after" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+  <div class="muted">
+    タブで切り替えられる版は
+    <a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener">こちら</a>。
+    記事に載せているURL → <code>${esc(m.demo)}</code>
+  </div>
+</details>` : ''}
 
 ${isPaid ? `<div class="warnbox">
   <strong>有料noteの貼り方</strong><br>
