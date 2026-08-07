@@ -631,16 +631,17 @@ function readProfileDraft() {
   if (!existsSync(p)) return null;
 
   const text = readFileSync(p, 'utf-8');
-  // 推奨案は「1. **◯◯**」の形で書かれている
-  const name = text.match(/###\s*アカウント名[\s\S]*?\n1\.\s*\*\*(.+?)\*\*/)?.[1];
+  // 確定後は「**◯◯**」、検討中は「1. **◯◯**」のどちらの形もありうる
+  const name = text.match(/###\s*アカウント名[^\n]*\n+(?:1\.\s*)?\*\*(.+?)\*\*/)?.[1];
   const bioBlock = text.match(/###\s*プロフィール文[^\n]*\n+```\n([\s\S]*?)```/)?.[1];
   if (!name && !bioBlock) return null;
 
-  // account.md では読みやすさのために改行してある。
-  // note のプロフィール欄には1文として貼るので改行を畳む。
-  const bio = (bioBlock ?? '').split('\n').map((l) => l.trim()).filter(Boolean).join('');
+  // 改行はそのまま貼る。note のプロフィール欄は改行を保持するため、
+  // account.md に書いた形が実際の見え方になる
+  const bio = (bioBlock ?? '').replace(/\s+$/, '');
 
-  return { name: name ?? '', bio, chars: [...bio].length };
+  // 字数は改行を除いて数える（note の上限は文字数で効く）
+  return { name: name ?? '', bio, chars: [...bio.replace(/\n/g, '')].length };
 }
 
 function profileCardHtml() {
@@ -666,8 +667,8 @@ function profileCardHtml() {
 
   ${d.bio ? `
   <div style="margin-top:16px">
-    <div class="muted">プロフィール文（${d.chars} 字）</div>
-    <div style="margin:4px 0 6px;line-height:1.8">${esc(d.bio)}</div>
+    <div class="muted">プロフィール文（${d.chars} 字 / 改行は保持されます）</div>
+    <div style="margin:4px 0 6px;line-height:1.8;white-space:pre-wrap">${esc(d.bio)}</div>
     <button onclick="copyText(this,${JSON.stringify(d.bio).replace(/"/g, '&quot;')})">本文をコピー</button>
   </div>` : ''}
 
