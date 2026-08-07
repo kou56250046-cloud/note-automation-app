@@ -4,6 +4,23 @@
 
 このドキュメントは「なぜこの構造になっているか」を記す。手順や使い方は [README.md](./README.md) を参照。
 
+> ## ⚠ 2026-08-07 の改訂で変わった点
+>
+> **以下の記述はこのドキュメントでは更新していない。正典は [CLAUDE.md](./CLAUDE.md) である。**
+> 経緯は [knowledge/learnings.md](./knowledge/learnings.md) の「カテゴリ改訂の記録」にある。
+>
+> | 項目 | このドキュメントの記述 | 現行 |
+> |---|---|---|
+> | 主カテゴリ | Claude Code の運用と保守 | 生成AIで「人に見せられる成果物」を作る |
+> | 無料記事の文字数 | 1500〜2500字 | **2500〜4000字**（本文のみ。実物は別） |
+> | `reader-feedback` | 無料記事に毎回1周 | **週1本だけ**（日曜にサンプリング） |
+> | `ethics-line`（無料記事） | 毎回実行 | **`lint.py` の一次判定で検出時のみ** |
+> | 市場調査 | web 検索15件 | **`note_market.py` の実測**＋検索5件 |
+> | 実物 | 要求なし | **全記事に必須**（`lint.py` の `no-artifact`） |
+>
+> **判定を消したのではなく、LLM から決定論コードへ移した。**
+> 浅い記事はレビューでは直らず、テーマ選定の時点で決まっているという判断による。
+
 ---
 
 ## 1. 設計の前提
@@ -134,13 +151,13 @@ v2.0 の26本から14本を削減した。行き先は [仕様書 付録A](./not
 
 | # | スキル | 判断基準 | 起動 |
 |---|---|---|---|
-| E1 | `daily-article` | 1500〜2500字。**実績を要する主張は書かない** | 無料記事 |
+| E1 | `daily-article` | **2500〜4000字。実物（プロンプト全文／コード全文／before-after）を必ず1つ持たせる** | 無料記事 |
 | E2 | `product-concept` | 強み × 競合の穴 × 深層心理の交点を1文で。**`productType` を確定**。構成も決める | 有料note |
 | E3 | `sales-letter` | 理想の未来と再現性を交互に配置。恐怖は1つだけ | 有料note |
 | E4 | `draft-writing` | 有料部分。道具型では**動作条件と最初の1歩**を必ず書く | 有料note |
 | E5 | `letter-audit` | 16項目を○×判定。**上限2周** | 有料note |
-| E6 | `ethics-line` | 偽の限定・盛った恐怖・裏付けのない体験談。**無条件ゲート** | **全記事** |
-| E7 | `reader-feedback` | ペルソナになりきって離脱ポイントを検出 | 無料記事 |
+| E6 | `ethics-line` | 偽の限定・盛った恐怖・裏付けのない体験談 | **有料note必須／無料は `lint.py` の検出時のみ** |
+| E7 | `reader-feedback` | ペルソナになりきって離脱ポイントを検出 | 無料記事（**週1本だけ**） |
 | E8 | `title-design` | 5タイプ×8案を生成して採点 | 有料note |
 | E9 | `build-report` | 判断ログを1枚に | 全記事 |
 
@@ -226,15 +243,37 @@ v2.0 の `proofreading`（E7）と `note-layout`（E8）をここに吸収した
 
 | ゲート | 見るもの | 対象 | 上限 | 実行 |
 |---|---|---|---|---|
-| `lint.py` | 文体・記法 | 全記事 | — | Actions（**トークン0**） |
+| `lint.py` | 文体・記法・**実物の有無**・**実績主張** | 全記事 | — | Actions（**トークン0**） |
 | `dedup.py` | 重複 | 全記事 | 0.85でブロック | Actions（**トークン0**） |
-| `reader-feedback` | 離脱しないか | 無料記事 | 1周 | `critic` |
+| `note_market.py` | 需要と供給。テーマ選定の根拠 | 週次 | — | Actions（**トークン0**） |
+| `reader-feedback` | 離脱しないか | 無料記事 | **週1本だけ** | `critic` |
 | `letter-audit` | 売れるか（16項目） | 有料note | 2周 | `critic` |
-| **`ethics-line`** | やってはいけないことをしていないか | **全記事** | **上限なし** | `auditor` |
+| **`ethics-line`** | やってはいけないことをしていないか | **有料note必須／無料は検出時のみ** | **上限なし** | `auditor` |
+
+### 5.0 レビューを削り、テーマ選定に投資する（2026-08-07 改訂）
+
+**浅い記事はレビューでは直らない。テーマ選定の時点で決まっている。**
+
+初版はレビューに週10回の LLM 呼び出しを注ぎ、テーマ選定には web 検索15件しか
+使っていなかった。その結果、需要÷供給 0.064 の領域に突っ込んだ。
+
+配分を逆にした。**判定を消したのではなく、LLM から決定論コードへ移した。**
+
+| 判定 | 移す前 | 移した後 |
+|---|---|---|
+| E5（断定表現） | `auditor` が毎回読む | `voice.md` の `ng` を `lint.py` が部分一致で検出 |
+| E3（裏付けのない実績） | 同上 | `lint.py` の `unverified-claim` が拾い、**拾ったときだけ** `auditor` |
+| 実物の有無 | 判定なし | `lint.py` の `no-artifact`（**error**） |
+| 市場性 | web 検索の印象 | `note_market.py` の実測（需要÷供給） |
+
+**漏れるもの:** 数値を伴わない婉曲な実績主張は機械では拾えない。
+週1本の `reader-feedback` と月次レビューで検出する。漏れを承知でコストを取っている。
 
 ### 5.1 `ethics-line` だけ上限がない理由
 
 景品表示法・特定商取引法に関わるため。他は品質の問題だが、これは法的な問題である。妥協しない。
+
+**モデルは下げない。** 減らしたのは呼ぶ**回数**であって精度ではない。
 
 焦らせる演出そのものは白。**嘘の期限だけがアウト**という線引きで判定する。
 
@@ -328,9 +367,12 @@ flowchart TD
     A["月火水金土 06:00 daily-build（クラウド）<br/>木・日 ローカルで「お願いします」"] --> B["themes.md から今日の曜日のテーマを1本引く"]
     B --> C{"type"}
 
-    C -- "free" --> D["daily-article（writer / Sonnet 5 / medium）"]
-    D --> E["reader-feedback（critic）1周"]
-    E --> F["ethics-line（auditor / light）上限なし"]
+    C -- "free" --> D["daily-article（writer / Sonnet 5 / medium）<br/>2500〜4000字＋実物1つ以上"]
+    D --> D2["lint.py で一次判定（トークン0）"]
+    D2 --> D3{"needsAudit?"}
+    D3 -- "はい" --> F["ethics-line（auditor / light）上限なし"]
+    D3 -- "いいえ" --> F2["auditor を呼ばない"]
+    D2 -.->|"週1本だけ"| E["reader-feedback（critic）"]
 
     C -- "paid" --> G["product-concept → productType を確定"]
     G --> H["sales-letter（letter-writer）＋ draft-writing（writer）"]
@@ -341,6 +383,8 @@ flowchart TD
     K --> L["title-design（8案）"]
 
     F --> M["build-report → report.md"]
+    F2 --> M
+    E --> M
     L --> M
     M --> N["themes.md を status: used に更新"]
     N --> O["git commit & push（03-draft.md は追跡しない）"]
@@ -434,7 +478,9 @@ research/accounts/   ──┘                             │
 | **有料noteの生成** | **ローカルのみ** | **`03-draft.md` を追跡しないため、クラウドだと手元に残らない（§11.2）** |
 | `monthly-review` | Anthropic クラウド | 定期実行のみで完結 |
 | `lint.py` / `dedup.py` | GitHub Actions | **LLM を使わない。トークン0** |
+| **`note_market.py`（`market-research`）** | **GitHub Actions** | **公開 API を叩いて集計・クラスタリングするだけ。日曜21時 JST。トークン0** |
 | `fetch-metrics` | GitHub Actions | 公開 API を叩くだけ |
+| `build-demo.mjs` | GitHub Actions ／ ローカル | 暗号化を伴わないのでどちらでも動く |
 | **`build-preview.mjs --public`** | **ローカルのみ** | **暗号化に `03-draft.md` が要る。生成物をコミットして持ち込む** |
 | **`serve.mjs`（localhost:5173）** | **ローカルのみ** | **クリップボードAPIがセキュアコンテキストを要求するため** |
 | ダッシュボード表示 | GitHub Pages ＋ ローカル | `data/` は暗号化済みなので公開してよい |
@@ -634,21 +680,30 @@ note-factory/
 │
 ├── research/
 │   ├── accounts/{genre}.md
+│   ├── market/                   # ★ 需要と供給の実測
+│   │   ├── hashtags.txt          #   測るタグ。カテゴリを変えたらここも変える
+│   │   ├── {date}.md             #   要約表。weekly-research が読むのはこれだけ
+│   │   ├── {date}.json           #   数値の全量。ダッシュボード用
+│   │   └── raw/                  #   生キャッシュ（.gitignore 対象）
 │   ├── themes.md                 # ネタ在庫（週7本）
 │   └── trends/{date}.md
 │
 ├── notes/{slug}/                 # 記事単位の成果物
+│   └── demo/                     # ★ before.html / after.html（AI×Webデザインのみ）
+├── demo/{slug}/                  # ★ build-demo.mjs の出力。Pages で配信。追跡する
 ├── preview/                      # プレビューHTML（.gitignore 対象）
 ├── data/                         # metrics.json / history.jsonl / revenue.json
 ├── scripts/
 │   ├── build-preview.mjs         # Markdown → note互換HTML
-│   ├── serve.mjs                 # localhost:5173
+│   ├── build-demo.mjs            # ★ before/after の並置ビュー
+│   ├── serve.mjs                 # localhost:5173（/demo/ も配信）
 │   ├── fetch-public.mjs
 │   ├── encrypt.mjs
 │   ├── lint.py                   # 依存なし（標準ライブラリのみ）
-│   └── dedup.py                  # 依存なし（標準ライブラリのみ）
+│   ├── dedup.py                  # 依存なし（標準ライブラリのみ）
+│   └── note_market.py            # ★ 依存なし。dedup.py の TF-IDF を再利用する
 ├── secrets/                      # passphrase.txt（.gitignore 対象）
-└── .github/workflows/            # 5本
+└── .github/workflows/            # 6本（market-research を追加）
 ```
 
 ### 記事単位の成果物
@@ -810,8 +865,9 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 **残り6本の内訳:** 有料noteのフローに4本（`product-concept` / `draft-writing` / `title-design` / `pricing-strategy`）、
 経営層に2本（`profile-accumulator` / `revenue-maximizer`）。
 
-**無料記事の日次フローは完成している。** `daily-article` → `reader-feedback` → `ethics-line` → `build-report`
-の4本が揃ったため、`/note-daily` は仕様どおり動く。
+**無料記事の日次フローは完成している。** `daily-article` → `lint.py`（一次判定）→
+検出時のみ `ethics-line` → `build-report` が揃っているため、`/note-daily` は仕様どおり動く。
+`reader-feedback` は週1本のサンプリングに変わった（§5.0）。
 
 > コマンドと Routine には手順が書かれているため動作自体はするが、**判断基準（物差し）が
 > 定義されていない状態である。** これは CLAUDE.md ルール1に反するため、暫定的な状態と扱う。
@@ -822,12 +878,12 @@ Pro（$20 ≈ 3,000円/月）に対して安全率1.6倍。**ステップ4で `/
 |---|---|
 | サブエージェント | **5/5 完了**（researcher / writer / letter-writer / critic / auditor） |
 | スラッシュコマンド | **5/5 完了**（note-init / note-daily / note-preview / note-revise / note-letter） |
-| GitHub Actions | **5/5 完了**（うち `fetch-metrics` は依存スクリプト待ちで no-op） |
+| GitHub Actions | **6/6 完了**（`market-research` を追加。`fetch-metrics` は依存スクリプト待ちで no-op） |
 | Routines プロンプト | **3/3 完了**（`monthly-review` は暫定版） |
-| Python 判定器 | **2/2 完了**（実データで検証済み） |
-| プレビュー機能 | **2/2 完了**（実起動で検証済み） |
+| Python 判定器 | **3/3 完了**（`lint.py` / `dedup.py` / **`note_market.py`**。実データで検証済み） |
+| プレビュー機能 | **3/3 完了**（`build-preview.mjs` / `serve.mjs` / **`build-demo.mjs`**。実起動で検証済み） |
 | `scripts/fetch-public.mjs` | 未実装（ステップ7） |
-| `scripts/encrypt.mjs` | 未実装（ステップ7） |
+| `scripts/encrypt.mjs` | 実装済み |
 
 **ステップ3を4より先にする理由:** 品質ゲートが動く前に毎日生成を始めると、重複記事とトーンのぶれた記事が積み上がる。**初期30本がアカウントの初期評価をほぼ決める。** 順番を入れ替えてはいけない。
 

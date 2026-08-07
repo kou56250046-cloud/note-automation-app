@@ -4,6 +4,17 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 作成日: 2026-08-05 / 主軸変更: 毎日投稿モデルへの再設計、リサーチの週次集約、商品の型分岐、ブラウザ自動操作の廃止
 
+> ## ⚠ 2026-08-07 の改訂で変わった点
+>
+> **この仕様書は v3.0 時点のものである。正典は [CLAUDE.md](./CLAUDE.md)。**
+> 経緯は [knowledge/learnings.md](./knowledge/learnings.md) の「カテゴリ改訂の記録」にある。
+>
+> - 主カテゴリを「生成AIで人に見せられる成果物を作る」に改訂（実測で旧カテゴリの需要÷供給が 0.064 と判明）
+> - 無料記事を **2500〜4000字**に拡張し、**実物（プロンプト全文・コード全文・before/after）を必須化**
+> - `reader-feedback` を毎回 → **週1本**、無料記事の `ethics-line` を **`lint.py` の検出時のみ**に変更
+> - `scripts/note_market.py` と `market-research` Actions を追加（需要と供給を**トークン0**で実測）
+> - `scripts/build-demo.mjs` を追加（before/after を Pages でライブ配信）
+
 ---
 
 ## 0. v2.0 からの変更点
@@ -122,10 +133,14 @@ Routines は保存した設定を Anthropic のクラウド上で自動実行す
 | ワークフロー | トリガー | 中身 |
 |---|---|---|
 | `lint-and-dedup` | `notes/**` への push | `lint.py` + `dedup.py`。両方走らせてから判定し、詳細を Job Summary に出す |
+| **`market-research`** | **日曜 21:00 JST** | **`note_market.py`。note の公開データから需要と供給を実測し `research/market/` を更新する。翌朝の `weekly-research` はこの要約表を読む** |
 | `fetch-metrics` | 毎朝 06:30 | note 公開APIから数値取得 → 暗号化 → `data/` 更新 |
 | `stock-alert` | 毎朝 07:00 | `themes.md` の未使用が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
-| `deploy-pages` | `preview/public/**` `data/**` への push | ダッシュボードと投稿キューを Pages へ。**暗号化はせず配るだけ**（§7.3） |
+| `deploy-pages` | `preview/public/**` `data/**` `demo/**` への push | ダッシュボードと投稿キューと**デモ**を Pages へ。**暗号化はせず配るだけ**（§7.3） |
+
+**`market-research` はこの原則に抵触しない。** やるのは生成ではなく計測である。
+集計もクラスタリングも Python で完結し、LLM を呼ばない。
 
 public repo なので実行時間は無制限。
 
@@ -194,13 +209,13 @@ v2.0 の26本から14本を削減する。
 
 | # | スキル | 判断基準 | 出力 |
 |---|---|---|---|
-| E1 | `daily-article` | 在庫から1本引いて1500〜2500字。**実績を要する主張は書かない** | `01-draft.md` / `meta.json` |
+| E1 | `daily-article` | 在庫から1本引いて**2500〜4000字。実物（プロンプト全文／コード全文／before-after）を必ず1つ持たせる** | `01-draft.md` / `meta.json` |
 | E2 | `product-concept` | 強み × 競合の穴 × 深層心理 の交点を1文で。**`productType` を確定する**。構成もここで決める | `00-concept.md` |
 | E3 | **`sales-letter`** | 無料部分＝セールスレター。**理想の未来と再現性を交互に配置**し、最後は理想の未来で終える。恐怖は1つだけ | `02-letter.md` / `letter-meta.json` |
 | E4 | `draft-writing` | 有料部分。抽象論禁止。道具型では**動作条件と最初の1歩**を必ず書く | `03-draft.md` |
 | E5 | **`letter-audit`** | 16項目を○×判定。**×が残れば E3 に差し戻し（最大2周）** | `04-audit.md` / `audit.json` |
-| E6 | **`ethics-line`** | 偽の限定・盛った恐怖・裏付けのない体験談を検出。**無条件ゲート** | `ethics.json` |
-| E7 | `reader-feedback` | ペルソナになりきって読み、離脱ポイントを検出 | `05-feedback.md` |
+| E6 | **`ethics-line`** | 偽の限定・盛った恐怖・裏付けのない体験談を検出。**有料note必須／無料は `lint.py` の検出時のみ** | `ethics.json` |
+| E7 | `reader-feedback` | ペルソナになりきって読み、離脱ポイントを検出（**週1本だけ**） | `05-feedback.md` |
 | E8 | `title-design` | 5タイプ×8案を生成して採点 | `07-titles.md` |
 | E9 | `build-report` | 今回の生成で何を判断したかのログを1枚に | `report.md` |
 
@@ -378,10 +393,16 @@ v2.0 の26本から14本を削減する。
 │  themes.md から今日の曜日のテーマを1本引く                          │
 │    ↓                                                                │
 │  daily-article（writer / Sonnet 5 / medium）→ 01-draft.md, meta.json│
+│    2500〜4000字＋実物（プロンプト／コード／before-after）を1つ以上   │
 │    ↓                                                                │
-│  reader-feedback（critic）1周                                       │
+│  lint.py / dedup.py で一次判定（トークン0）                         │
+│    ├ no-artifact が error → 実物を足す                              │
+│    └ unverified-claim を検出 → needsAudit: true                     │
 │    ↓                                                                │
-│  ethics-line（auditor / light モード）上限なし。clear になるまで    │
+│  needsAudit のときだけ ethics-line（auditor / light）上限なし       │
+│    検出が無ければ auditor を呼ばない                                │
+│                                                                     │
+│  ※ reader-feedback（critic）は週1本だけ。日曜にサンプリングする    │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 
@@ -575,14 +596,22 @@ note-factory/
 │
 ├── research/
 │   ├── accounts/{genre}.md
+│   ├── market/                   # ★ 需要と供給の実測（note_market.py が生成）
+│   │   ├── hashtags.txt          #   測るタグ。カテゴリを変えたらここも変える
+│   │   ├── {date}.md             #   要約表。weekly-research が読むのはこれだけ
+│   │   ├── {date}.json           #   数値の全量
+│   │   └── raw/                  #   生キャッシュ（.gitignore 対象）
 │   ├── themes.md                 # ネタ在庫
 │   └── trends/{date}.md
 │
 ├── notes/{slug}/                 # §記事単位の成果物
+│   └── demo/                     # ★ before.html / after.html
+├── demo/{slug}/                  # ★ build-demo.mjs の出力。Pages で配信。追跡する
 ├── preview/                      # build-preview.mjs の出力（.gitignore 対象）
 ├── data/                         # metrics.json / history.jsonl / revenue.json
 ├── scripts/
 │   ├── build-preview.mjs
+│   ├── build-demo.mjs            # ★ before/after の並置ビュー
 │   ├── serve.mjs
 │   ├── fetch-public.mjs
 │   ├── encrypt.mjs
@@ -625,14 +654,28 @@ Sonnet 5 は新トークナイザで、同じ日本語が旧モデル比で**約
 
 **無料記事1本**
 
+> **2026-08-07 の改訂でこの表は変わった。** レビューを削り、テーマ選定に投資した。
+> 記事が長くなった（実物を必須化した）ぶん執筆は増えるが、レビュー側が大きく減る。
+
 | 工程 | 入力 | 出力 | モデル |
 |---|---:|---:|---|
-| 執筆 | 11k | 6.5k | Sonnet 5 (medium) |
-| reader-feedback | 6k | 1k | Sonnet 5 |
-| ethics-line（light） | 6k | 1k | Opus 5 |
+| 執筆 | 12k | 9k | Sonnet 5 (medium)。**実物ぶん増えた** |
+| 校正・記法・実物の有無・実績主張 | — | — | **lint.py（トークン0）** |
+| 重複判定 | — | — | **dedup.py（トークン0）** |
+| `reader-feedback` | 6k | 1k | Sonnet 5。**週1本だけ**（5本に按分すると 1.2k / 0.2k） |
+| `ethics-line`（light） | 6k | 1k | Opus 5。**`lint.py` が検出したときだけ** |
 | 修正1周 | 8k | 3k | Sonnet 5 |
-| 校正・レイアウト | — | — | **lint.py（トークン0）** |
-| **計** | **31k** | **11.5k** | **約21円** |
+| **計（検出なしの通常時）** | **約21k** | **約12k** | 執筆が主。Opus は呼ばれない |
+
+**週5本ぶんで見ると、Opus の呼び出しが週5回からほぼ0回になる。**
+一方 `note_market.py`（市場計測）は Python なので**トークン0**である。
+
+| 施策 | 変化 |
+|---|---|
+| `reader-feedback` 週5 → 週1 | critic 呼び出し −4/週 |
+| 無料記事の `ethics-line` を検出時のみに | Opus 週5 → ほぼ0 |
+| `weekly-research` の web 検索 15件 → 5件 | 週次の最大コスト源が 1/3 |
+| `note_market.py` を追加 | **±0**（Actions・LLM を使わない） |
 
 **有料note 1本（軽量版）**
 

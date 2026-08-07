@@ -19,6 +19,8 @@ on:
     paths:
       - 'data/**'
       - 'preview/public/**'
+      - 'demo/**'
+      - 'notes/**/demo/**'
       - 'note-factory-dashboard.html'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
@@ -41,6 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # デモの組み立てに使う。build-demo.mjs は依存なしで動く
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: 配信物を組み立てる
         run: |
           mkdir -p _site
@@ -58,6 +65,16 @@ jobs:
           if [ -d preview/public ]; then
             mkdir -p _site/posts
             cp -r preview/public/* _site/posts/ 2>/dev/null || true
+          fi
+
+          # before/after のライブデモ。
+          # 記事から読者がリンクを踏む先。暗号化しないので Actions で組み直してよい。
+          if [ -d notes ]; then
+            node scripts/build-demo.mjs || true
+          fi
+          if [ -d demo ]; then
+            mkdir -p _site/demo
+            cp -r demo/* _site/demo/ 2>/dev/null || true
           fi
 
           # 検索エンジンに拾わせない。
@@ -119,11 +136,21 @@ jobs:
           fi
 
           # 5. noindex が付いているか
-          if [ -d _site/posts ]; then
-            for f in _site/posts/*.html; do
-              [ -f "$f" ] || continue
-              grep -q 'name="robots"' "$f" || { echo "::error::$f に noindex がありません"; fail=1; }
-            done
+          #    デモは note の記事とは別物なので重複コンテンツにはならないが、
+          #    robots.txt が全体 Disallow なのに合わせて揃えておく。
+          #    ただし before.html / after.html は記事の作例そのもので、
+          #    こちらが書いた枠ではないため対象から外す。
+          for f in _site/posts/*.html _site/demo/index.html _site/demo/*/index.html; do
+            [ -f "$f" ] || continue
+            grep -q 'name="robots"' "$f" || { echo "::error::$f に noindex がありません"; fail=1; }
+          done
+
+          # 7. デモに有料部分が紛れていないか
+          #    before/after は無料記事の作例である。暗号文があるのは組み立てを誤ったとき
+          if [ -d _site/demo ] && grep -rl 'data-enc=' _site/demo/ >/dev/null 2>&1; then
+            echo "::error::demo に暗号化データが含まれています（組み立てを確認）"
+            grep -rl 'data-enc=' _site/demo/ || true
+            fail=1
           fi
 
           # 6. 平文とみられる数値データ

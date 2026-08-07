@@ -27,23 +27,47 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 | 層 | やること | 周期 |
 |---|---|---|
+| **市場計測** | **note の公開データから需要と供給を実測（トークン0）** | **日曜1回** |
 | 週次リサーチ | 1週間分のテーマ7本を仕込む | 月曜1回 |
 | 日次生成 | 在庫から1本引いて記事にする（**web検索なし**） | 毎日 |
-| 決定論ゲート | 文体・重複・note記法を機械判定（**トークン0**） | push のたび |
+| 決定論ゲート | 文体・重複・note記法・**実物の有無**を機械判定（**トークン0**） | push のたび |
 
 日次生成が web 検索をしないことが、毎日投稿を成立させている唯一の理由である。
+
+### 市場は印象ではなく実測で決める
+
+`scripts/note_market.py` が note のハッシュタグ単位で**需要**（人気上位のスキ中央値）と
+**供給**（新着の1日あたり投稿数）を測り、需要÷供給で空白地帯を出す。
+
+```
+Webデザイン       需要 374 / 供給 47.9件/日  →  比 7.80   空白
+NotebookLM        需要 277 / 供給 44.1件/日  →  比 6.28   空白
+ClaudeCode        需要  27 / 供給 390.3件/日 →  比 0.07   埋もれる
+生成AI            需要  77 / 供給 1782件/日  →  比 0.04   埋もれる
+```
+
+**「AI」を主語にすると埋もれ、「デザイン」「GAS」「NotebookLM」を主語にすると空く。**
+同じ内容でも、どちらの語で名乗るかで到達が2桁変わる。
+
+`weekly-research` が読むのは Python が作った20〜30行の要約表だけで、生の JSON は読まない。
+**分析の質を上げながら、トークンはむしろ減っている。**
 
 ### 人が見ないぶん、機械が自分を落とす
 
 | ゲート | 見るもの | 対象 | 上限 |
 |---|---|---|---|
-| `lint.py` | 文体・表記・note で崩れる記法 | 全記事 | — |
+| `lint.py` | 文体・表記・note の記法・**実物の有無**・**実績主張** | 全記事 | — |
 | `dedup.py` | 既出記事との重複 | 全記事 | 0.85超でブロック |
-| `reader-feedback` | 離脱しないか | 無料記事 | 1周 |
+| `note_market.py` | 需要と供給。テーマ選定の根拠 | 週次 | — |
+| `reader-feedback` | 離脱しないか | 無料記事 | **週1本だけ** |
 | `letter-audit` | 売れるか（16項目） | 有料note | 2周 |
-| **`ethics-line`** | 偽の限定・盛った恐怖がないか | **全記事** | **上限なし** |
+| **`ethics-line`** | 偽の限定・盛った恐怖がないか | **有料note必須／無料は検出時のみ** | **上限なし** |
 
 `ethics-line` だけ上限がないのは、景品表示法・特定商取引法に関わるため。他は品質の問題だが、これは法的な問題である。妥協しない。
+
+**レビューを削って、テーマ選定に投資している。** 浅い記事はレビューでは直らない。テーマを決めた時点で決まっている。無料記事の `ethics-line` は `lint.py` が一次判定し、疑いが出たときだけ `auditor`（Opus）を呼ぶ。判定を消したのではなく、LLM から決定論コードへ移した。
+
+**すべての記事は実物を1つ以上持つ。** プロンプト全文・コード全文・before/after のどれか。無い記事は `lint.py` の `no-artifact` が通さない。
 
 **上2つはトークンを消費しない。** 決定論で判定できるものを LLM に考えさせないのが、このシステムのコスト設計の中核である。
 
@@ -69,7 +93,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 「お願いします」と言うだけでも同じコマンドが起動します。
 
-`themes.md` の在庫から今日のテーマを1本引いて記事にする。無料記事なら1500〜2500字、有料noteならレター＋本文が生成され、ゲートを通過するまで自動で回る。
+`themes.md` の在庫から今日のテーマを1本引いて記事にする。無料記事なら2500〜4000字（実物込み）、有料noteならレター＋本文が生成され、ゲートを通過するまで自動で回る。
 
 ### 3. note に投稿する
 
@@ -139,11 +163,12 @@ Pro プランの実行上限は5回/日。**最大消費は「月初が月曜と
 
 | ワークフロー | タイミング | やること |
 |---|---|---|
-| `lint-and-dedup` | `notes/` への push | 文体・note記法・重複を判定 |
+| `lint-and-dedup` | `notes/` への push | 文体・note記法・**実物の有無**・重複を判定 |
+| **`market-research`** | **日曜 21:00** | **需要と供給を実測して `research/market/` を更新** |
 | `fetch-metrics` | 毎朝 06:30 | note の数値を取得して暗号化 |
 | `stock-alert` | 毎朝 07:00 | ネタ在庫が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
-| `deploy-pages` | `preview/public/` `data/` への push | ダッシュボードと投稿キューを Pages へ |
+| `deploy-pages` | `preview/public/` `data/` `demo/` への push | ダッシュボード・投稿キュー・**デモ**を Pages へ |
 
 **`deploy-pages` は暗号化しない。配るだけ。** `03-draft.md` は `.gitignore` 対象で Actions 上に存在しないため、暗号化はローカルの `build-preview.mjs --public` が行う。
 
@@ -185,14 +210,33 @@ note-factory/
 │
 ├── routines/              # Routines のプロンプト定義（3本）
 ├── knowledge/             # account.md / profile.md / voice.md / learnings.md
-├── research/              # themes.md（ネタ在庫）/ accounts/ / trends/
+├── research/              # themes.md（ネタ在庫）/ market/（需要と供給の実測）/ accounts/
 ├── notes/{slug}/          # 記事単位の成果物
+│   └── demo/              # before.html / after.html（AI×Webデザインの記事）
+├── demo/{slug}/           # ライブデモ。Pages で配信する（追跡する）
 ├── preview/               # プレビューHTML
 │   └── public/            # 公開用（有料部分は暗号化。これだけ追跡する）
 ├── data/                  # metrics.json / history.jsonl / revenue.json
-├── scripts/               # build-preview.mjs / serve.mjs / crypto-util.mjs / lint.py / dedup.py
-└── .github/workflows/     # 5本
+├── scripts/               # build-preview.mjs / build-demo.mjs / serve.mjs
+│                          # crypto-util.mjs / lint.py / dedup.py / note_market.py
+└── .github/workflows/     # 6本
 ```
+
+### before/after はライブデモにする
+
+**画像を手で貼らせない。** note はコピペ投稿なので、画像を挟むと人間の作業が増える。
+
+```
+notes/{slug}/demo/before.html   ← 変更前の画面
+notes/{slug}/demo/after.html    ← 変更後の画面
+      ↓ node scripts/build-demo.mjs
+demo/{slug}/index.html          ← 並置ビュー（タブで切り替えられる）
+      ↓ commit & push
+https://…/demo/{slug}/          ← 記事にこのURLを載せる
+```
+
+デモがある記事は、本文にコードブロックが無くても `lint.py` の `no-artifact` を通る。
+実物がデモ側にあるためである。
 
 記事1本の成果物:
 

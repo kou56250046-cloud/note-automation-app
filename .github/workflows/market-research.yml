@@ -1,0 +1,69 @@
+name: market-research
+
+# note の公開データから市場を機械的に解剖し、research/market/ に置く。
+#
+# **LLM を使わない。トークンを消費しない。**
+# 需要（人気上位のスキ中央値）と供給（新着の投稿速度）をタグ単位で測り、
+# 需要÷供給で空白地帯を出す。翌朝の weekly-research は出来上がった
+# 要約表（research/market/{date}.md）だけを読む。
+#
+# CLAUDE.md の「GitHub Actions で記事を生成しない」に抵触しない。
+# ここでやるのは生成ではなく計測である。
+#
+# 秘密情報を必要としない（公開 API のみ・ログイン不要）。
+
+on:
+  schedule:
+    - cron: '0 12 * * 0'   # UTC 12:00 = JST 21:00（日曜）
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '当日のキャッシュを無視して取り直す'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # pip install しない。note_market.py は標準ライブラリだけで動く。
+      - name: 市場を解剖する
+        run: |
+          python scripts/note_market.py \
+            --update-profile \
+            ${{ inputs.force && '--force' || '' }}
+
+      - name: 要約をジョブサマリに出す
+        if: always()
+        run: |
+          latest=$(ls -1 research/market/*.md 2>/dev/null | tail -1)
+          if [ -n "$latest" ]; then
+            cat "$latest" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "market データが生成されませんでした" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 変更があればコミットする
+        run: |
+          if [ -z "$(git status --porcelain research/market/ knowledge/profile.md)" ]; then
+            echo "変更なし" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/market/ knowledge/profile.md
+          git commit -m "市場データを更新 $(date -u -d '+9 hours' +%Y-%m-%d)"
+          git push

@@ -2,9 +2,25 @@
 #
 # status: pending  未使用
 #         used     記事化済み
-#         rejected 人間が却下（ダッシュボードの却下ボタン）
+#         rejected 却下（人間のボタン操作、またはカテゴリ改訂による範囲外）
 #
 # 日次生成はここから1本引くだけ。web 検索はしない。
+#
+# ============================================================
+# 2026-08-07 在庫を全て rejected にした
+# ------------------------------------------------------------
+# 主カテゴリを「Claude Code の運用と保守」から
+# 「生成AIで見せられる成果物を作る」に改訂したため、
+# W32 の在庫は全て範囲外になった。
+#
+# 実測（research/market/2026-08-06.md）で ClaudeCode タグの
+# 需要÷供給が 0.064（1日425件投稿・スキ中央値27）と判明し、
+# カテゴリごと破棄している。理由は knowledge/learnings.md の
+# 「カテゴリ改訂の記録」に残した。
+#
+# **pending が0本なので、記事を書く前に weekly-research が要る。**
+# 空の在庫を埋めるために、その場でテーマを作らないこと。
+# ============================================================
 
 - id: 2026-W32-01
   title: 「スキルが起動しない・呼ばれない」を3手順で切り分ける
@@ -65,7 +81,7 @@
     - https://qiita.com/Yasushi-Mo/items/0071f71ba102d2125c13
     - https://y-agent.github.io/inside-claude-code/04-context-compaction.html
     - https://pasqualepillitteri.it/en/news/1181/claude-code-token-10-github-repos-savings
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
 
 - id: 2026-W32-03
   title: 「依存関係を飛ばさない」設計——止まる場所を先に決めておく
@@ -94,7 +110,7 @@
     - https://qiita.com/nogataka/items/dc115e441ad1552e35ce
     - https://code.claude.com/docs/ja/best-practices
     - https://uravation.com/media/claude-code-best-practices-top10-2026/
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
 
 - id: 2026-W32-04
   title: 自動化パイプラインが止まったときの診断フローチャート＋ログ確認スクリプト集
@@ -131,7 +147,7 @@
     - https://zenn.dev/ux_xu/articles/4f57169b0dd820
     - https://fyve.co.jp/claude-code/articles/claude-code-subagent-limit
   productTypeHint: tool
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
 
 - id: 2026-W32-05
   title: 生成が途中で切れる原因を3つに切り分ける——出力上限・圧縮・権限詰まり
@@ -163,7 +179,7 @@
     - https://zenn.dev/okamyuji/articles/claude-code-token-limit-survival-guide
     - https://deepwiki.com/anthropics/claude-code/3.3-context-window-and-compaction
     - https://note.com/kawaidesign/n/n067cab520432
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
 
 - id: 2026-W32-06
   title: モデルとエフォートの配分——Sonnet/Opusをどこで切り替えるか
@@ -192,7 +208,7 @@
     - https://www.qes.co.jp/media/claudecode/a925
     - https://aiagent-navi.com/ai-agent/claude-code-billing-guide/
     - https://support.anthropic.com/ja/articles/11145838-max-プランでの-claude-code-の使用
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外
 
 - id: 2026-W32-07
   title: 壊れにくいスキル・エージェント定義の雛形とチェックリスト
@@ -228,4 +244,4 @@
     - https://code.claude.com/docs/ja/best-practices
     - https://qiita.com/nogataka/items/4787c956aeb547b1421c
   productTypeHint: tool
-  status: pending
+  status: rejected   # 2026-08-07 カテゴリ改訂により範囲外

@@ -37,10 +37,39 @@ DEFAULT_RULES = {
     "maxKanjiRatio": 0.40,
     "maxParagraphLines": 5,
     "minHeadingInterval": 300,
+    "minCharCount": 2500,
+    "maxCharCount": 4000,
+    "minCodeBlocks": 1,
 }
 
 KANJI = re.compile(r"[一-鿿㐀-䶿]")
 KANA = re.compile(r"[぀-ゟ゠-ヿ]")
+
+# GitHub Pages に置く before/after のデモ。
+# 実物がデモ側にあるなら、本文にコードブロックが無くてもよい。
+DEMO_URL = re.compile(r"https?://\S*/demo/\S*")
+
+# 数値を伴う実績の主張。profile.md に根拠がなければ書けない（CLAUDE.md ルール3）。
+#
+# **ここでの検出は warning である。** 記事を止めるためではなく、
+# auditor（Opus）を起動するかどうかの一次判定に使う。
+# 粗く拾って auditor に渡す。判断はあちらの仕事である。
+UNVERIFIED_PATTERNS: list[tuple[str, str]] = [
+    (r"[0-9０-９]+\s*(?:万)?円", "金額"),
+    (r"月\s*[0-9０-９]+\s*万", "月収"),
+    (r"(?:売上|収益|利益)[^。]{0,10}[0-9０-９]", "収益"),
+    (r"[0-9０-９]+\s*[%％][^。]{0,6}(?:削減|減|短縮|向上|増|アップ|改善)", "増減率"),
+    (r"[0-9０-９]+\s*割[^。]{0,4}(?:削減|減)", "増減率"),
+    (r"[0-9０-９]+\s*倍[^。]{0,8}(?:なりました|なった|増え|速く|短く|効率)", "倍率"),
+    (r"[0-9０-９]+\s*(?:人|名)(?:が|に|以上|も)", "人数"),
+    (r"多くの(?:人|方|読者|ユーザー|エンジニア)が", "人数"),
+    (r"[0-9０-９]+\s*(?:日|週間|ヶ月|か月|カ月)で[^。]{0,8}"
+     r"(?:達成|突破|到達|稼|完成|できました)", "期間実績"),
+    (r"フォロワー\s*(?:数)?[^。]{0,4}[0-9０-９]+", "フォロワー数"),
+    (r"[0-9０-９]+\s*(?:PV|ビュー|view)", "PV"),
+    # 「スキル」「スキャン」「スキーマ」は技術記事の頻出語なので外す
+    (r"スキ(?![ルャーマ])[^。]{0,6}[0-9０-９]+", "スキ数"),
+]
 
 
 def display_path(path: Path) -> str:
@@ -374,6 +403,91 @@ def check_style_consistency(body: list[tuple[int, str]]) -> list[Finding]:
     return []
 
 
+def count_fences(lines: list[str]) -> int:
+    """コードブロックの数を数える。
+
+    strip_code_blocks() はコードを落としてしまうので、元の行から数える。
+    開きと閉じで2本なので2で割る。
+    """
+    return sum(1 for l in lines if l.lstrip().startswith("```")) // 2
+
+
+def check_artifact(lines: list[str], rules: dict) -> list[Finding]:
+    """実物があるか。
+
+    **実物のない記事は浅い。** 手順の説明だけでは読者の手元に何も残らない。
+    プロンプト全文・コード全文・before/after のどれか1つは必ず持たせる。
+    持てないならテーマ選定のほうが間違っている。
+    """
+    need = int(rules.get("minCodeBlocks", 0))
+    if need <= 0:
+        return []
+
+    blocks = count_fences(lines)
+    if blocks >= need:
+        return []
+
+    # デモ側に実物があるなら本文にコードブロックが無くてもよい
+    if DEMO_URL.search("\n".join(lines)):
+        return []
+
+    return [Finding(
+        "error", "no-artifact", 1,
+        f"実物がない（コードブロック {blocks} / 必要 {need}、デモURLも無い）。"
+        f"プロンプト全文・コード全文・before/after のどれかを載せる",
+    )]
+
+
+def check_unverified_claim(body: list[tuple[int, str]]) -> list[Finding]:
+    """数値を伴う実績の主張を拾う。
+
+    **warning であって error ではない。** ここで記事を止めるのではなく、
+    auditor（Opus）を起動するかどうかの一次判定に使う。
+    無料記事で毎回 Opus を呼ぶのをやめ、疑いが出たときだけ呼ぶための仕組みである。
+    """
+    findings = []
+    for lineno, raw in body:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        for pat, kind in UNVERIFIED_PATTERNS:
+            m = re.search(pat, line)
+            if m:
+                findings.append(Finding(
+                    "warning", "unverified-claim", lineno,
+                    f"{kind}の主張。profile.md に根拠が無ければ書けない"
+                    f"（ethics-line を起動する）",
+                    m.group(0)[:40],
+                ))
+                break   # 1行につき1件でよい。同じ箇所を何度も報告しない
+    return findings
+
+
+def check_char_count(count: int, rules: dict) -> list[Finding]:
+    """本文の文字数。コードブロックは除いて数える（lint_file 側で除去済み）。
+
+    実物を載せる余地を確保するために下限を上げてあるが、
+    コード込みで水増しされては意味がないので、数えるのは本文だけである。
+    """
+    lo = int(rules.get("minCharCount", 0))
+    hi = int(rules.get("maxCharCount", 0))
+    out = []
+
+    if lo and count < lo:
+        # 下限の半分未満は、書きかけか構成の失敗。通さない
+        level = "error" if count < lo // 2 else "warning"
+        out.append(Finding(
+            level, "char-count", 1,
+            f"本文 {count} 字（下限 {lo}）。実物と手順を足す",
+        ))
+    if hi and count > hi:
+        out.append(Finding(
+            "warning", "char-count", 1,
+            f"本文 {count} 字（上限 {hi}）。読者が離脱する",
+        ))
+    return out
+
+
 def check_paragraph_length(body: list[tuple[int, str]], rules: dict) -> list[Finding]:
     """段落が長いとスマホで塊に見えて読み飛ばされる。"""
     findings = []
@@ -411,6 +525,9 @@ def lint_file(path: Path, voice: Voice) -> dict:
     lines = path.read_text(encoding="utf-8").splitlines()
     body = strip_code_blocks(lines)
 
+    text = "".join(raw for _, raw in body)
+    char_count = len(re.sub(r"\s", "", text))
+
     findings: list[Finding] = []
     findings += check_sentence_length(body, voice.rules)
     findings += check_kanji_ratio(body, voice.rules)
@@ -420,13 +537,19 @@ def lint_file(path: Path, voice: Voice) -> dict:
     findings += check_note_incompatible(lines)
     findings += check_style_consistency(body)
     findings += check_paragraph_length(body, voice.rules)
+    findings += check_artifact(lines, voice.rules)
+    findings += check_unverified_claim(body)
+    findings += check_char_count(char_count, voice.rules)
 
     findings.sort(key=lambda f: (f.line, f.rule))
 
-    text = "".join(raw for _, raw in body)
     return {
         "file": display_path(path),
-        "charCount": len(re.sub(r"\s", "", text)),
+        "charCount": char_count,
+        "codeBlocks": count_fences(lines),
+        # ethics-line（auditor）を起動すべきかの一次判定。
+        # 無料記事で毎回 Opus を呼ばないための信号である。
+        "needsAudit": any(f.rule == "unverified-claim" for f in findings),
         "errors": [f.to_dict() for f in findings if f.level == "error"],
         "warnings": [f.to_dict() for f in findings if f.level == "warning"],
     }
@@ -435,7 +558,11 @@ def lint_file(path: Path, voice: Voice) -> dict:
 def print_human(result: dict) -> None:
     errors, warnings = result["errors"], result["warnings"]
     mark = "✕" if errors else ("△" if warnings else "○")
-    print(f"\n{mark} {result['file']}  ({result['charCount']} 字)")
+    print(f"\n{mark} {result['file']}  "
+          f"({result['charCount']} 字 / コードブロック {result['codeBlocks']})")
+
+    if result["needsAudit"]:
+        print("   → ethics-line（auditor）を起動すること")
 
     if not errors and not warnings:
         print("   問題なし")

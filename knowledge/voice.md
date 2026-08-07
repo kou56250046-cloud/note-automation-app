@@ -31,6 +31,9 @@ hardSentenceLength: 100
 maxKanjiRatio: 0.40
 maxParagraphLines: 5
 minHeadingInterval: 300
+minCharCount: 2500
+maxCharCount: 4000
+minCodeBlocks: 1
 ```
 
 | キー | 意味 | 超えたら |
@@ -40,6 +43,19 @@ minHeadingInterval: 300
 | `maxKanjiRatio` | 本文中の漢字の比率 | 警告（読みにくい） |
 | `maxParagraphLines` | 一段落の行数 | 警告（改行を入れる） |
 | `minHeadingInterval` | 見出しの間隔（文字数） | 下回ったら警告（見出しが多すぎる） |
+| `minCharCount` | 記事の文字数の下限 | 下回ったら警告。半分未満は**エラー** |
+| `maxCharCount` | 記事の文字数の上限 | 警告 |
+| `minCodeBlocks` | 実物（コードブロック）の最低数 | 下回り、かつデモURLも無ければ**エラー** |
+
+### `minCodeBlocks` が要る理由
+
+**実物のない記事は浅い。** 手順の説明だけなら読者の手元に何も残らない。
+
+コピーしてそのまま動くプロンプト全文、動く単位のコード、before/after のデモ。
+このどれか1つは必ず持たせる。持てないならテーマ選定が間違っている。
+
+デモURL（GitHub Pages の `/demo/`）が本文にあれば、コードブロックが無くても通る。
+実物がデモ側にあるためである。
 
 ---
 

@@ -15,6 +15,12 @@ notes/**/03-draft.md
 preview/*
 !preview/public/
 
+# 市場データの生キャッシュ
+#   research/market/{date}.md と .json（要約）は追跡する。
+#   raw/ は1回あたり千件規模の JSONL で、毎週積むとリポジトリが膨らむ。
+#   同じ日に相手のサーバを二度叩かないためのローカルキャッシュでしかない。
+research/market/raw/
+
 # 秘密情報
 secrets/
 .env

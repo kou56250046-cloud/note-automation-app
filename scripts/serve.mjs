@@ -99,6 +99,19 @@ const server = createServer((req, res) => {
     return send(res, 404, 'not found');
   }
 
+  // before/after のライブデモ。
+  // 記事から読者がリンクを踏む先で、preview とは別系統である。
+  if (url === '/demo' || url.startsWith('/demo/')) {
+    const rest = url.slice('/demo'.length) || '/';
+    const p = resolveSafe(join(ROOT, 'demo'), rest === '/' ? '/index.html' : rest);
+    if (p) {
+      if (sendFile(res, p)) return;
+      // ディレクトリを指されたら index.html を返す
+      if (sendFile(res, join(p, 'index.html'))) return;
+    }
+    return send(res, 404, 'demo がありません（node scripts/build-demo.mjs）');
+  }
+
   // preview
   const path = url === '/' || url === ''
     ? join(PREVIEW, 'index.html')

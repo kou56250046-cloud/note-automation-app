@@ -561,6 +561,63 @@ function gateHtml(g) {
   return h + '</div>';
 }
 
+/**
+ * account.md の「note プロフィール」節から、差し替え用の文案を読む。
+ *
+ * note のプロフィールは API で書き換えられない。人間が設定画面に1回貼る。
+ * ブラウザ自動操作は使わない方針なので、コピーできる形で出すところまでが機械の仕事である。
+ */
+function readProfileDraft() {
+  const p = join(ROOT, 'knowledge', 'account.md');
+  if (!existsSync(p)) return null;
+
+  const text = readFileSync(p, 'utf-8');
+  // 推奨案は「1. **◯◯**」の形で書かれている
+  const name = text.match(/###\s*アカウント名[\s\S]*?\n1\.\s*\*\*(.+?)\*\*/)?.[1];
+  const bioBlock = text.match(/###\s*プロフィール文[^\n]*\n+```\n([\s\S]*?)```/)?.[1];
+  if (!name && !bioBlock) return null;
+
+  // account.md では読みやすさのために改行してある。
+  // note のプロフィール欄には1文として貼るので改行を畳む。
+  const bio = (bioBlock ?? '').split('\n').map((l) => l.trim()).filter(Boolean).join('');
+
+  return { name: name ?? '', bio, chars: [...bio].length };
+}
+
+function profileCardHtml() {
+  // 公開版には出さない。プロフィールの設定は PC でやる作業である
+  if (PUBLIC) return '';
+
+  const d = readProfileDraft();
+  if (!d) return '';
+
+  return `
+<div class="card" style="border-left:3px solid #2f6f4e">
+  <h2>note プロフィールを差し替える</h2>
+  <div class="muted">
+    設定画面に1回貼るだけです。<code>knowledge/account.md</code> の「note プロフィール」節が元になっています。
+  </div>
+
+  ${d.name ? `
+  <div style="margin-top:14px">
+    <div class="muted">アカウント名</div>
+    <div style="font-size:15px;font-weight:600;margin:4px 0 6px">${esc(d.name)}</div>
+    <button onclick="copyText(this,${JSON.stringify(d.name).replace(/"/g, '&quot;')})">名前をコピー</button>
+  </div>` : ''}
+
+  ${d.bio ? `
+  <div style="margin-top:16px">
+    <div class="muted">プロフィール文（${d.chars} 字）</div>
+    <div style="margin:4px 0 6px;line-height:1.8">${esc(d.bio)}</div>
+    <button onclick="copyText(this,${JSON.stringify(d.bio).replace(/"/g, '&quot;')})">本文をコピー</button>
+  </div>` : ''}
+
+  <div class="muted" style="margin-top:14px">
+    貼り先: note → 設定 → プロフィール。<strong>旧記事26本は削除しません</strong>（実測値の根拠が消えるため）。
+  </div>
+</div>`;
+}
+
 function buildIndex(items, gates) {
   const cards = items.map((it) => {
     const m = it.meta;
@@ -589,6 +646,7 @@ function buildIndex(items, gates) {
     <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
   </div>` : ''}
 </header>
+${profileCardHtml()}
 ${items.length ? cards : '<div class="card">記事がありません。<code>お願いします</code> で1本作ってください。</div>'}
 <div class="muted" style="margin-top:28px">
   コピーは <code>text/html</code> と <code>text/plain</code> を同時に書き込みます。

@@ -20,6 +20,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 | 層 | 役割 | 周期 | 実行 |
 |---|---|---|---|
+| **市場計測層** | 需要と供給を実測する | 日曜1回 | `note_market.py`（Actions・**LLM を使わない**） |
 | **週次リサーチ層** | 1週間分のテーマを仕込む | 月曜1回 | `weekly-research`（Routine） |
 | **日次生成層** | 在庫から1本引いて記事にする | 毎日 | `daily-build`（Routine）／有料はローカル |
 | **決定論ゲート層** | 文体・重複・note記法を機械判定する | push のたび | GitHub Actions（**LLM を使わない**） |
@@ -113,10 +114,25 @@ note のアルゴリズムはアカウント単位で「この人は何の人か
 執筆スキルは判定しない。判定は独立したコンテキストを持つサブエージェントが行う。
 `letter-writer` や `writer` に「良い出来かどうか」を聞かない。
 
-### 6. ゲートを人間の承認で代替しない
+### 6. ゲートを人間の承認で代替しない。代替してよいのは決定論コードだけである
 
 「これでよろしいですか」と聞いて先に進むのは、ゲートを通したことにならない。
-`ethics-line` は必ず実行する。有料noteでは `letter-audit` も必ず実行する。
+
+**有料noteでは `letter-audit` と `ethics-line` を必ず実行する。** 売る以上、
+景品表示法・特定商取引法のリスクが実在する。ここは削らない。
+
+**無料記事では `lint.py` が E3・E5 を一次判定し、検出があったときだけ `auditor` を起動する。**
+
+| 項目 | 一次判定 | 起動条件 |
+|---|---|---|
+| E5（断定表現） | `voice.md` の `ng` を部分一致で検出 | error なので必ず直す |
+| E3（裏付けのない実績） | `unverified-claim`（金額・割合・人数・期間・フォロワー数） | 検出時のみ `auditor` |
+
+これはゲートを緩めたのではなく、**判定を LLM から決定論コードへ移した**（ルール1）。
+人間の承認で代替してはならないという原則は変えていない。
+
+**漏れるもの:** 数値を伴わない婉曲な実績主張は機械では拾えない。
+週1本の `reader-feedback` と月次レビューで検出する。漏れを承知でコストを取っている。
 
 ---
 
@@ -124,18 +140,40 @@ note のアルゴリズムはアカウント単位で「この人は何の人か
 
 | ゲート | 見るもの | 対象 | 上限 | 実行 |
 |---|---|---|---|---|
-| `scripts/lint.py` | 文体・表記・note で崩れる記法 | 全記事 | — | Actions（**トークン0**） |
+| `scripts/lint.py` | 文体・表記・note で崩れる記法・**実物の有無**・**実績主張** | 全記事 | — | Actions（**トークン0**） |
 | `scripts/dedup.py` | 既出記事との重複 | 全記事 | 0.85超でブロック | Actions（**トークン0**） |
-| `reader-feedback` | 離脱しないか | 無料記事 | 1周 | `critic` |
+| `scripts/note_market.py` | 需要と供給。テーマ選定の根拠 | 週次 | — | Actions（**トークン0**） |
+| `reader-feedback` | 離脱しないか | 無料記事 | **週1本だけ** | `critic` |
 | `letter-audit` | 売れるか（16項目） | 有料note | 2周 | `critic` |
-| **`ethics-line`** | やってはいけないことをしていないか | **全記事** | **上限なし** | `auditor` |
+| **`ethics-line`** | やってはいけないことをしていないか | **有料note必須／無料は検出時のみ** | **上限なし** | `auditor` |
 
 **`ethics-line` だけ上限がない理由:** 景品表示法・特定商取引法に関わるため。
 他は品質の問題だが、これは法的な問題である。妥協しない。
 
-**無料記事でも `ethics-line` を通す。** ただし検出項目は E3（裏付けのない実績）と E5（断定表現）の2つに絞る。
-無料記事は売らないため E1（偽の限定）と E4（書きっぱなしの弱点）が構造的に発生しないからである。
-逆に、実績のないアカウントほど E3 と E5 は混入しやすい。ここは絶対に外さない。
+### レビューを削り、テーマ選定に投資する
+
+**浅い記事はレビューでは直らない。テーマ選定の時点で決まっている。**
+
+初版はレビュー（`reader-feedback` / `ethics-line`）に週10回の LLM 呼び出しを注ぎ、
+テーマを決める市場分析には web 検索15件しか使っていなかった。それで浅い記事が出た。
+
+配分を逆にする。
+
+| 施策 | 変化 |
+|---|---|
+| `reader-feedback` を週5本 → **週1本**（日曜にサンプリング） | critic 呼び出し −4/週 |
+| 無料記事の `ethics-line` を `lint.py` の一次判定に置換 | Opus 呼び出し 週5 → **ほぼ0** |
+| `weekly-research` の web 検索を 15件 → **5件** | 週次の最大コスト源が 1/3 |
+| `note_market.py` が需要と供給を実測（Python） | **トークン0** |
+
+**分析の質を上げながら、総消費は下がる。** 増やしたのは計算であって推論ではない。
+
+### 実物のない記事を通さない
+
+**すべての記事は実物を1つ以上持つ。** プロンプト全文・コード全文・before/after のどれか。
+
+`lint.py` の `no-artifact` が error で止める。実物が用意できないテーマは、
+そもそも `weekly-research` の `artifact` 軸（2以下は在庫に入れない）で落ちる。
 
 **`critic` と `auditor` を兼務させない理由:** 目的が違う。
 critic は「売れるか」を見る。auditor は「嘘がないか」を見る。
@@ -147,11 +185,15 @@ critic は「売れるか」を見る。auditor は「嘘がないか」を見�
 
 | 用途 | モデル | effort | 理由 |
 |---|---|---|---|
+| **市場計測** | **なし（Python）** | — | **`note_market.py`。推論ではなく計算である** |
 | 日次記事の執筆 | Sonnet 5 | `medium` | 量が多い。Opus 5 との品質差が出にくい |
-| 週次リサーチ | Sonnet 5 | `high` | web 検索が主体 |
+| 週次リサーチ | Sonnet 5 | `high` | 需要の数値は market データが担うので検索は5件 |
 | 有料noteの本文・レター | Sonnet 5 | `high` | 同上 |
 | `letter-audit`（`critic`） | **Opus 5** | `high` | 判定の精度が売上に直結する |
-| **`ethics-line`（`auditor`）** | **Opus 5** | `high` | **法的リスク。コスト最適化の対象にしない** |
+| **`ethics-line`（`auditor`）** | **Opus 5** | `high` | **法的リスク。呼ぶ回数は減らすが、呼ぶときは Opus** |
+
+**`ethics-line` のモデルは下げない。** 減らしたのは呼ぶ**回数**であって精度ではない。
+無料記事では `lint.py` が一次判定し、検出時だけ Opus を呼ぶ（ルール6）。
 
 Sonnet 5 は新トークナイザで、同じ日本語が旧モデル比で約30%多いトークンになる。
 `max_tokens` は思考＋本文の合計上限なので、記事が途中で切れたらここを疑う。
@@ -197,9 +239,21 @@ Sonnet 5 は新トークナイザで、同じ日本語が旧モデル比で約30
 記事生成 → notes/{slug}/02-final.md（無料）/ 03-draft.md（有料）
   ↓ build-preview.mjs           → preview/            （ローカル確認）
   ↓ build-preview.mjs --public  → preview/public/     （公開・暗号化）
+  ↓ build-demo.mjs              → demo/{slug}/        （before/after。暗号化しない）
   ↓ commit & push → deploy-pages
 人間が「本文をコピー」を押す → note に貼る → 公開
 ```
+
+### before/after はライブデモにする
+
+**画像を手で貼らせない。** note はコピペ投稿なので、画像を挟むと人間の作業が増える。
+
+`notes/{slug}/demo/before.html` と `after.html` を置くと、`build-demo.mjs` が
+`demo/{slug}/` に並置ビューを生成し、Pages で配信する。記事にはURLを載せる。
+
+**`build-preview.mjs` とは別系統である。** あちらは投稿済みを自動除外するが、
+デモは**投稿したあとにこそ読者が踏む**ため、除外ロジックを共有できない。
+暗号化も不要なので Actions でもローカルでも組み立てられる。
 
 クリップボードには `text/html` と `text/plain` を同時に書き込む。
 note のエディタは `text/html` を読むので、見出し・太字・リスト・引用・区切り線が保持される。
@@ -262,7 +316,11 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 | `preview/*`（直下） | ✕ | ローカル確認用。有料部分が平文で入る |
 | `secrets/` | ✕ | 合言葉 |
 | **`preview/public/`** | **○** | **有料部分は暗号化済み。Pages 配信に必要** |
+| **`demo/`** | **○** | **無料記事の作例。読者に見せるものなので隠す理由がない** |
+| `notes/**/demo/` | ○ | デモの元ファイル |
 | `notes/**/02-letter.md` | ○ | note 上でも無料公開する部分 |
+| `research/market/*.md` `*.json` | ○ | 需要と供給の実測。テーマ選定の根拠として残す |
+| `research/market/raw/` | ✕ | 生キャッシュ。毎週千件規模で積むと膨らむ |
 | `data/` | ○ | 暗号化済み |
 
 **この制約から2つが決まる。**
@@ -279,6 +337,16 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 Claude Code Action は Anthropic API キーによる従量課金であり、サブスク枠の外になる。
 **生成は Routines かローカルに置く。** Actions が担当するのは LLM を使わない処理だけである。
 
+| Actions | 何をするか | LLM |
+|---|---|---|
+| `lint-and-dedup` | 文体・記法・実物の有無・重複を判定する | 使わない |
+| **`market-research`** | **需要と供給を実測する（日曜21時 JST）** | **使わない** |
+| `deploy-pages` | ダッシュボード・投稿キュー・デモを配信する | 使わない |
+| `fetch-metrics` | 数値を取得して暗号化する | 使わない |
+| `stock-alert` | 在庫が3本未満なら Issue を立てる | 使わない |
+
+**`market-research` はこの原則に抵触しない。** やるのは生成ではなく計測である。
+
 ---
 
 ## ファイル配置
@@ -292,7 +360,12 @@ knowledge/
   learnings.md        却下理由・範囲外テーマの記録
 
 research/
-  accounts/{genre}.md 競合アカウントの解剖
+  accounts/{genre}.md 競合アカウントの解剖（有料note着手時に更新する）
+  market/
+    hashtags.txt      note_market.py が測るタグ。カテゴリを変えたらここも変える
+    {date}.md         **需要と供給の要約。weekly-research が読むのはこれだけ**
+    {date}.json       数値の全量。ダッシュボード用
+    raw/              生キャッシュ（.gitignore 対象）
   themes.md           ネタ在庫。週1で7本仕込み、毎日1本消化する
   trends/{date}.md
 
@@ -311,9 +384,12 @@ notes/{slug}/
   audit.json          letter-audit の判定結果
   ethics.json         ethics-line の検出結果
 
+notes/{slug}/demo/    before.html / after.html。★AI×Webデザインの記事だけ
+demo/{slug}/          build-demo.mjs の出力。**Pages で配信する。追跡する**
 preview/              build-preview.mjs の出力（.gitignore 対象）
 data/                 metrics.json / history.jsonl / revenue.json
-scripts/              build-preview.mjs / serve.mjs / fetch-public.mjs / encrypt.mjs / lint.py / dedup.py
+scripts/              build-preview.mjs / build-demo.mjs / serve.mjs / fetch-public.mjs
+                      encrypt.mjs / lint.py / dedup.py / note_market.py
 routines/             Routines のプロンプト定義（自己完結形式）
 ```
 
