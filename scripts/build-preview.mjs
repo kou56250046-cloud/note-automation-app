@@ -607,6 +607,15 @@ function gateHtml(g) {
 const demoPath = (slug) => (PUBLIC ? `../demo/${slug}/` : `/demo/${slug}/`);
 
 /**
+ * onclick 属性の中に埋め込める JS の文字列リテラルを作る。
+ *
+ * JSON.stringify の結果は `"..."` の形になる。属性値もダブルクォートで
+ * 囲まれているため、そのまま埋めると最初の " で属性が閉じてボタンが動かなくなる。
+ * &quot; に逃がすと、ブラウザが属性値を読む段階で " に戻り、JS として正しく解釈される。
+ */
+const jsStr = (v) => JSON.stringify(v ?? '').replace(/"/g, '&quot;');
+
+/**
  * 06-thumbnail.md から見出し画像のプロンプト本文だけを取り出す。
  *
  * 人間は Gemini に貼るだけでよい状態にしたい。判断の記録（なぜその被写体か）は
@@ -662,14 +671,14 @@ function profileCardHtml() {
   <div style="margin-top:14px">
     <div class="muted">アカウント名</div>
     <div style="font-size:15px;font-weight:600;margin:4px 0 6px">${esc(d.name)}</div>
-    <button onclick="copyText(this,${JSON.stringify(d.name).replace(/"/g, '&quot;')})">名前をコピー</button>
+    <button onclick="copyText(this,${jsStr(d.name)})">名前をコピー</button>
   </div>` : ''}
 
   ${d.bio ? `
   <div style="margin-top:16px">
     <div class="muted">プロフィール文（${d.chars} 字 / 改行は保持されます）</div>
     <div style="margin:4px 0 6px;line-height:1.8;white-space:pre-wrap">${esc(d.bio)}</div>
-    <button onclick="copyText(this,${JSON.stringify(d.bio).replace(/"/g, '&quot;')})">本文をコピー</button>
+    <button onclick="copyText(this,${jsStr(d.bio)})">本文をコピー</button>
   </div>` : ''}
 
   <div class="muted" style="margin-top:14px">
@@ -768,9 +777,9 @@ ${paidHtml}`);
 <div class="sticky">
   <a href="./index.html" class="muted">← 投稿キュー</a>
   <div class="row">
-    <button onclick="copyText(this, ${JSON.stringify(m.title ?? '')})">タイトルをコピー</button>
+    <button onclick="copyText(this, ${jsStr(m.title)})">タイトルをコピー</button>
     ${buttons}
-    ${tags ? `<button onclick="copyText(this, ${JSON.stringify(tags)})">ハッシュタグをコピー</button>` : ''}
+    ${tags ? `<button onclick="copyText(this, ${jsStr(tags)})">ハッシュタグをコピー</button>` : ''}
     ${m.demo ? `<a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener"><button>before / after を開く</button></a>` : ''}
     ${PUBLIC ? '<button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>' : ''}
   </div>
@@ -807,7 +816,7 @@ ${m.demo ? `<details class="demo-embed" open>
 ${it.thumbPrompt ? `<div class="thumb-box">
   <div class="thumb-head">見出し画像のプロンプト</div>
   <div class="row">
-    <button class="primary" onclick="copyText(this, ${JSON.stringify(it.thumbPrompt)})">プロンプトをコピー</button>
+    <button class="primary" onclick="copyText(this, ${jsStr(it.thumbPrompt)})">プロンプトをコピー</button>
     <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
   </div>
   <details>
