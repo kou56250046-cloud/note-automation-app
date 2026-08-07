@@ -14,6 +14,13 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 > - `reader-feedback` を毎回 → **週1本**、無料記事の `ethics-line` を **`lint.py` の検出時のみ**に変更
 > - `scripts/note_market.py` と `market-research` Actions を追加（需要と供給を**トークン0**で実測）
 > - `scripts/build-demo.mjs` を追加（before/after を Pages でライブ配信）
+> - `thumbnail-prompt` を追加。記事から見出し画像のプロンプトを組み立て、
+>   プレビューからコピーして Gemini に貼る（画像は生成しない）
+> - `/note-review` を追加。`revenue-maximizer` を手動で回せる
+> - ダッシュボードをデモデータから**実測値**に切り替えた。
+>   `note_market.py --write-dashboard` → `encrypt.mjs --from` で ENC に埋め込む。
+>   **`data/` は Pages に配信しない**（`history.jsonl` にフォロワー数が平文で入るため）
+> - スキルは 16/16、コマンドは 6/6 で完了
 
 ---
 

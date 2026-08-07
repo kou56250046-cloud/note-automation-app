@@ -15,6 +15,12 @@ notes/**/03-draft.md
 preview/*
 !preview/public/
 
+# ダッシュボードの平文データ
+#   encrypt.mjs が note-factory-dashboard.html の ENC に暗号化して埋め込む。
+#   埋め込んだ後は不要になる中間ファイルで、平文のまま置く理由がない。
+#   history.jsonl は蓄積データなので追跡する（Pages には配信しない）。
+data/dashboard.json
+
 # 市場データの生キャッシュ
 #   research/market/{date}.md と .json（要約）は追跡する。
 #   raw/ は1回あたり千件規模の JSONL で、毎週積むとリポジトリが膨らむ。

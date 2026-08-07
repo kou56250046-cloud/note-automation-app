@@ -633,6 +633,159 @@ def build_markdown(date: str, overall: dict, tags: list[dict], clusters: list[di
     return "\n".join(L) + "\n"
 
 
+DATA_DIR = REPO_ROOT / "data"
+HISTORY_PATH = DATA_DIR / "history.jsonl"
+DASHBOARD_PATH = DATA_DIR / "dashboard.json"
+NOTES_DIR = REPO_ROOT / "notes"
+
+
+def build_dashboard(me: dict, date: str) -> str:
+    """ダッシュボードが読む JSON を作る。
+
+    埋め込みは `node scripts/encrypt.mjs --from data/dashboard.json` が行う。
+    ここでは平文の JSON を置くだけである。
+
+    **取れないものは作らない。** note の公開 API にはコメント数も
+    過去のフォロワー履歴も無い。埋められない項目は 0 か空にして、
+    ダッシュボード側で「まだ無い」と分かる形にする。
+    履歴は今日から積む（data/history.jsonl）。
+    """
+    notes = me.get("notes", [])
+    if not notes:
+        return "自アカウントの記事を取得できなかったため dashboard.json を書かなかった"
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    likes_total = sum(n["like"] for n in notes)
+
+    # ---- 履歴を積む。1日1行。同じ日は上書きする ----
+    rows: dict[str, dict] = {}
+    if HISTORY_PATH.exists():
+        for line in HISTORY_PATH.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    r = json.loads(line)
+                    rows[r["date"]] = r
+                except (json.JSONDecodeError, KeyError):
+                    continue
+    rows[today] = {
+        "date": today,
+        "followers": me.get("followerCount") or 0,
+        "noteCount": me.get("noteCount") or len(notes),
+        "totalLikes": likes_total,
+    }
+    with HISTORY_PATH.open("w", encoding="utf-8") as f:
+        for k in sorted(rows):
+            f.write(json.dumps(rows[k], ensure_ascii=False) + "\n")
+
+    history = [rows[k] for k in sorted(rows)]
+
+    # ---- 記事ごとの指標 ----
+    now = datetime.now(JST)
+    followers = me.get("followerCount") or 0
+    articles = []
+    for n in notes:
+        pub = parse_dt(n["publishAt"])
+        days = max(0, (now - pub.astimezone(JST)).days) if pub else 0
+        title = n["title"]
+        hype = any(re.search(p, title) for p in HYPE_PATTERNS)
+        concrete = any(re.search(p, title) for p in CONCRETE_PATTERNS)
+
+        articles.append({
+            "key": n["key"],
+            "slug": n["key"],
+            "title": title,
+            "publishedAt": n["publishAt"][:10] if n["publishAt"] else "",
+            "isPaid": n["price"] > 0,
+            "price": n["price"],
+            "likes": n["like"],
+            # note の公開 API はコメント数を返さない
+            "comments": 0,
+            "titleType": "hype" if hype else ("concrete" if concrete else "plain"),
+            # 公開時点のフォロワー数は遡って取れない
+            "followersAtPublish": None,
+            "likeRate": round(n["like"] / followers, 4) if followers else 0,
+            "daysSincePublish": days,
+            "dailyLikes": round(n["like"] / days, 3) if days else 0,
+            # 日別の推移は今日から積む。1日1点ずつ増える
+            "curve": [[days, n["like"]]],
+            "systemization": {"snsPosted": False, "crossLinked": False},
+        })
+    articles.sort(key=lambda a: a["publishedAt"], reverse=True)
+
+    # ---- 制作中の記事（notes/ の状態から） ----
+    pipeline = []
+    if NOTES_DIR.exists():
+        for d in sorted(NOTES_DIR.iterdir()):
+            meta_p = d / "meta.json"
+            if not d.is_dir() or not meta_p.exists():
+                continue
+            try:
+                meta = json.loads(meta_p.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                continue
+            if (d / "02-final.md").exists() or (d / "02-letter.md").exists():
+                stage, idx = "完成", 3
+            elif (d / "01-draft.md").exists():
+                stage, idx = "初稿", 2
+            else:
+                stage, idx = "着手", 1
+            pipeline.append({
+                "slug": d.name,
+                "title": meta.get("title", d.name),
+                "stage": stage,
+                "stageIndex": idx,
+                "updatedAt": meta.get("publishDate", today),
+            })
+
+    revenue = {"months": []}
+    rev_p = DATA_DIR / "revenue.json"
+    if rev_p.exists():
+        try:
+            revenue = json.loads(rev_p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            pass
+
+    data = {
+        "updatedAt": datetime.now(JST).isoformat(timespec="seconds"),
+        "account": {
+            "urlname": me["urlname"],
+            "nickname": me.get("nickname", ""),
+            "followerCount": followers,
+            "noteCount": me.get("noteCount") or len(notes),
+        },
+        "totals": {
+            "likes": likes_total,
+            "comments": 0,
+            "paidCount": sum(1 for n in notes if n["price"] > 0),
+            "freeCount": sum(1 for n in notes if n["price"] == 0),
+        },
+        "articles": articles,
+        "followerHistory": [
+            {"date": r["date"], "followers": r["followers"]} for r in history
+        ],
+        "pipeline": pipeline,
+        "revenue": revenue,
+        "autolog": [{
+            "ts": datetime.now(JST).strftime("%Y-%m-%d %H:%M"),
+            "r": "note_market",
+            "st": "ok",
+            "ms": 0,
+            "msg": f"実測 {len(notes)} 本 / フォロワー {followers}",
+            "detail": f"history {len(history)} 日分",
+        }],
+        # 実データなので警告を出さない。デモに戻すときだけ true にする
+        "isDemo": False,
+    }
+
+    DASHBOARD_PATH.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return (f"data/dashboard.json を書いた（記事 {len(articles)} 本 / "
+            f"履歴 {len(history)} 日分）。"
+            "反映は node scripts/encrypt.mjs --from data/dashboard.json")
+
+
 AUTO_BEGIN = "<!-- AUTO:note-metrics -->"
 AUTO_END = "<!-- /AUTO:note-metrics -->"
 
@@ -711,6 +864,8 @@ def main() -> int:
                     help="基準線にする自分の urlname。'-' で無効化")
     ap.add_argument("--update-profile", action="store_true",
                     help="knowledge/profile.md の実績を実測値で更新する")
+    ap.add_argument("--write-dashboard", action="store_true",
+                    help="data/dashboard.json を書き、data/history.jsonl に実測を積む")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
@@ -799,6 +954,9 @@ def main() -> int:
 
     if args.update_profile:
         print(f"[market] {update_profile(me, date)}")
+
+    if args.write_dashboard:
+        print(f"[market] {build_dashboard(me, date)}")
 
     return 0
 

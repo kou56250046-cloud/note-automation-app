@@ -53,6 +53,19 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 | `/note-letter {slug}` | 有料noteのレター診断ループ | ローカル |
 | `/note-review` | ボトルネックを診断して次の1手を1つ決める | ローカル |
 
+### 記事1本を作ると出るもの
+
+```
+notes/{slug}/
+  02-final.md        本文（2500〜4000字＋実物）
+  06-thumbnail.md    見出し画像のプロンプト（Gemini に貼る）
+  demo/              before.html / after.html（デザイン系のみ）
+  report.md          判断ログ
+```
+
+**プレビューにはこれが全部そろって出る。** 本文のコピー、ハッシュタグのコピー、
+before/after の並置、見出し画像プロンプトのコピーが1画面で終わる。
+
 **ユーザーが「お願いします」と言ったら `/note-daily` を実行する。**
 
 ---
@@ -329,7 +342,8 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 | `notes/**/02-letter.md` | ○ | note 上でも無料公開する部分 |
 | `research/market/*.md` `*.json` | ○ | 需要と供給の実測。テーマ選定の根拠として残す |
 | `research/market/raw/` | ✕ | 生キャッシュ。毎週千件規模で積むと膨らむ |
-| `data/` | ○ | 暗号化済み |
+| `data/dashboard.json` | ✕ | **平文の中間ファイル。** 暗号化して ENC に埋めたら不要 |
+| `data/history.jsonl` | ○ | フォロワー数の蓄積。**Pages には配信しない** |
 
 **この制約から2つが決まる。**
 
@@ -337,6 +351,30 @@ public にする理由は、GitHub Pages と Actions の無料枠を使えるか
 2. **公開版プレビューの生成もローカルのみ。** `03-draft.md` が Actions 上に存在しないため、そこでは暗号化すらできない。ローカルで暗号化し、生成物をコミットして持ち込む。
 
 ダッシュボードと投稿キューは GitHub Pages で配信する。**スマホから投稿できる。**
+
+### ダッシュボードの更新
+
+**ダッシュボードは `data/` を読まない。** `note-factory-dashboard.html` の
+`const ENC = "..."` に暗号化データを埋め込む自己完結型である。
+
+```
+python scripts/note_market.py --write-dashboard   # data/dashboard.json を作る
+node scripts/encrypt.mjs --from data/dashboard.json  # ENC に埋め込む
+git commit && push                                # deploy-pages が配信する
+```
+
+| ファイル | 追跡 | 理由 |
+|---|:---:|---|
+| `data/dashboard.json` | ✕ | 平文の中間ファイル。埋め込んだら不要 |
+| `data/history.jsonl` | ○ | フォロワー数の蓄積。**失うと履歴が戻らない** |
+| `note-factory-dashboard.html` | ○ | ENC は暗号化済み |
+
+**`data/` を Pages に配信しない。** `history.jsonl` にフォロワー数が平文で入るため、
+配信する理由のないものを公開範囲に置かない。
+
+**取れないものは作らない。** note の公開 API にはコメント数も過去のフォロワー履歴も無い。
+`followerHistory` と記事ごとの `curve` は**今日から1点ずつ積む**。
+売上は手入力（ダッシュボードに入力欄がある）。
 
 ---
 

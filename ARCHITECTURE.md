@@ -17,6 +17,8 @@
 > | `ethics-line`（無料記事） | 毎回実行 | **`lint.py` の一次判定で検出時のみ** |
 > | 市場調査 | web 検索15件 | **`note_market.py` の実測**＋検索5件 |
 > | 実物 | 要求なし | **全記事に必須**（`lint.py` の `no-artifact`） |
+> | 見出し画像 | 手作業 | `thumbnail-prompt` がプロンプトを作る（`06-thumbnail.md`） |
+> | ダッシュボード | デモデータ | **実測値**（`note_market.py --write-dashboard`） |
 >
 > **判定を消したのではなく、LLM から決定論コードへ移した。**
 > 浅い記事はレビューでは直らず、テーマ選定の時点で決まっているという判断による。
@@ -701,7 +703,9 @@ note-factory/
 │   ├── encrypt.mjs
 │   ├── lint.py                   # 依存なし（標準ライブラリのみ）
 │   ├── dedup.py                  # 依存なし（標準ライブラリのみ）
-│   └── note_market.py            # ★ 依存なし。dedup.py の TF-IDF を再利用する
+│   ├── note_market.py            # ★ 依存なし。dedup.py の TF-IDF を再利用する
+│   │                             #   --write-dashboard で data/dashboard.json も作る
+│   └── encrypt.mjs               # dashboard.json を ENC に埋め込む
 ├── secrets/                      # passphrase.txt（.gitignore 対象）
 └── .github/workflows/            # 6本（market-research を追加）
 ```

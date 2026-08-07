@@ -55,11 +55,15 @@ jobs:
           # ダッシュボード
           cp note-factory-dashboard.html _site/index.html
 
-          # 暗号化済みの数値データ
-          if [ -d data ]; then
-            mkdir -p _site/data
-            cp -r data/* _site/data/ 2>/dev/null || true
-          fi
+          # data/ は配信しない。
+          #
+          # ダッシュボードは note-factory-dashboard.html の ENC に
+          # 暗号化データを埋め込む自己完結型で、data/ を fetch しない。
+          # 一方 data/history.jsonl にはフォロワー数が平文で入る。
+          # 配信する理由がないものを公開範囲に置かない。
+          #
+          # 将来ダッシュボードが fetch する設計に戻すなら、
+          # 暗号化済みのファイルだけを名指しでコピーすること。
 
           # 投稿キュー（ローカルで暗号化済み）
           if [ -d preview/public ]; then

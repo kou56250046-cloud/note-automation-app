@@ -142,6 +142,7 @@ ClaudeCode        需要  27 / 供給 390.3件/日 →  比 0.07   埋もれる
 | **`/note-preview`** | 投稿キューを作る。**PC とスマホの両方から使える**（週1回の運用作業） |
 | `/note-revise {slug} "指示"` | 差し戻して再生成 |
 | `/note-letter {slug}` | 有料noteのレター診断ループを回す |
+| `/note-review` | ボトルネックを診断して次の1手を1つ決める |
 
 ---
 
@@ -168,7 +169,7 @@ Pro プランの実行上限は5回/日。**最大消費は「月初が月曜と
 | `fetch-metrics` | 毎朝 06:30 | note の数値を取得して暗号化 |
 | `stock-alert` | 毎朝 07:00 | ネタ在庫が3本未満なら Issue |
 | `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
-| `deploy-pages` | `preview/public/` `data/` `demo/` への push | ダッシュボード・投稿キュー・**デモ**を Pages へ |
+| `deploy-pages` | `preview/public/` `demo/` への push | ダッシュボード・投稿キュー・**デモ**を Pages へ |
 
 **`deploy-pages` は暗号化しない。配るだけ。** `03-draft.md` は `.gitignore` 対象で Actions 上に存在しないため、暗号化はローカルの `build-preview.mjs --public` が行う。
 
@@ -204,7 +205,7 @@ note-factory/
 ├── note-factory-spec.md   # 仕様書 v3.0
 │
 ├── .claude/
-│   ├── skills/            # 15スキル（research / editorial / exec）
+│   ├── skills/            # 16スキル（research / editorial / exec）
 │   ├── agents/            # 5サブエージェント
 │   └── commands/          # スラッシュコマンド
 │
@@ -216,7 +217,7 @@ note-factory/
 ├── demo/{slug}/           # ライブデモ。Pages で配信する（追跡する）
 ├── preview/               # プレビューHTML
 │   └── public/            # 公開用（有料部分は暗号化。これだけ追跡する）
-├── data/                  # metrics.json / history.jsonl / revenue.json
+├── data/                  # history.jsonl（追跡）/ dashboard.json（平文・追跡しない）
 ├── scripts/               # build-preview.mjs / build-demo.mjs / serve.mjs
 │                          # crypto-util.mjs / lint.py / dedup.py / note_market.py
 └── .github/workflows/     # 6本
@@ -238,13 +239,34 @@ https://…/demo/{slug}/          ← 記事にこのURLを載せる
 デモがある記事は、本文にコードブロックが無くても `lint.py` の `no-artifact` を通る。
 実物がデモ側にあるためである。
 
+### 見出し画像のプロンプトも出る
+
+記事を書いたあと、`thumbnail-prompt` が `notes/{slug}/06-thumbnail.md` を作る。
+**画像は生成しない。** プレビューからコピーして Gemini に貼る。
+
+抽象語（高級感・洗練・シネマティック）だけのプロンプトは書かない。
+**被写体は記事から具体名詞を取り、色は `demo/after.html` の `:root` から取る。**
+記事のデモとサムネの色が揃う。
+
+### プレビュー画面で終わること
+
+```
+本文をコピー ／ タイトルをコピー ／ ハッシュタグをコピー
+before / after の並置表示
+見出し画像プロンプトをコピー
+```
+
+**1画面で投稿の準備が終わる。** あとは note に貼るだけ。
+
 記事1本の成果物:
 
 | ファイル | 中身 |
 |---|---|
 | `00-theme.md` | 引いたテーマと選定理由 |
 | `01-draft.md` → `02-final.md` | 本文 |
-| `meta.json` | タイトル / カテゴリ / ハッシュタグ / type / 公開予定日 |
+| `meta.json` | タイトル / カテゴリ / ハッシュタグ / type / 公開予定日 / demo / artifacts |
+| `06-thumbnail.md` | **見出し画像のプロンプト**（Gemini に貼る） |
+| `demo/before.html` `after.html` | before/after の作例（デザイン系のみ） |
 | `report.md` | **判断ログ** |
 | `ethics.json` | 線引きゲートの検出結果 |
 
@@ -290,6 +312,32 @@ PBKDF2 / SHA-256 / 310,000回
 **公開URLは推測できる。** リポジトリが public なので `github.io/note-automation-app/` は誰でも辿れる。「見つかりにくいから安全」は成り立たない。**有料部分の防御は合言葉だけである。**
 
 公開ページには `noindex` と `robots.txt` を付ける。note の記事より先にインデックスされると重複コンテンツ扱いになるためである。
+
+### ダッシュボードの更新
+
+**ダッシュボードは `data/` を読まない。** `note-factory-dashboard.html` の
+`const ENC = "..."` に暗号化データを埋め込む自己完結型である。
+
+```
+python scripts/note_market.py --write-dashboard      # data/dashboard.json を作る
+node scripts/encrypt.mjs --from data/dashboard.json  # ENC に埋め込む
+git commit && push                                   # deploy-pages が配信する
+```
+
+`note_market.py` が note の公開 API から実測し、`data/history.jsonl` に1日1行で積む。
+フォロワー推移と記事ごとのスキ推移は、**この履歴から組み立てる**。
+
+| ファイル | 追跡 | Pages 配信 | 理由 |
+|---|:---:|:---:|---|
+| `data/dashboard.json` | ✕ | ✕ | 平文の中間ファイル。埋め込んだら不要 |
+| `data/history.jsonl` | ○ | **✕** | フォロワー数が平文。**失うと履歴が戻らない** |
+| `note-factory-dashboard.html` | ○ | ○ | ENC は暗号化済み |
+
+**`data/` は Pages に配信しない。** 配信する理由のないものを公開範囲に置かない。
+
+**取れないものは作らない。** note の公開 API にはコメント数も過去のフォロワー履歴も無い。
+`followerHistory` と記事ごとの `curve` は**実行した日から1点ずつ積む**。
+売上は自動取得しない（Cookie とブラウザ操作が要る）。ダッシュボードの入力欄から月1回入れる。
 
 ---
 
