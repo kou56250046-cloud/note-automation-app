@@ -1,0 +1,622 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>NotebookLMの回答が毎回ブレる。カスタム指示で止める設定 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;NotebookLMの回答が毎回ブレる。カスタム指示で止める設定&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#NotebookLM #Gemini #プロンプト #生成AI&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>NotebookLMの回答が毎回ブレる。カスタム指示で止める設定</h1>
+  <div class="muted">生成AIで見せられる成果物を作る / NotebookLM・精度向上 ／ 2026-08-11 ／ #NotebookLM #Gemini #プロンプト #生成AI</div>
+</header>
+
+
+
+<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, &quot;あなたは note の見出し画像を専門とするアートディレクターです。\n以下の条件で16:9の画像を1枚作ってください。\n\n## 被写体（最重要）\n暗い机の上に、2つの紙の束が並んで置かれている。\n・左の束: 紙の向きも高さもバラバラに乱雑に積まれている。輪郭が崩れて見える\n・右の束: 角がきっちり揃い、まっすぐに積まれている。輪郭が整っている\nどちらの紙にも文字やUIラベルは描き込まない。束の形の対比だけで違いを見せる。\n\n## 構図\n・2つの束を画面下半分に左右に並べ、上半分をキーワードのための余白にする\n・視線が乱雑な左の束から整った右の束へ、そしてキーワードへ流れる配置\n・浅い被写界深度。背景は軽くぼかす\n\n## 色\n・背景の基調: #12111b（濃いダークネイビー系）\n・アクセント: #ffb43d（アンバー）。右の束の縁とキーワードの文字色に使う。1色だけ\n・コントラストを強く。中間色を多用しない\n\n## 質感とライティング\n・技術書の図版のような、平面的で情報が読み取りやすい図解\n・斜め上からの単一光源。影の方向を揃える\n・高精細、ノイズなし、4K品質\n\n## テキスト(必須・大きく主張する)\n画面上半分に「ブレを止める」というキーワードを大きく配置してください。\n\n・太い書体（Bold/Black相当）で、下の2つの束と同じかそれ以上の視覚的な強さで配置する\n・文字色は #ffb43d（アンバー）で統一し、#12111b の背景とのコントラストを最優先する\n・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない\n・デザイン性を最優先する。ただの文字の貼り付けではなく、下の対比構図と一体化した\n  タイポグラフィとして配置する\n\n## 避けるもの\n・グラデーションを全面に敷くこと\n・複数の光源で影の方向がばらつくこと\n・要素を3つ以上並べること\n・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク\n・紙束に実際の文字やUIラベルを描き込むこと\n・キーワードが背景に埋もれて読みにくくなること&quot;)">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">あなたは note の見出し画像を専門とするアートディレクターです。
+以下の条件で16:9の画像を1枚作ってください。
+
+## 被写体（最重要）
+暗い机の上に、2つの紙の束が並んで置かれている。
+・左の束: 紙の向きも高さもバラバラに乱雑に積まれている。輪郭が崩れて見える
+・右の束: 角がきっちり揃い、まっすぐに積まれている。輪郭が整っている
+どちらの紙にも文字やUIラベルは描き込まない。束の形の対比だけで違いを見せる。
+
+## 構図
+・2つの束を画面下半分に左右に並べ、上半分をキーワードのための余白にする
+・視線が乱雑な左の束から整った右の束へ、そしてキーワードへ流れる配置
+・浅い被写界深度。背景は軽くぼかす
+
+## 色
+・背景の基調: #12111b（濃いダークネイビー系）
+・アクセント: #ffb43d（アンバー）。右の束の縁とキーワードの文字色に使う。1色だけ
+・コントラストを強く。中間色を多用しない
+
+## 質感とライティング
+・技術書の図版のような、平面的で情報が読み取りやすい図解
+・斜め上からの単一光源。影の方向を揃える
+・高精細、ノイズなし、4K品質
+
+## テキスト(必須・大きく主張する)
+画面上半分に「ブレを止める」というキーワードを大きく配置してください。
+
+・太い書体（Bold/Black相当）で、下の2つの束と同じかそれ以上の視覚的な強さで配置する
+・文字色は #ffb43d（アンバー）で統一し、#12111b の背景とのコントラストを最優先する
+・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない
+・デザイン性を最優先する。ただの文字の貼り付けではなく、下の対比構図と一体化した
+  タイポグラフィとして配置する
+
+## 避けるもの
+・グラデーションを全面に敷くこと
+・複数の光源で影の方向がばらつくこと
+・要素を3つ以上並べること
+・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク
+・紙束に実際の文字やUIラベルを描き込むこと
+・キーワードが背景に埋もれて読みにくくなること</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 6 件</div><ul><li class="warn">L29 前の見出しから 148 文字（目安 300）。見出しが多すぎる</li><li class="warn">L35 前の見出しから 125 文字（目安 300）。見出しが多すぎる</li><li class="warn">L41 前の見出しから 108 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;NotebookLMに同じ質問を2回投げると、違う答えが返ってくることがあります。&lt;/p&gt;
+&lt;p&gt;これは調子が悪いのではありません。役割も出力形式も口調も、何ひとつ固定していないことが原因です。NotebookLMには「カスタム指示」という設定があり、これを1つ書いておくだけで出力のブレはほぼ止まります。&lt;/p&gt;
+&lt;p&gt;この記事では、私が実際にノートブックのカスタマイズ欄に貼っている指示文を全文で載せます。指示なしと指示ありで、同じ質問に対する回答がどう変わるかも並べます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;同じ質問なのに、毎回違う答えが返ってくる&lt;/h2&gt;
+&lt;p&gt;NotebookLMにソースを読み込ませて、同じ質問を日を分けて投げたことがある方には、見覚えのある症状です。&lt;/p&gt;
+&lt;p&gt;例えば「このプロジェクトの次のマイルストーンは？」と聞いたとします。&lt;/p&gt;
+&lt;p&gt;1回目は、背景の経緯から説明が始まり、箇条書きが6項目並ぶ長い回答が返ってきます。2回目は、結論だけを3行で返してきます。3回目は、ソースに書かれていない一般論まで混ざってくることがあります。&lt;/p&gt;
+&lt;p&gt;質問の文言は同じでも、回答の長さ・構成・断定の強さが毎回違います。これは会議の議事録を要約させるときも、リサーチノートの内容を聞くときも同じように起きます。&lt;/p&gt;
+&lt;p&gt;原因は単純です。&lt;strong&gt;役割・出力形式・参照範囲・口調&lt;/strong&gt;のどれも指定していないからです。指定がなければ、NotebookLMはそのつど「それらしい形」を自分で選びます。選び方が毎回同じである保証はありません。&lt;/p&gt;
+&lt;p&gt;トーンにも同じことが起きます。同じ資料を要約させても、ある日は丁寧な解説口調で返り、別の日はそっけない箇条書きだけで返ってきます。質問文を工夫しても、この振れ幅は消えません。&lt;/p&gt;
+&lt;h2&gt;カスタム指示は「止血策」である&lt;/h2&gt;
+&lt;p&gt;NotebookLMの設定には、ノートブックごとにカスタム指示を書ける欄があります。ここに役割とルールを書いておくと、以降の回答はその型に沿って返ってくるようになります。&lt;/p&gt;
+&lt;p&gt;万能の精度向上策ではありません。あくまで「毎回ブレる」という症状を止める処置です。何を書けば効くのか、要素ごとに見ていきます。&lt;/p&gt;
+&lt;h3&gt;役割を固定する&lt;/h3&gt;
+&lt;p&gt;まず「あなたは何者か」を1行で決めます。「アシスタントです」のような曖昧な役割ではなく、このノートブックで何をする担当なのかを書きます。&lt;/p&gt;
+&lt;p&gt;役割が決まると、答え方の基準がそろいます。雑談的な補足を混ぜるか、事実だけを返すかが、質問ごとにぶれなくなります。&lt;/p&gt;
+&lt;h3&gt;出力形式を固定する&lt;/h3&gt;
+&lt;p&gt;回答の構成をテンプレート化します。「結論→根拠→補足」のように、毎回同じ順番・同じ項目数で返させます。&lt;/p&gt;
+&lt;p&gt;ここを指定しないと、簡潔な回答と長文の回答が交互に出てきます。読む側は毎回フォーマットを読み直す手間が発生します。&lt;/p&gt;
+&lt;h3&gt;参照範囲を指定する&lt;/h3&gt;
+&lt;p&gt;NotebookLMはソースに基づいて回答する設計ですが、指示がないと一般知識で補ってしまうことがあります。「ソースに記載がない場合は、その旨を明示する」と書いておくと、推測での補完を防げます。&lt;/p&gt;
+&lt;p&gt;これは精度の話であると同時に、回答のブレを減らす話でもあります。ソース外の知識で補うかどうかが毎回変わると、それだけで回答の長さと内容が揺れます。&lt;/p&gt;
+&lt;h3&gt;口調を固定する&lt;/h3&gt;
+&lt;p&gt;ですます調で統一するか、断定的に書くか、疑問形を残すか。ここも書いておかないと質問ごとに変わります。細かい点に見えますが、複数人でノートブックを共有する場合は特に効いてきます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;カスタム指示の全文&lt;/h2&gt;
+&lt;p&gt;私が実際に使っている指示文です。NotebookLMの「ノートブックをカスタマイズ」からペルソナ欄に貼れば、そのまま使えます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;あなたはこのノートブックの内容だけを根拠に回答するリサーチアシスタントです。
+
+# 役割
+- ソースに書かれていない内容は「ソースに記載がありません」と明示し、推測で補わない
+- 専門用語が初めて出てきたときだけ、簡単に補足する
+
+# 出力形式
+- 回答は常に次の3段構成にする
+  1. 結論(2文以内)
+  2. 根拠(ソースの該当箇所を要約した箇条書き。3〜5項目)
+  3. 補足(必要な場合のみ)
+- 表は使わず、箇条書きで示す
+- 前置きの挨拶や締めの言葉は書かない
+
+# 口調
+- ですます調で統一する
+- 断定できることは断定し、断定できないことは「ソースからは判断できません」と書く
+
+# 参照範囲
+- このノートブックに追加されたソースの内容だけを根拠にする
+- 一般知識で補う必要がある場合は、補った旨を先に明記してから答える&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;役割・出力形式・口調・参照範囲の4要素を、それぞれ短い箇条書きで指定しているだけです。長い説明文にはしていません。&lt;/p&gt;
+&lt;h2&gt;指示なしと指示ありで、回答はこう変わる&lt;/h2&gt;
+&lt;p&gt;実際にNotebookLMを操作した記録ではなく、指示の有無で典型的に起きる違いを再現した例です。&lt;/p&gt;
+&lt;p&gt;質問は「このプロジェクトの次のマイルストーンは？」で統一します。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;指示なしの場合&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;1回目の回答は、プロジェクトの背景から説明が始まります。過去の経緯を2段落で書いたあと、次のマイルストーンを箇条書きで6項目挙げてきます。&lt;/p&gt;
+&lt;p&gt;2回目に同じ質問をすると、経緯の説明は省かれ、「次のマイルストーンはBです」とだけ、1文で返ってきます。&lt;/p&gt;
+&lt;p&gt;3回目は、ソースに記載のない一般的なプロジェクト管理の助言が混ざり込みます。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;指示ありの場合&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;毎回、次の形で返ってきます。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;結論: 次のマイルストーンはBです&lt;/li&gt;
+&lt;li&gt;根拠: ソースのどの箇所にBと書かれているかを2〜3項目で要約&lt;/li&gt;
+&lt;li&gt;補足: ソースに記載がない場合は「補足はありません」&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;質問を変えても、この3段構成そのものは崩れません。回答の中身は変わっても、読む側が期待する形は固定されます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;つまずきやすいところ&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;指示を長く書きすぎる&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;役割・形式・口調のほかに、例外条件や細かい言い回しの指定まで足していくと、指示自体が長文化します。長くなるほどNotebookLMが指示のどこを優先するか揺れやすくなり、かえってブレが戻ってきます。要素ごとに1〜3行で収めるのが安全です。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;参照範囲を書き忘れる&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;役割と出力形式だけ書いて、参照範囲を指定し忘れるケースをよく見ます。この場合、形式は毎回そろっても、中身に一般知識が混ざるかどうかは揺れたままになります。4要素はセットで書くことをおすすめします。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;別のノートブックには引き継がれない&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;カスタム指示はノートブックごとの設定です。新しいノートブックを作ると、指示欄は空の状態に戻ります。複数のプロジェクトで同じ形式を使うなら、指示文をテキストファイルに保存しておいてください。ノートブックを作るたびに貼り直す運用にすると、毎回書き直す手間を省けます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;NotebookLMを開き、右上の「ノートブックをカスタマイズ」からペルソナの欄を開いてください。&lt;/p&gt;
+&lt;p&gt;上のカスタム指示をそのまま貼り、使っているノートブックで同じ質問を2〜3回投げ直してみてください。回答の構成がそろっているかどうかで、効いているか確認できます。&lt;/p&gt;
+&lt;p&gt;自分の用途に合わせて変えるなら、まず「出力形式」の3段構成だけを書き換えてみてください。変更の影響が把握しやすくなります。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;NotebookLMのブレは、モデルの気まぐれではなく、指示の空白を毎回埋め直している状態です。空白を先に埋めておけば、回答は同じ型で返ってくるようになります。&lt;/p&gt;" data-text="NotebookLMに同じ質問を2回投げると、違う答えが返ってくることがあります。
+
+これは調子が悪いのではありません。役割も出力形式も口調も、何ひとつ固定していないことが原因です。NotebookLMには「カスタム指示」という設定があり、これを1つ書いておくだけで出力のブレはほぼ止まります。
+
+この記事では、私が実際にノートブックのカスタマイズ欄に貼っている指示文を全文で載せます。指示なしと指示ありで、同じ質問に対する回答がどう変わるかも並べます。
+
+---
+
+同じ質問なのに、毎回違う答えが返ってくる
+
+NotebookLMにソースを読み込ませて、同じ質問を日を分けて投げたことがある方には、見覚えのある症状です。
+
+例えば「このプロジェクトの次のマイルストーンは？」と聞いたとします。
+
+1回目は、背景の経緯から説明が始まり、箇条書きが6項目並ぶ長い回答が返ってきます。2回目は、結論だけを3行で返してきます。3回目は、ソースに書かれていない一般論まで混ざってくることがあります。
+
+質問の文言は同じでも、回答の長さ・構成・断定の強さが毎回違います。これは会議の議事録を要約させるときも、リサーチノートの内容を聞くときも同じように起きます。
+
+原因は単純です。役割・出力形式・参照範囲・口調のどれも指定していないからです。指定がなければ、NotebookLMはそのつど「それらしい形」を自分で選びます。選び方が毎回同じである保証はありません。
+
+トーンにも同じことが起きます。同じ資料を要約させても、ある日は丁寧な解説口調で返り、別の日はそっけない箇条書きだけで返ってきます。質問文を工夫しても、この振れ幅は消えません。
+
+カスタム指示は「止血策」である
+
+NotebookLMの設定には、ノートブックごとにカスタム指示を書ける欄があります。ここに役割とルールを書いておくと、以降の回答はその型に沿って返ってくるようになります。
+
+万能の精度向上策ではありません。あくまで「毎回ブレる」という症状を止める処置です。何を書けば効くのか、要素ごとに見ていきます。
+
+役割を固定する
+
+まず「あなたは何者か」を1行で決めます。「アシスタントです」のような曖昧な役割ではなく、このノートブックで何をする担当なのかを書きます。
+
+役割が決まると、答え方の基準がそろいます。雑談的な補足を混ぜるか、事実だけを返すかが、質問ごとにぶれなくなります。
+
+出力形式を固定する
+
+回答の構成をテンプレート化します。「結論→根拠→補足」のように、毎回同じ順番・同じ項目数で返させます。
+
+ここを指定しないと、簡潔な回答と長文の回答が交互に出てきます。読む側は毎回フォーマットを読み直す手間が発生します。
+
+参照範囲を指定する
+
+NotebookLMはソースに基づいて回答する設計ですが、指示がないと一般知識で補ってしまうことがあります。「ソースに記載がない場合は、その旨を明示する」と書いておくと、推測での補完を防げます。
+
+これは精度の話であると同時に、回答のブレを減らす話でもあります。ソース外の知識で補うかどうかが毎回変わると、それだけで回答の長さと内容が揺れます。
+
+口調を固定する
+
+ですます調で統一するか、断定的に書くか、疑問形を残すか。ここも書いておかないと質問ごとに変わります。細かい点に見えますが、複数人でノートブックを共有する場合は特に効いてきます。
+
+---
+
+カスタム指示の全文
+
+私が実際に使っている指示文です。NotebookLMの「ノートブックをカスタマイズ」からペルソナ欄に貼れば、そのまま使えます。
+
+あなたはこのノートブックの内容だけを根拠に回答するリサーチアシスタントです。
+
+役割
+- ソースに書かれていない内容は「ソースに記載がありません」と明示し、推測で補わない
+- 専門用語が初めて出てきたときだけ、簡単に補足する
+
+出力形式
+- 回答は常に次の3段構成にする
+  1. 結論(2文以内)
+  2. 根拠(ソースの該当箇所を要約した箇条書き。3〜5項目)
+  3. 補足(必要な場合のみ)
+- 表は使わず、箇条書きで示す
+- 前置きの挨拶や締めの言葉は書かない
+
+口調
+- ですます調で統一する
+- 断定できることは断定し、断定できないことは「ソースからは判断できません」と書く
+
+参照範囲
+- このノートブックに追加されたソースの内容だけを根拠にする
+- 一般知識で補う必要がある場合は、補った旨を先に明記してから答える
+
+
+役割・出力形式・口調・参照範囲の4要素を、それぞれ短い箇条書きで指定しているだけです。長い説明文にはしていません。
+
+指示なしと指示ありで、回答はこう変わる
+
+実際にNotebookLMを操作した記録ではなく、指示の有無で典型的に起きる違いを再現した例です。
+
+質問は「このプロジェクトの次のマイルストーンは？」で統一します。
+
+指示なしの場合
+
+1回目の回答は、プロジェクトの背景から説明が始まります。過去の経緯を2段落で書いたあと、次のマイルストーンを箇条書きで6項目挙げてきます。
+
+2回目に同じ質問をすると、経緯の説明は省かれ、「次のマイルストーンはBです」とだけ、1文で返ってきます。
+
+3回目は、ソースに記載のない一般的なプロジェクト管理の助言が混ざり込みます。
+
+指示ありの場合
+
+毎回、次の形で返ってきます。
+
+- 結論: 次のマイルストーンはBです
+- 根拠: ソースのどの箇所にBと書かれているかを2〜3項目で要約
+- 補足: ソースに記載がない場合は「補足はありません」
+
+質問を変えても、この3段構成そのものは崩れません。回答の中身は変わっても、読む側が期待する形は固定されます。
+
+---
+
+つまずきやすいところ
+
+指示を長く書きすぎる
+
+役割・形式・口調のほかに、例外条件や細かい言い回しの指定まで足していくと、指示自体が長文化します。長くなるほどNotebookLMが指示のどこを優先するか揺れやすくなり、かえってブレが戻ってきます。要素ごとに1〜3行で収めるのが安全です。
+
+参照範囲を書き忘れる
+
+役割と出力形式だけ書いて、参照範囲を指定し忘れるケースをよく見ます。この場合、形式は毎回そろっても、中身に一般知識が混ざるかどうかは揺れたままになります。4要素はセットで書くことをおすすめします。
+
+別のノートブックには引き継がれない
+
+カスタム指示はノートブックごとの設定です。新しいノートブックを作ると、指示欄は空の状態に戻ります。複数のプロジェクトで同じ形式を使うなら、指示文をテキストファイルに保存しておいてください。ノートブックを作るたびに貼り直す運用にすると、毎回書き直す手間を省けます。
+
+---
+
+今日できること
+
+NotebookLMを開き、右上の「ノートブックをカスタマイズ」からペルソナの欄を開いてください。
+
+上のカスタム指示をそのまま貼り、使っているノートブックで同じ質問を2〜3回投げ直してみてください。回答の構成がそろっているかどうかで、効いているか確認できます。
+
+自分の用途に合わせて変えるなら、まず「出力形式」の3段構成だけを書き換えてみてください。変更の影響が把握しやすくなります。
+
+---
+
+NotebookLMのブレは、モデルの気まぐれではなく、指示の空白を毎回埋め直している状態です。空白を先に埋めておけば、回答は同じ型で返ってくるようになります。"></div>
+
+
+<div class="article">
+<p>NotebookLMに同じ質問を2回投げると、違う答えが返ってくることがあります。</p>
+<p>これは調子が悪いのではありません。役割も出力形式も口調も、何ひとつ固定していないことが原因です。NotebookLMには「カスタム指示」という設定があり、これを1つ書いておくだけで出力のブレはほぼ止まります。</p>
+<p>この記事では、私が実際にノートブックのカスタマイズ欄に貼っている指示文を全文で載せます。指示なしと指示ありで、同じ質問に対する回答がどう変わるかも並べます。</p>
+<hr>
+<h2>同じ質問なのに、毎回違う答えが返ってくる</h2>
+<p>NotebookLMにソースを読み込ませて、同じ質問を日を分けて投げたことがある方には、見覚えのある症状です。</p>
+<p>例えば「このプロジェクトの次のマイルストーンは？」と聞いたとします。</p>
+<p>1回目は、背景の経緯から説明が始まり、箇条書きが6項目並ぶ長い回答が返ってきます。2回目は、結論だけを3行で返してきます。3回目は、ソースに書かれていない一般論まで混ざってくることがあります。</p>
+<p>質問の文言は同じでも、回答の長さ・構成・断定の強さが毎回違います。これは会議の議事録を要約させるときも、リサーチノートの内容を聞くときも同じように起きます。</p>
+<p>原因は単純です。<strong>役割・出力形式・参照範囲・口調</strong>のどれも指定していないからです。指定がなければ、NotebookLMはそのつど「それらしい形」を自分で選びます。選び方が毎回同じである保証はありません。</p>
+<p>トーンにも同じことが起きます。同じ資料を要約させても、ある日は丁寧な解説口調で返り、別の日はそっけない箇条書きだけで返ってきます。質問文を工夫しても、この振れ幅は消えません。</p>
+<h2>カスタム指示は「止血策」である</h2>
+<p>NotebookLMの設定には、ノートブックごとにカスタム指示を書ける欄があります。ここに役割とルールを書いておくと、以降の回答はその型に沿って返ってくるようになります。</p>
+<p>万能の精度向上策ではありません。あくまで「毎回ブレる」という症状を止める処置です。何を書けば効くのか、要素ごとに見ていきます。</p>
+<h3>役割を固定する</h3>
+<p>まず「あなたは何者か」を1行で決めます。「アシスタントです」のような曖昧な役割ではなく、このノートブックで何をする担当なのかを書きます。</p>
+<p>役割が決まると、答え方の基準がそろいます。雑談的な補足を混ぜるか、事実だけを返すかが、質問ごとにぶれなくなります。</p>
+<h3>出力形式を固定する</h3>
+<p>回答の構成をテンプレート化します。「結論→根拠→補足」のように、毎回同じ順番・同じ項目数で返させます。</p>
+<p>ここを指定しないと、簡潔な回答と長文の回答が交互に出てきます。読む側は毎回フォーマットを読み直す手間が発生します。</p>
+<h3>参照範囲を指定する</h3>
+<p>NotebookLMはソースに基づいて回答する設計ですが、指示がないと一般知識で補ってしまうことがあります。「ソースに記載がない場合は、その旨を明示する」と書いておくと、推測での補完を防げます。</p>
+<p>これは精度の話であると同時に、回答のブレを減らす話でもあります。ソース外の知識で補うかどうかが毎回変わると、それだけで回答の長さと内容が揺れます。</p>
+<h3>口調を固定する</h3>
+<p>ですます調で統一するか、断定的に書くか、疑問形を残すか。ここも書いておかないと質問ごとに変わります。細かい点に見えますが、複数人でノートブックを共有する場合は特に効いてきます。</p>
+<hr>
+<h2>カスタム指示の全文</h2>
+<p>私が実際に使っている指示文です。NotebookLMの「ノートブックをカスタマイズ」からペルソナ欄に貼れば、そのまま使えます。</p>
+<pre><code>あなたはこのノートブックの内容だけを根拠に回答するリサーチアシスタントです。
+
+# 役割
+- ソースに書かれていない内容は「ソースに記載がありません」と明示し、推測で補わない
+- 専門用語が初めて出てきたときだけ、簡単に補足する
+
+# 出力形式
+- 回答は常に次の3段構成にする
+  1. 結論(2文以内)
+  2. 根拠(ソースの該当箇所を要約した箇条書き。3〜5項目)
+  3. 補足(必要な場合のみ)
+- 表は使わず、箇条書きで示す
+- 前置きの挨拶や締めの言葉は書かない
+
+# 口調
+- ですます調で統一する
+- 断定できることは断定し、断定できないことは「ソースからは判断できません」と書く
+
+# 参照範囲
+- このノートブックに追加されたソースの内容だけを根拠にする
+- 一般知識で補う必要がある場合は、補った旨を先に明記してから答える</code></pre>
+<p>役割・出力形式・口調・参照範囲の4要素を、それぞれ短い箇条書きで指定しているだけです。長い説明文にはしていません。</p>
+<h2>指示なしと指示ありで、回答はこう変わる</h2>
+<p>実際にNotebookLMを操作した記録ではなく、指示の有無で典型的に起きる違いを再現した例です。</p>
+<p>質問は「このプロジェクトの次のマイルストーンは？」で統一します。</p>
+<p><strong>指示なしの場合</strong></p>
+<p>1回目の回答は、プロジェクトの背景から説明が始まります。過去の経緯を2段落で書いたあと、次のマイルストーンを箇条書きで6項目挙げてきます。</p>
+<p>2回目に同じ質問をすると、経緯の説明は省かれ、「次のマイルストーンはBです」とだけ、1文で返ってきます。</p>
+<p>3回目は、ソースに記載のない一般的なプロジェクト管理の助言が混ざり込みます。</p>
+<p><strong>指示ありの場合</strong></p>
+<p>毎回、次の形で返ってきます。</p>
+<ul>
+<li>結論: 次のマイルストーンはBです</li>
+<li>根拠: ソースのどの箇所にBと書かれているかを2〜3項目で要約</li>
+<li>補足: ソースに記載がない場合は「補足はありません」</li>
+</ul>
+<p>質問を変えても、この3段構成そのものは崩れません。回答の中身は変わっても、読む側が期待する形は固定されます。</p>
+<hr>
+<h2>つまずきやすいところ</h2>
+<p><strong>指示を長く書きすぎる</strong></p>
+<p>役割・形式・口調のほかに、例外条件や細かい言い回しの指定まで足していくと、指示自体が長文化します。長くなるほどNotebookLMが指示のどこを優先するか揺れやすくなり、かえってブレが戻ってきます。要素ごとに1〜3行で収めるのが安全です。</p>
+<p><strong>参照範囲を書き忘れる</strong></p>
+<p>役割と出力形式だけ書いて、参照範囲を指定し忘れるケースをよく見ます。この場合、形式は毎回そろっても、中身に一般知識が混ざるかどうかは揺れたままになります。4要素はセットで書くことをおすすめします。</p>
+<p><strong>別のノートブックには引き継がれない</strong></p>
+<p>カスタム指示はノートブックごとの設定です。新しいノートブックを作ると、指示欄は空の状態に戻ります。複数のプロジェクトで同じ形式を使うなら、指示文をテキストファイルに保存しておいてください。ノートブックを作るたびに貼り直す運用にすると、毎回書き直す手間を省けます。</p>
+<hr>
+<h2>今日できること</h2>
+<p>NotebookLMを開き、右上の「ノートブックをカスタマイズ」からペルソナの欄を開いてください。</p>
+<p>上のカスタム指示をそのまま貼り、使っているノートブックで同じ質問を2〜3回投げ直してみてください。回答の構成がそろっているかどうかで、効いているか確認できます。</p>
+<p>自分の用途に合わせて変えるなら、まず「出力形式」の3段構成だけを書き換えてみてください。変更の影響が把握しやすくなります。</p>
+<hr>
+<p>NotebookLMのブレは、モデルの気まぐれではなく、指示の空白を毎回埋め直している状態です。空白を先に埋めておけば、回答は同じ型で返ってくるようになります。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

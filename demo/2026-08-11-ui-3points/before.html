@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>before — AIが出したままの管理画面</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: #f0f2f5;
+    color: #222;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 220px;
+    background: linear-gradient(180deg, #2b2f77 0%, #1a1c4d 100%);
+    color: #fff;
+    padding: 16px;
+  }
+
+  .sidebar .logo {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .sidebar nav a {
+    display: block;
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .main {
+    flex: 1;
+    padding: 16px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .kpi {
+    padding: 16px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .kpi .label { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .kpi .value { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .kpi .delta { font-size: 16px; font-weight: 700; }
+
+  .kpi.c1 { background: linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%); }
+  .kpi.c2 { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+  .kpi.c3 { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); }
+  .kpi.c4 { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
+
+  .panel {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .panel h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    border-bottom: 1px solid #eee;
+  }
+
+  th {
+    background: #4a6cf7;
+    color: #fff;
+  }
+
+  .status {
+    display: inline-block;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .status.done { background: #11998e; }
+  .status.pending { background: #f7971e; }
+  .status.cancel { background: #ff5f6d; }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">管理画面</div>
+    <nav>
+      <a href="#">ダッシュボード</a>
+      <a href="#">注文</a>
+      <a href="#">顧客</a>
+      <a href="#">在庫</a>
+      <a href="#">設定</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header>
+      <h1>ダッシュボード</h1>
+      <div>2026年8月</div>
+    </header>
+
+    <section class="kpis">
+      <div class="kpi c1">
+        <div class="label">今月の売上</div>
+        <div class="value">¥4,820,000</div>
+        <div class="delta">+12.4%</div>
+      </div>
+      <div class="kpi c2">
+        <div class="label">新規顧客</div>
+        <div class="value">312人</div>
+        <div class="delta">+4.1%</div>
+      </div>
+      <div class="kpi c3">
+        <div class="label">注文数</div>
+        <div class="value">1,204件</div>
+        <div class="delta">+8.9%</div>
+      </div>
+      <div class="kpi c4">
+        <div class="label">返品率</div>
+        <div class="value">2.3%</div>
+        <div class="delta">-0.4%</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>最近の注文</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>注文ID</th>
+            <th>顧客名</th>
+            <th>金額</th>
+            <th>状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>#10231</td>
+            <td>山田 太郎</td>
+            <td>¥12,800</td>
+            <td><span class="status done">完了</span></td>
+          </tr>
+          <tr>
+            <td>#10230</td>
+            <td>佐藤 花子</td>
+            <td>¥8,400</td>
+            <td><span class="status pending">処理中</span></td>
+          </tr>
+          <tr>
+            <td>#10229</td>
+            <td>鈴木 一郎</td>
+            <td>¥21,000</td>
+            <td><span class="status cancel">キャンセル</span></td>
+          </tr>
+          <tr>
+            <td>#10228</td>
+            <td>田中 実</td>
+            <td>¥5,600</td>
+            <td><span class="status done">完了</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
