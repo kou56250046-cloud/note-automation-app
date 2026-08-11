@@ -330,7 +330,7 @@
     - https://qiita.com/kazukichi_0914/items/4e21ddfaaf961b526f8e
     - https://qiita.com/kazukichi_0914/items/0ab3e790f860a8850dff
     - https://codelabs.developers.google.com/codelabs/gemini-workspace?hl=ja
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-gas-minutes として記事化
 
 - id: 2026-W33-03
   title: NotebookLM のカスタム指示で、出力のブレを止める
