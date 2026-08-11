@@ -1,0 +1,1077 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>Gemini + GAS で議事録を要約する。コードとプロンプトの全文 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;Gemini + GAS で議事録を要約する。コードとプロンプトの全文&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GAS #GoogleAppsScript #業務効率化 #Gemini&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>Gemini + GAS で議事録を要約する。コードとプロンプトの全文</h1>
+  <div class="muted">生成AIで見せられる成果物を作る / Gemini+GASの自動化 ／ 2026-08-11 ／ #GAS #GoogleAppsScript #業務効率化 #Gemini</div>
+</header>
+
+
+
+<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, &quot;あなたは note の見出し画像を専門とするアートディレクターです。\n以下の条件で16:9の画像を1枚作ってください。\n\n## 被写体（最重要）\nスプレッドシートのような表構造。左側の列には長く詰まったテキストの行が5〜6行並び、\n右側の列には同じ行が短く畳まれた形で並んでいる。行と行の間に、左から右へ向かう\n細い矢印か接続線を1本だけ描き、「長い行が短い行に変換されている」ことを示す。\n\n## 構図\n・中央から少し左に表全体を置き、右側に余白を作る\n・視線が左の長い行から右の短い行へ自然に流れる配置\n・浅い被写界深度。背景は軽くぼかす\n\n## 色\n・背景の基調: #12111b（濃いダークネイビー系）\n・アクセント: #ffb43d（アンバー）。矢印と畳まれた行のハイライトにのみ使う。1色だけ\n・コントラストを強く。中間色を多用しない\n\n## 質感とライティング\n・技術書の図版のような、線と面で構成されたフラットな図解\n・斜め上からの単一光源。影の方向を揃える\n・高精細、ノイズなし、4K品質\n\n## テキスト\n**画像内に文字を一切入れないでください。**\nnote ではタイトルが画像の上に重なるため、\n中央やや右に、文字を置ける平坦な余白を確保してください。\n\n## 避けるもの\n・グラデーションを全面に敷くこと\n・複数の光源で影の方向がばらつくこと\n・要素を3つ以上並べること\n・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク\n・歯車やギアのモチーフ（自動化の紋切り型表現）&quot;)">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">あなたは note の見出し画像を専門とするアートディレクターです。
+以下の条件で16:9の画像を1枚作ってください。
+
+## 被写体（最重要）
+スプレッドシートのような表構造。左側の列には長く詰まったテキストの行が5〜6行並び、
+右側の列には同じ行が短く畳まれた形で並んでいる。行と行の間に、左から右へ向かう
+細い矢印か接続線を1本だけ描き、「長い行が短い行に変換されている」ことを示す。
+
+## 構図
+・中央から少し左に表全体を置き、右側に余白を作る
+・視線が左の長い行から右の短い行へ自然に流れる配置
+・浅い被写界深度。背景は軽くぼかす
+
+## 色
+・背景の基調: #12111b（濃いダークネイビー系）
+・アクセント: #ffb43d（アンバー）。矢印と畳まれた行のハイライトにのみ使う。1色だけ
+・コントラストを強く。中間色を多用しない
+
+## 質感とライティング
+・技術書の図版のような、線と面で構成されたフラットな図解
+・斜め上からの単一光源。影の方向を揃える
+・高精細、ノイズなし、4K品質
+
+## テキスト
+**画像内に文字を一切入れないでください。**
+note ではタイトルが画像の上に重なるため、
+中央やや右に、文字を置ける平坦な余白を確保してください。
+
+## 避けるもの
+・グラデーションを全面に敷くこと
+・複数の光源で影の方向がばらつくこと
+・要素を3つ以上並べること
+・脳のイラスト、光る回路基板、ロボットの手、青い網目状のネットワーク
+・歯車やギアのモチーフ（自動化の紋切り型表現）</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 4 件</div><ul><li class="warn">L34 前の見出しから 276 文字（目安 300）。見出しが多すぎる</li><li class="warn">L191 前の見出しから 59 文字（目安 300）。見出しが多すぎる</li><li class="warn">L221 「故に」→「したがって」に開く</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;会議の議事録は、書いた瞬間がいちばん熱量が高い。&lt;/p&gt;
+&lt;p&gt;その熱量のまま「決定事項」「タスク」「次回への申し送り」まで整理できれば理想です。&lt;br&gt;でも現実は、議事録を貼って終わり。&lt;br&gt;誰が何をいつまでにやるのか、ドキュメントの中に埋もれたままになります。&lt;/p&gt;
+&lt;p&gt;この記事では、Googleドキュメントに書いた議事録を、Gemini APIで要約して&lt;br&gt;ドキュメントの先頭に自動で挿入する GAS（Google Apps Script）を紹介します。&lt;/p&gt;
+&lt;p&gt;コピーして貼るだけで動くコードと、要約に使っているプロンプトを、全文載せます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;議事録は「あとで整理する」が実現しない&lt;/h2&gt;
+&lt;p&gt;議事録が読み返されない理由は、書き手の能力ではありません。&lt;br&gt;構造の問題です。&lt;/p&gt;
+&lt;p&gt;会議中に書けるのは、発言をそのまま並べた生のテキストです。&lt;br&gt;決定事項とタスクを仕分ける余力は、会議の場では出てきません。&lt;/p&gt;
+&lt;p&gt;そして会議が終わると、次の予定がすぐに来ます。&lt;br&gt;「あとで整理する」の「あとで」は、たいてい来ません。&lt;/p&gt;
+&lt;p&gt;結果として、議事録は検索されるだけの死んだテキストになります。&lt;br&gt;「あの会議、何が決まったんだっけ」と聞かれるたびに、&lt;br&gt;本文を頭から読み返す作業が発生します。&lt;/p&gt;
+&lt;p&gt;ここを自動化すれば、書いた直後に整理された形が手に入ります。&lt;br&gt;人が読み返す部分を、要約だけに縮められます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;何を作るか&lt;/h2&gt;
+&lt;p&gt;Googleドキュメントを開いた状態でメニューから実行すると、&lt;br&gt;本文を丸ごとGemini APIに渡し、返ってきた要約をドキュメントの先頭に挿入します。&lt;/p&gt;
+&lt;p&gt;要約の中身は次の4項目に固定しています。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;決定事項&lt;/li&gt;
+&lt;li&gt;未決事項&lt;/li&gt;
+&lt;li&gt;タスク（誰が・何を・いつまでに）&lt;/li&gt;
+&lt;li&gt;次回への申し送り&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;汎用の要約ツールにはしていません。&lt;br&gt;議事録という1つの用途に絞ることで、プロンプトの指示を具体的にできます。&lt;br&gt;「良い感じに要約して」ではなく、出したい形をこちらから決めています。&lt;/p&gt;
+&lt;p&gt;4項目を固定にしているのにも理由があります。&lt;br&gt;自由記述で要約させると、会議の雰囲気や参加者の発言態度など、&lt;br&gt;本来は不要な情報まで拾ってしまうことがあります。&lt;/p&gt;
+&lt;p&gt;決定事項・未決事項・タスク・申し送りの4つに絞ると、&lt;br&gt;出力を読む側が毎回同じ順番で確認できます。&lt;br&gt;フォーマットが揺れないことも、自動化の価値の一部です。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;コード全文&lt;/h2&gt;
+&lt;p&gt;Googleドキュメントのスクリプトエディタ（拡張機能 → Apps Script）に、&lt;br&gt;そのまま貼ってください。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/**
+ * 議事録要約ツール
+ * Googleドキュメントの本文をGemini APIで要約し、先頭に挿入する。
+ */
+
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/' +
+  GEMINI_MODEL + ':generateContent';
+
+// ドキュメントを開いたときにメニューを追加する
+function onOpen() {
+  DocumentApp.getUi()
+    .createMenu('議事録要約')
+    .addItem('この議事録を要約する', 'summarizeMinutes')
+    .addToUi();
+}
+
+// メイン処理
+function summarizeMinutes() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  const text = body.getText();
+
+  if (text.length &amp;lt; 50) {
+    DocumentApp.getUi().alert('本文が短すぎます。議事録を貼ってから実行してください。');
+    return;
+  }
+
+  const summary = callGemini(text);
+  insertSummary(body, summary);
+
+  DocumentApp.getUi().alert('要約をドキュメント先頭に挿入しました。');
+}
+
+// Gemini APIを呼び出す
+function callGemini(minutesText) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY が設定されていません。スクリプトプロパティに登録してください。');
+  }
+
+  const prompt = buildPrompt(minutesText);
+
+  const payload = {
+    contents: [
+      {
+        parts: [{ text: prompt }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1024
+    }
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(GEMINI_API_URL + '?key=' + apiKey, options);
+  const code = response.getResponseCode();
+  const json = JSON.parse(response.getContentText());
+
+  if (code !== 200) {
+    const message = json.error ? json.error.message : response.getContentText();
+    throw new Error('Gemini API エラー(' + code + '): ' + message);
+  }
+
+  const candidate = json.candidates &amp;amp;&amp;amp; json.candidates[0];
+  const parts = candidate &amp;amp;&amp;amp; candidate.content &amp;amp;&amp;amp; candidate.content.parts;
+
+  if (!parts || !parts[0] || !parts[0].text) {
+    throw new Error('Gemini の応答から要約テキストを取り出せませんでした。');
+  }
+
+  return parts[0].text;
+}
+
+// プロンプトを組み立てる
+function buildPrompt(minutesText) {
+  return [
+    'あなたは会議の議事録を要約する担当者です。',
+    '次の議事録を読み、以下の4項目に分けて日本語で出力してください。',
+    '',
+    '# 決定事項',
+    '会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。',
+    '',
+    '# 未決事項',
+    '持ち越しになった論点を箇条書きで。',
+    '',
+    '# タスク',
+    '担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。',
+    '担当者や期限が本文に無い場合は、その旨を書く（推測で補わない）。',
+    '',
+    '# 次回への申し送り',
+    '次回の会議で確認すべきことを箇条書きで。',
+    '',
+    '出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。',
+    '本文に書かれていないことは推測で補わないでください。',
+    '',
+    '--- 議事録本文 ---',
+    minutesText
+  ].join('\n');
+}
+
+// ドキュメントの先頭に要約を挿入する
+function insertSummary(body, summaryText) {
+  const heading = '【AI要約 ' + formatDate(new Date()) + '】';
+  body.insertParagraph(0, '');
+  body.insertParagraph(0, summaryText);
+  body.insertParagraph(0, heading).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+}
+
+function formatDate(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;hr&gt;
+&lt;h2&gt;プロンプト全文（構造だけを取り出したもの）&lt;/h2&gt;
+&lt;p&gt;上のコードの &lt;code&gt;buildPrompt&lt;/code&gt; が実際に組み立てている指示文は、次の形になります。&lt;br&gt;議事録本文の部分だけ、貼り付けた文書に差し替わります。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;あなたは会議の議事録を要約する担当者です。
+次の議事録を読み、以下の4項目に分けて日本語で出力してください。
+
+# 決定事項
+会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。
+
+# 未決事項
+持ち越しになった論点を箇条書きで。
+
+# タスク
+担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。
+担当者や期限が本文に無い場合は、その旨を書く(推測で補わない)。
+
+# 次回への申し送り
+次回の会議で確認すべきことを箇条書きで。
+
+出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。
+本文に書かれていないことは推測で補わないでください。
+
+--- 議事録本文 ---
+（ここに議事録の本文が入る）&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;「推測で補わないでください」を2回入れているのは意図的です。&lt;br&gt;議事録の要約は、無い発言を足すと事故になります。&lt;br&gt;Geminiは指示が弱いと、文脈から自然に見える内容を補ってしまうことがあるため、&lt;br&gt;禁止を繰り返して抑えています。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;動作条件&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;トリガー&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;onOpen&lt;/code&gt; は単純トリガーで、ドキュメントを開くと自動実行され、&lt;br&gt;メニューを追加するだけの役割です。&lt;/p&gt;
+&lt;p&gt;Gemini APIを呼ぶ &lt;code&gt;summarizeMinutes&lt;/code&gt; は、メニューをクリックしたときだけ動きます。&lt;br&gt;単純トリガーの中で外部通信をすると制限に引っかかるため、この分離が必要です。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;権限&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;初回実行時に、Googleの承認画面が出ます。&lt;br&gt;このスクリプトが要求するのは、ドキュメントの読み書きと、外部URLへの接続です。&lt;br&gt;求められたスコープを確認してから承認してください。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;APIキーの置き場所&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;コードにキーを直接書きません。&lt;br&gt;スクリプトエディタの「プロジェクトの設定」から「スクリプト プロパティ」を開き、&lt;br&gt;&lt;code&gt;GEMINI_API_KEY&lt;/code&gt; という名前で登録します。&lt;/p&gt;
+&lt;p&gt;こうしておくと、コードを他人に共有してもキーは漏れません。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;実行時間の制限&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;GASの1回の実行には時間の上限があります。&lt;br&gt;議事録が数万字を超えるような長さになると、Gemini側のトークン上限や&lt;br&gt;応答時間の影響で失敗しやすくなります。&lt;/p&gt;
+&lt;p&gt;長時間の会議を1本の議事録にまとめて流す運用より、&lt;br&gt;議題ごとにドキュメントを分けて実行するほうが安定します。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;モデルと利用枠&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;コードでは &lt;code&gt;gemini-2.0-flash&lt;/code&gt; を指定しています。&lt;br&gt;要約は複雑な推論を必要としない作業なので、速く安いモデルで十分です。&lt;/p&gt;
+&lt;p&gt;Gemini APIには無料で使える利用枠がありますが、&lt;br&gt;1日あたりのリクエスト数に上限があります。&lt;br&gt;何度も実行する運用では、上限に近づいていないかを&lt;br&gt;Google AI Studio の管理画面で確認してください。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;つまずきやすいところ&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;「承認が必要です」で止まる&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;初回はGoogleの確認画面が出ます。&lt;br&gt;自分のスクリプトなので、詳細を開いて許可を進めれば実行できます。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;「GEMINI_API_KEY が設定されていません」と出る&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;スクリプトプロパティへの登録を忘れているか、キー名の綴りが違います。&lt;br&gt;&lt;code&gt;GEMINI_API_KEY&lt;/code&gt; の大文字・小文字まで一致させてください。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;要約が返ってこない&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;callGemini&lt;/code&gt; はAPIのエラーメッセージをそのまま例外に含めています。&lt;br&gt;実行ログ（表示 → 実行数）を開くと、APIキーの権限不足なのか、&lt;br&gt;リクエスト形式の問題なのかが本文に出ます。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;要約の中身が薄い&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;議事録本文がそもそも発言の羅列だけで、決定事項が明記されていない場合、&lt;br&gt;Geminiは「なし」と正直に返します。&lt;br&gt;これはバグではなく、プロンプトの「推測で補わない」が効いている状態です。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;要約の途中で応答が切れる&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;maxOutputTokens&lt;/code&gt; を1024に設定しています。&lt;br&gt;議事録が1万字を超えるような場合、この上限に収まらず要約が途中で切れることがあります。&lt;/p&gt;
+&lt;p&gt;その場合は数値を増やすか、議事録を議題ごとに分けて&lt;br&gt;複数回に分けて実行する方法で対応してください。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;このコードをコピーして、自分のGoogleドキュメントの&lt;br&gt;スクリプトエディタに貼ってみてください。&lt;/p&gt;
+&lt;p&gt;Gemini APIキーは Google AI Studio で発行できます。&lt;br&gt;発行したら、スクリプトプロパティに &lt;code&gt;GEMINI_API_KEY&lt;/code&gt; として登録し、&lt;br&gt;ドキュメントを開き直してメニューから実行するだけです。&lt;/p&gt;
+&lt;p&gt;過去の議事録が1つ手元にあれば、5分あれば動作を確認できます。&lt;/p&gt;
+&lt;p&gt;1回目の実行では、要約の見出しがすでに項目名として決め打ちされているので、&lt;br&gt;自分の会議のスタイルに合わせて &lt;code&gt;buildPrompt&lt;/code&gt; の中身を調整してみてください。&lt;br&gt;「担当者」を「アサイン先」に変える程度の書き換えでも、&lt;br&gt;チームで使う言葉に馴染みます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;議事録の要約は、AIに向いている作業の中でも特に相性がよい領域です。&lt;br&gt;形式が決まっていて、事実だけを抜き出せばよく、創造性を求められません。&lt;/p&gt;
+&lt;p&gt;だからこそ、プロンプトで「推測で補わない」ときつく縛るほうが、&lt;br&gt;実務では使いやすい要約になります。&lt;/p&gt;
+&lt;p&gt;今回のコードは議事録専用に絞っています。&lt;br&gt;スプレッドシートに議事録が溜まっている場合は、&lt;br&gt;&lt;code&gt;DocumentApp&lt;/code&gt; の部分を &lt;code&gt;SpreadsheetApp&lt;/code&gt; に置き換える発想で応用できますが、&lt;br&gt;それは別の記事で扱います。&lt;/p&gt;" data-text="会議の議事録は、書いた瞬間がいちばん熱量が高い。
+
+その熱量のまま「決定事項」「タスク」「次回への申し送り」まで整理できれば理想です。
+でも現実は、議事録を貼って終わり。
+誰が何をいつまでにやるのか、ドキュメントの中に埋もれたままになります。
+
+この記事では、Googleドキュメントに書いた議事録を、Gemini APIで要約して
+ドキュメントの先頭に自動で挿入する GAS（Google Apps Script）を紹介します。
+
+コピーして貼るだけで動くコードと、要約に使っているプロンプトを、全文載せます。
+
+---
+
+議事録は「あとで整理する」が実現しない
+
+議事録が読み返されない理由は、書き手の能力ではありません。
+構造の問題です。
+
+会議中に書けるのは、発言をそのまま並べた生のテキストです。
+決定事項とタスクを仕分ける余力は、会議の場では出てきません。
+
+そして会議が終わると、次の予定がすぐに来ます。
+「あとで整理する」の「あとで」は、たいてい来ません。
+
+結果として、議事録は検索されるだけの死んだテキストになります。
+「あの会議、何が決まったんだっけ」と聞かれるたびに、
+本文を頭から読み返す作業が発生します。
+
+ここを自動化すれば、書いた直後に整理された形が手に入ります。
+人が読み返す部分を、要約だけに縮められます。
+
+---
+
+何を作るか
+
+Googleドキュメントを開いた状態でメニューから実行すると、
+本文を丸ごとGemini APIに渡し、返ってきた要約をドキュメントの先頭に挿入します。
+
+要約の中身は次の4項目に固定しています。
+
+- 決定事項
+- 未決事項
+- タスク（誰が・何を・いつまでに）
+- 次回への申し送り
+
+汎用の要約ツールにはしていません。
+議事録という1つの用途に絞ることで、プロンプトの指示を具体的にできます。
+「良い感じに要約して」ではなく、出したい形をこちらから決めています。
+
+4項目を固定にしているのにも理由があります。
+自由記述で要約させると、会議の雰囲気や参加者の発言態度など、
+本来は不要な情報まで拾ってしまうことがあります。
+
+決定事項・未決事項・タスク・申し送りの4つに絞ると、
+出力を読む側が毎回同じ順番で確認できます。
+フォーマットが揺れないことも、自動化の価値の一部です。
+
+---
+
+コード全文
+
+Googleドキュメントのスクリプトエディタ（拡張機能 → Apps Script）に、
+そのまま貼ってください。
+
+/**
+ * 議事録要約ツール
+ * Googleドキュメントの本文をGemini APIで要約し、先頭に挿入する。
+ */
+
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/' +
+  GEMINI_MODEL + ':generateContent';
+
+// ドキュメントを開いたときにメニューを追加する
+function onOpen() {
+  DocumentApp.getUi()
+    .createMenu('議事録要約')
+    .addItem('この議事録を要約する', 'summarizeMinutes')
+    .addToUi();
+}
+
+// メイン処理
+function summarizeMinutes() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  const text = body.getText();
+
+  if (text.length &lt; 50) {
+    DocumentApp.getUi().alert('本文が短すぎます。議事録を貼ってから実行してください。');
+    return;
+  }
+
+  const summary = callGemini(text);
+  insertSummary(body, summary);
+
+  DocumentApp.getUi().alert('要約をドキュメント先頭に挿入しました。');
+}
+
+// Gemini APIを呼び出す
+function callGemini(minutesText) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY が設定されていません。スクリプトプロパティに登録してください。');
+  }
+
+  const prompt = buildPrompt(minutesText);
+
+  const payload = {
+    contents: [
+      {
+        parts: [{ text: prompt }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1024
+    }
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(GEMINI_API_URL + '?key=' + apiKey, options);
+  const code = response.getResponseCode();
+  const json = JSON.parse(response.getContentText());
+
+  if (code !== 200) {
+    const message = json.error ? json.error.message : response.getContentText();
+    throw new Error('Gemini API エラー(' + code + '): ' + message);
+  }
+
+  const candidate = json.candidates &amp;&amp; json.candidates[0];
+  const parts = candidate &amp;&amp; candidate.content &amp;&amp; candidate.content.parts;
+
+  if (!parts || !parts[0] || !parts[0].text) {
+    throw new Error('Gemini の応答から要約テキストを取り出せませんでした。');
+  }
+
+  return parts[0].text;
+}
+
+// プロンプトを組み立てる
+function buildPrompt(minutesText) {
+  return [
+    'あなたは会議の議事録を要約する担当者です。',
+    '次の議事録を読み、以下の4項目に分けて日本語で出力してください。',
+    '',
+    '# 決定事項',
+    '会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。',
+    '',
+    '# 未決事項',
+    '持ち越しになった論点を箇条書きで。',
+    '',
+    '# タスク',
+    '担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。',
+    '担当者や期限が本文に無い場合は、その旨を書く（推測で補わない）。',
+    '',
+    '# 次回への申し送り',
+    '次回の会議で確認すべきことを箇条書きで。',
+    '',
+    '出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。',
+    '本文に書かれていないことは推測で補わないでください。',
+    '',
+    '--- 議事録本文 ---',
+    minutesText
+  ].join('\n');
+}
+
+// ドキュメントの先頭に要約を挿入する
+function insertSummary(body, summaryText) {
+  const heading = '【AI要約 ' + formatDate(new Date()) + '】';
+  body.insertParagraph(0, '');
+  body.insertParagraph(0, summaryText);
+  body.insertParagraph(0, heading).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+}
+
+function formatDate(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+}
+
+
+---
+
+プロンプト全文（構造だけを取り出したもの）
+
+上のコードの buildPrompt が実際に組み立てている指示文は、次の形になります。
+議事録本文の部分だけ、貼り付けた文書に差し替わります。
+
+あなたは会議の議事録を要約する担当者です。
+次の議事録を読み、以下の4項目に分けて日本語で出力してください。
+
+決定事項
+会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。
+
+未決事項
+持ち越しになった論点を箇条書きで。
+
+タスク
+担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。
+担当者や期限が本文に無い場合は、その旨を書く(推測で補わない)。
+
+次回への申し送り
+次回の会議で確認すべきことを箇条書きで。
+
+出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。
+本文に書かれていないことは推測で補わないでください。
+
+--- 議事録本文 ---
+（ここに議事録の本文が入る）
+
+
+「推測で補わないでください」を2回入れているのは意図的です。
+議事録の要約は、無い発言を足すと事故になります。
+Geminiは指示が弱いと、文脈から自然に見える内容を補ってしまうことがあるため、
+禁止を繰り返して抑えています。
+
+---
+
+動作条件
+
+トリガー
+
+onOpen は単純トリガーで、ドキュメントを開くと自動実行され、
+メニューを追加するだけの役割です。
+
+Gemini APIを呼ぶ summarizeMinutes は、メニューをクリックしたときだけ動きます。
+単純トリガーの中で外部通信をすると制限に引っかかるため、この分離が必要です。
+
+権限
+
+初回実行時に、Googleの承認画面が出ます。
+このスクリプトが要求するのは、ドキュメントの読み書きと、外部URLへの接続です。
+求められたスコープを確認してから承認してください。
+
+APIキーの置き場所
+
+コードにキーを直接書きません。
+スクリプトエディタの「プロジェクトの設定」から「スクリプト プロパティ」を開き、
+GEMINI_API_KEY という名前で登録します。
+
+こうしておくと、コードを他人に共有してもキーは漏れません。
+
+実行時間の制限
+
+GASの1回の実行には時間の上限があります。
+議事録が数万字を超えるような長さになると、Gemini側のトークン上限や
+応答時間の影響で失敗しやすくなります。
+
+長時間の会議を1本の議事録にまとめて流す運用より、
+議題ごとにドキュメントを分けて実行するほうが安定します。
+
+モデルと利用枠
+
+コードでは gemini-2.0-flash を指定しています。
+要約は複雑な推論を必要としない作業なので、速く安いモデルで十分です。
+
+Gemini APIには無料で使える利用枠がありますが、
+1日あたりのリクエスト数に上限があります。
+何度も実行する運用では、上限に近づいていないかを
+Google AI Studio の管理画面で確認してください。
+
+---
+
+つまずきやすいところ
+
+「承認が必要です」で止まる
+
+初回はGoogleの確認画面が出ます。
+自分のスクリプトなので、詳細を開いて許可を進めれば実行できます。
+
+「GEMINI_API_KEY が設定されていません」と出る
+
+スクリプトプロパティへの登録を忘れているか、キー名の綴りが違います。
+GEMINI_API_KEY の大文字・小文字まで一致させてください。
+
+要約が返ってこない
+
+callGemini はAPIのエラーメッセージをそのまま例外に含めています。
+実行ログ（表示 → 実行数）を開くと、APIキーの権限不足なのか、
+リクエスト形式の問題なのかが本文に出ます。
+
+要約の中身が薄い
+
+議事録本文がそもそも発言の羅列だけで、決定事項が明記されていない場合、
+Geminiは「なし」と正直に返します。
+これはバグではなく、プロンプトの「推測で補わない」が効いている状態です。
+
+要約の途中で応答が切れる
+
+maxOutputTokens を1024に設定しています。
+議事録が1万字を超えるような場合、この上限に収まらず要約が途中で切れることがあります。
+
+その場合は数値を増やすか、議事録を議題ごとに分けて
+複数回に分けて実行する方法で対応してください。
+
+---
+
+今日できること
+
+このコードをコピーして、自分のGoogleドキュメントの
+スクリプトエディタに貼ってみてください。
+
+Gemini APIキーは Google AI Studio で発行できます。
+発行したら、スクリプトプロパティに GEMINI_API_KEY として登録し、
+ドキュメントを開き直してメニューから実行するだけです。
+
+過去の議事録が1つ手元にあれば、5分あれば動作を確認できます。
+
+1回目の実行では、要約の見出しがすでに項目名として決め打ちされているので、
+自分の会議のスタイルに合わせて buildPrompt の中身を調整してみてください。
+「担当者」を「アサイン先」に変える程度の書き換えでも、
+チームで使う言葉に馴染みます。
+
+---
+
+議事録の要約は、AIに向いている作業の中でも特に相性がよい領域です。
+形式が決まっていて、事実だけを抜き出せばよく、創造性を求められません。
+
+だからこそ、プロンプトで「推測で補わない」ときつく縛るほうが、
+実務では使いやすい要約になります。
+
+今回のコードは議事録専用に絞っています。
+スプレッドシートに議事録が溜まっている場合は、
+DocumentApp の部分を SpreadsheetApp に置き換える発想で応用できますが、
+それは別の記事で扱います。"></div>
+
+
+<div class="article">
+<p>会議の議事録は、書いた瞬間がいちばん熱量が高い。</p>
+<p>その熱量のまま「決定事項」「タスク」「次回への申し送り」まで整理できれば理想です。<br>でも現実は、議事録を貼って終わり。<br>誰が何をいつまでにやるのか、ドキュメントの中に埋もれたままになります。</p>
+<p>この記事では、Googleドキュメントに書いた議事録を、Gemini APIで要約して<br>ドキュメントの先頭に自動で挿入する GAS（Google Apps Script）を紹介します。</p>
+<p>コピーして貼るだけで動くコードと、要約に使っているプロンプトを、全文載せます。</p>
+<hr>
+<h2>議事録は「あとで整理する」が実現しない</h2>
+<p>議事録が読み返されない理由は、書き手の能力ではありません。<br>構造の問題です。</p>
+<p>会議中に書けるのは、発言をそのまま並べた生のテキストです。<br>決定事項とタスクを仕分ける余力は、会議の場では出てきません。</p>
+<p>そして会議が終わると、次の予定がすぐに来ます。<br>「あとで整理する」の「あとで」は、たいてい来ません。</p>
+<p>結果として、議事録は検索されるだけの死んだテキストになります。<br>「あの会議、何が決まったんだっけ」と聞かれるたびに、<br>本文を頭から読み返す作業が発生します。</p>
+<p>ここを自動化すれば、書いた直後に整理された形が手に入ります。<br>人が読み返す部分を、要約だけに縮められます。</p>
+<hr>
+<h2>何を作るか</h2>
+<p>Googleドキュメントを開いた状態でメニューから実行すると、<br>本文を丸ごとGemini APIに渡し、返ってきた要約をドキュメントの先頭に挿入します。</p>
+<p>要約の中身は次の4項目に固定しています。</p>
+<ul>
+<li>決定事項</li>
+<li>未決事項</li>
+<li>タスク（誰が・何を・いつまでに）</li>
+<li>次回への申し送り</li>
+</ul>
+<p>汎用の要約ツールにはしていません。<br>議事録という1つの用途に絞ることで、プロンプトの指示を具体的にできます。<br>「良い感じに要約して」ではなく、出したい形をこちらから決めています。</p>
+<p>4項目を固定にしているのにも理由があります。<br>自由記述で要約させると、会議の雰囲気や参加者の発言態度など、<br>本来は不要な情報まで拾ってしまうことがあります。</p>
+<p>決定事項・未決事項・タスク・申し送りの4つに絞ると、<br>出力を読む側が毎回同じ順番で確認できます。<br>フォーマットが揺れないことも、自動化の価値の一部です。</p>
+<hr>
+<h2>コード全文</h2>
+<p>Googleドキュメントのスクリプトエディタ（拡張機能 → Apps Script）に、<br>そのまま貼ってください。</p>
+<pre><code>/**
+ * 議事録要約ツール
+ * Googleドキュメントの本文をGemini APIで要約し、先頭に挿入する。
+ */
+
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/' +
+  GEMINI_MODEL + ':generateContent';
+
+// ドキュメントを開いたときにメニューを追加する
+function onOpen() {
+  DocumentApp.getUi()
+    .createMenu('議事録要約')
+    .addItem('この議事録を要約する', 'summarizeMinutes')
+    .addToUi();
+}
+
+// メイン処理
+function summarizeMinutes() {
+  const doc = DocumentApp.getActiveDocument();
+  const body = doc.getBody();
+  const text = body.getText();
+
+  if (text.length &lt; 50) {
+    DocumentApp.getUi().alert('本文が短すぎます。議事録を貼ってから実行してください。');
+    return;
+  }
+
+  const summary = callGemini(text);
+  insertSummary(body, summary);
+
+  DocumentApp.getUi().alert('要約をドキュメント先頭に挿入しました。');
+}
+
+// Gemini APIを呼び出す
+function callGemini(minutesText) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY が設定されていません。スクリプトプロパティに登録してください。');
+  }
+
+  const prompt = buildPrompt(minutesText);
+
+  const payload = {
+    contents: [
+      {
+        parts: [{ text: prompt }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1024
+    }
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(GEMINI_API_URL + '?key=' + apiKey, options);
+  const code = response.getResponseCode();
+  const json = JSON.parse(response.getContentText());
+
+  if (code !== 200) {
+    const message = json.error ? json.error.message : response.getContentText();
+    throw new Error('Gemini API エラー(' + code + '): ' + message);
+  }
+
+  const candidate = json.candidates &amp;&amp; json.candidates[0];
+  const parts = candidate &amp;&amp; candidate.content &amp;&amp; candidate.content.parts;
+
+  if (!parts || !parts[0] || !parts[0].text) {
+    throw new Error('Gemini の応答から要約テキストを取り出せませんでした。');
+  }
+
+  return parts[0].text;
+}
+
+// プロンプトを組み立てる
+function buildPrompt(minutesText) {
+  return [
+    'あなたは会議の議事録を要約する担当者です。',
+    '次の議事録を読み、以下の4項目に分けて日本語で出力してください。',
+    '',
+    '# 決定事項',
+    '会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。',
+    '',
+    '# 未決事項',
+    '持ち越しになった論点を箇条書きで。',
+    '',
+    '# タスク',
+    '担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。',
+    '担当者や期限が本文に無い場合は、その旨を書く（推測で補わない）。',
+    '',
+    '# 次回への申し送り',
+    '次回の会議で確認すべきことを箇条書きで。',
+    '',
+    '出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。',
+    '本文に書かれていないことは推測で補わないでください。',
+    '',
+    '--- 議事録本文 ---',
+    minutesText
+  ].join('\n');
+}
+
+// ドキュメントの先頭に要約を挿入する
+function insertSummary(body, summaryText) {
+  const heading = '【AI要約 ' + formatDate(new Date()) + '】';
+  body.insertParagraph(0, '');
+  body.insertParagraph(0, summaryText);
+  body.insertParagraph(0, heading).setHeading(DocumentApp.ParagraphHeading.HEADING2);
+}
+
+function formatDate(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+}</code></pre>
+<hr>
+<h2>プロンプト全文（構造だけを取り出したもの）</h2>
+<p>上のコードの <code>buildPrompt</code> が実際に組み立てている指示文は、次の形になります。<br>議事録本文の部分だけ、貼り付けた文書に差し替わります。</p>
+<pre><code>あなたは会議の議事録を要約する担当者です。
+次の議事録を読み、以下の4項目に分けて日本語で出力してください。
+
+# 決定事項
+会議で決まったことを箇条書きで。決まっていなければ「なし」と書く。
+
+# 未決事項
+持ち越しになった論点を箇条書きで。
+
+# タスク
+担当者と期限が分かる場合はセットで書く。「誰が・何を・いつまでに」の形式。
+担当者や期限が本文に無い場合は、その旨を書く(推測で補わない)。
+
+# 次回への申し送り
+次回の会議で確認すべきことを箇条書きで。
+
+出力は上記の見出しとMarkdownの箇条書きのみとし、前置きや締めの挨拶は書かないでください。
+本文に書かれていないことは推測で補わないでください。
+
+--- 議事録本文 ---
+（ここに議事録の本文が入る）</code></pre>
+<p>「推測で補わないでください」を2回入れているのは意図的です。<br>議事録の要約は、無い発言を足すと事故になります。<br>Geminiは指示が弱いと、文脈から自然に見える内容を補ってしまうことがあるため、<br>禁止を繰り返して抑えています。</p>
+<hr>
+<h2>動作条件</h2>
+<p><strong>トリガー</strong></p>
+<p><code>onOpen</code> は単純トリガーで、ドキュメントを開くと自動実行され、<br>メニューを追加するだけの役割です。</p>
+<p>Gemini APIを呼ぶ <code>summarizeMinutes</code> は、メニューをクリックしたときだけ動きます。<br>単純トリガーの中で外部通信をすると制限に引っかかるため、この分離が必要です。</p>
+<p><strong>権限</strong></p>
+<p>初回実行時に、Googleの承認画面が出ます。<br>このスクリプトが要求するのは、ドキュメントの読み書きと、外部URLへの接続です。<br>求められたスコープを確認してから承認してください。</p>
+<p><strong>APIキーの置き場所</strong></p>
+<p>コードにキーを直接書きません。<br>スクリプトエディタの「プロジェクトの設定」から「スクリプト プロパティ」を開き、<br><code>GEMINI_API_KEY</code> という名前で登録します。</p>
+<p>こうしておくと、コードを他人に共有してもキーは漏れません。</p>
+<p><strong>実行時間の制限</strong></p>
+<p>GASの1回の実行には時間の上限があります。<br>議事録が数万字を超えるような長さになると、Gemini側のトークン上限や<br>応答時間の影響で失敗しやすくなります。</p>
+<p>長時間の会議を1本の議事録にまとめて流す運用より、<br>議題ごとにドキュメントを分けて実行するほうが安定します。</p>
+<p><strong>モデルと利用枠</strong></p>
+<p>コードでは <code>gemini-2.0-flash</code> を指定しています。<br>要約は複雑な推論を必要としない作業なので、速く安いモデルで十分です。</p>
+<p>Gemini APIには無料で使える利用枠がありますが、<br>1日あたりのリクエスト数に上限があります。<br>何度も実行する運用では、上限に近づいていないかを<br>Google AI Studio の管理画面で確認してください。</p>
+<hr>
+<h2>つまずきやすいところ</h2>
+<p><strong>「承認が必要です」で止まる</strong></p>
+<p>初回はGoogleの確認画面が出ます。<br>自分のスクリプトなので、詳細を開いて許可を進めれば実行できます。</p>
+<p><strong>「GEMINI_API_KEY が設定されていません」と出る</strong></p>
+<p>スクリプトプロパティへの登録を忘れているか、キー名の綴りが違います。<br><code>GEMINI_API_KEY</code> の大文字・小文字まで一致させてください。</p>
+<p><strong>要約が返ってこない</strong></p>
+<p><code>callGemini</code> はAPIのエラーメッセージをそのまま例外に含めています。<br>実行ログ（表示 → 実行数）を開くと、APIキーの権限不足なのか、<br>リクエスト形式の問題なのかが本文に出ます。</p>
+<p><strong>要約の中身が薄い</strong></p>
+<p>議事録本文がそもそも発言の羅列だけで、決定事項が明記されていない場合、<br>Geminiは「なし」と正直に返します。<br>これはバグではなく、プロンプトの「推測で補わない」が効いている状態です。</p>
+<p><strong>要約の途中で応答が切れる</strong></p>
+<p><code>maxOutputTokens</code> を1024に設定しています。<br>議事録が1万字を超えるような場合、この上限に収まらず要約が途中で切れることがあります。</p>
+<p>その場合は数値を増やすか、議事録を議題ごとに分けて<br>複数回に分けて実行する方法で対応してください。</p>
+<hr>
+<h2>今日できること</h2>
+<p>このコードをコピーして、自分のGoogleドキュメントの<br>スクリプトエディタに貼ってみてください。</p>
+<p>Gemini APIキーは Google AI Studio で発行できます。<br>発行したら、スクリプトプロパティに <code>GEMINI_API_KEY</code> として登録し、<br>ドキュメントを開き直してメニューから実行するだけです。</p>
+<p>過去の議事録が1つ手元にあれば、5分あれば動作を確認できます。</p>
+<p>1回目の実行では、要約の見出しがすでに項目名として決め打ちされているので、<br>自分の会議のスタイルに合わせて <code>buildPrompt</code> の中身を調整してみてください。<br>「担当者」を「アサイン先」に変える程度の書き換えでも、<br>チームで使う言葉に馴染みます。</p>
+<hr>
+<p>議事録の要約は、AIに向いている作業の中でも特に相性がよい領域です。<br>形式が決まっていて、事実だけを抜き出せばよく、創造性を求められません。</p>
+<p>だからこそ、プロンプトで「推測で補わない」ときつく縛るほうが、<br>実務では使いやすい要約になります。</p>
+<p>今回のコードは議事録専用に絞っています。<br>スプレッドシートに議事録が溜まっている場合は、<br><code>DocumentApp</code> の部分を <code>SpreadsheetApp</code> に置き換える発想で応用できますが、<br>それは別の記事で扱います。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>
