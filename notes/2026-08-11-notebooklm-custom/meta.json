@@ -1,0 +1,13 @@
+{
+  "slug": "2026-08-11-notebooklm-custom",
+  "themeId": "2026-W33-03",
+  "type": "free",
+  "title": "NotebookLMの回答が毎回ブレる。カスタム指示で止める設定",
+  "category": "生成AIで見せられる成果物を作る / NotebookLM・精度向上",
+  "hashtags": ["NotebookLM", "Gemini", "プロンプト", "生成AI"],
+  "demo": null,
+  "artifacts": ["prompt"],
+  "publishDate": "2026-08-11",
+  "charCount": 2591,
+  "createdAt": "2026-08-11T10:30:00+09:00"
+}

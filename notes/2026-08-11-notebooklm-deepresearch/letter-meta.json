@@ -1,0 +1,43 @@
+{
+  "productType": "tool",
+  "blocks": [
+    {"n": 1, "type": "hook", "lines": [1, 1]},
+    {"n": 2, "type": "problem", "lines": [3, 9]},
+    {"n": 3, "type": "ideal-future-1", "lines": [13, 17]},
+    {"n": 4, "type": "reproducibility-1-simplify", "lines": [19, 23]},
+    {"n": 5, "type": "ideal-future-2", "lines": [25, 29]},
+    {"n": 6, "type": "reproducibility-2-ease", "lines": [31, 37]},
+    {"n": 7, "type": "fear", "lines": [41, 47]},
+    {"n": 8, "type": "ideal-future-3", "lines": [49, 51]},
+    {"n": 9, "type": "reproducibility-3-artifact-disclosure", "lines": [53, 90]},
+    {"n": 10, "type": "ideal-future-4", "lines": [92, 92]},
+    {"n": 11, "type": "reproducibility-4-inconvenience", "lines": [94, 100]},
+    {"n": 12, "type": "objection-removal", "lines": [104, 119]},
+    {"n": 13, "type": "funnel", "lines": [123, 127]},
+    {"n": 14, "type": "closing", "lines": [129, 133]}
+  ],
+  "fearCount": 1,
+  "fearBlock": 7,
+  "reproducibility": ["単純化", "簡易化", "成果物の開示", "不便だった状況"],
+  "closingType": "ideal-future",
+  "exitActions": 1,
+  "deadlineClaims": [
+    {
+      "text": "この価格は先着100本までです。100本に達した時点で、1,980円に切り替わります。",
+      "lines": [109, 110],
+      "type": "price-increase-unit-limit",
+      "unitLimit": 100,
+      "priceBefore": 1480,
+      "priceAfter": 1980,
+      "verified": true,
+      "source": "notes/2026-08-11-notebooklm-deepresearch/pricing.json#earlyBird"
+    }
+  ],
+  "toolEvidence": {
+    "disclosed": true,
+    "firstStep": "21行目「調べたいテーマを、渡す分解プロンプトに当てはめる。それだけです」／107行目「最初にやることは、調べたいテーマを分解プロンプトに当てはめて、Deep Researchに投げることです」",
+    "requirements": "87-88行目（動作条件2つ：Gemini のDeep Research対応プラン、NotebookLM無料枠）",
+    "limitations": "119行目（一次情報の正確性は保証しない。出典は自分で確認する前提）",
+    "artifactExample": "64-81行目（テーマを当てはめた分解プロンプト実物5行＋Deep Research出力冒頭の例）"
+  }
+}

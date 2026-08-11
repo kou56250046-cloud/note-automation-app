@@ -1,0 +1,17 @@
+{
+  "price": 1980,
+  "currency": "JPY",
+  "density": "high",
+  "marketMedian": 980,
+  "multiplier": 2.02,
+  "ceiling": "AIに出させたUIの見た目を、design.mdと4種の指示テンプレートで毎回同じ品質に揃えられるところまで。ブランドガイドラインへの厳密準拠や実装バグ修正は扱わない",
+  "rationale": "market/2026-08-09.json の全体価格中央値980円。情報密度=高（design.md雛形・指示テンプレート4種・before/after作例2種が動く単位で複数入り、買った日に使える）。情報密度「高」の倍率レンジ2〜3.5倍（1,960〜3,430円）のうち、販売実績がprofile.mdに無いため下限側を採り、980の端数寄せで1,980円とした。",
+  "raiseCondition": "販売数と購入者の結果がprofile.mdに入ったら、次の商品から2,480円を検討する",
+  "earlyBird": {
+    "price": 1980,
+    "unitLimit": 100,
+    "afterPrice": 2480,
+    "note": "先着100本までは1,980円。100本に達した時点でnote上の価格を2,480円に手動で切り替える。本物のコミットメントとしてletter-meta.jsonのdeadlineClaimsに記録する。実行しないなら書かない、という原則に沿い、販売数はダッシュボードで追跡し実際に切り替えを行うこと"
+  },
+  "source": "research/market/2026-08-09.json"
+}

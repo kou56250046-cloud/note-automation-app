@@ -1,0 +1,33 @@
+{
+  "productType": "tool",
+  "blocks": [
+    {"n": 1, "type": "hook", "lines": [1, 7]},
+    {"n": 2, "type": "problem", "lines": [9, 15]},
+    {"n": 3, "type": "ideal-future-1", "lines": [17, 21]},
+    {"n": 4, "type": "reproducibility-1-simplify", "lines": [23, 29]},
+    {"n": 5, "type": "ideal-future-2", "lines": [31, 31]},
+    {"n": 6, "type": "reproducibility-2-ease", "lines": [33, 33]},
+    {"n": 7, "type": "fear", "lines": [35, 39]},
+    {"n": 8, "type": "ideal-future-3", "lines": [41, 41]},
+    {"n": 9, "type": "reproducibility-3-disclosure", "lines": [43, 63]},
+    {"n": 10, "type": "ideal-future-4", "lines": [65, 65]},
+    {"n": 11, "type": "reproducibility-4-inconvenience", "lines": [67, 67]},
+    {"n": 12, "type": "objection-removal", "lines": [69, 81]},
+    {"n": 13, "type": "funnel", "lines": [83, 89]},
+    {"n": 14, "type": "closing", "lines": [91, 95]}
+  ],
+  "fearCount": 1,
+  "fearBlock": 7,
+  "reproducibility": ["単純化", "簡易化", "成果物の開示", "不便だった状況"],
+  "closingType": "ideal-future",
+  "exitActions": 1,
+  "deadlineClaims": [
+    {"claim": "先着100本 1,980円 → 100本超で2,480円", "line": 75}
+  ],
+  "toolEvidence": {
+    "disclosed": true,
+    "firstStep": "25〜29行目（design.mdをプロジェクトルートに置き、最初の指示に『@design.mdを読んでから』と書く）",
+    "requirements": "63行目（Claude Code、またはClaude Desktop / Webでdesign.mdを@design.mdとして参照させる構成で動作確認済み）",
+    "limitations": "81行目（ブランドガイドラインへの厳密な準拠、コードの実装バグ修正は扱わない）"
+  }
+}

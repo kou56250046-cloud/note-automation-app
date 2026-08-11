@@ -296,7 +296,7 @@
     - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
     - https://qiita.com/sarap422/items/36fdabedda0fb8693b3f
     - https://zenn.dev/rescuenow/articles/08b9496054a86a
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-ui-3points として記事化（曜日から繰り上げ）
 
 - id: 2026-W33-02
   title: Gemini + GAS で議事録を要約する。コードとプロンプトの全文
@@ -364,7 +364,7 @@
     - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
     - https://note.com/re_birth_ai/n/nf22eb4aa5d93
     - https://www.i3design.jp/in-pocket/how-to-use-notebooklm/
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-notebooklm-custom として記事化（曜日から繰り上げ）
 
 - id: 2026-W33-04
   title: AIにUIを作らせる指示テンプレート集（design.md 雛形つき）
@@ -403,7 +403,7 @@
     - https://fyve.co.jp/claude-code/articles/claude-code-ui-design-guide
     - https://www.divx.co.jp/media/395
     - https://ai-pedia.jp/guides/claude-design-tutorial/
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-ui-templates として記事化（ローカル・木曜から繰り上げ）
 
 - id: 2026-W33-05
   title: LP のファーストビューを、AIの出力から3手で直す
@@ -469,7 +469,7 @@
     - https://qiita.com/kazukichi_0914/items/0ab3e790f860a8850dff
     - https://codelabs.developers.google.com/codelabs/gemini-workspace?hl=ja
     - https://smartcodes.jp/education/articles/apps-script-gemini-ai-assistant/
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-gas-trigger-debug として記事化（曜日から繰り上げ）
 
 - id: 2026-W33-07
   title: NotebookLM と Deep Research をつなぐ調査フロー一式
@@ -506,7 +506,9 @@
     - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
     - https://manabinoba.blog/complete-guide-to-notebooklm/
     - https://rutinelabo.com/notebooklm-guide-2026/
-  status: pending
+  status: pending   # 2026-08-11 着手したが letter-audit が2周不合格で打ち切り。
+                     # notes/2026-08-11-notebooklm-deepresearch/report.md 参照。
+                     # product-concept で価値軸を追加してから再着手すること（used にしない）
 
 # ------------------------------------------------------------
 # 2026-08-07 の手動補充分（W33-05 の消化に対する1本）
@@ -558,4 +560,4 @@
     - https://www.lifehacker.jp/article/2603simple-note-taking-tweaks-make-notebooklm-smart/
     - https://note.com/ai_komon/n/ndd2a1fdc500b
     - https://zenn.dev/kauchi/articles/read-book-with-notebook-lm
-  status: pending
+  status: used   # 2026-08-11 notes/2026-08-11-notebooklm-source-format として記事化（曜日から繰り上げ）

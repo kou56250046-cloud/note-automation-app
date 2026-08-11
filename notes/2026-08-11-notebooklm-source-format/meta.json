@@ -1,0 +1,13 @@
+{
+  "slug": "2026-08-11-notebooklm-source-format",
+  "themeId": "2026-W33-08",
+  "type": "free",
+  "title": "NotebookLMのソースは、貼る前に見出しとKey-Valueで整形します",
+  "category": "生成AIで見せられる成果物を作る / NotebookLM・精度向上",
+  "hashtags": ["NotebookLM", "Gemini", "プロンプト", "生成AI"],
+  "demo": null,
+  "artifacts": ["prompt"],
+  "publishDate": "2026-08-11",
+  "charCount": 2750,
+  "createdAt": "2026-08-11T10:30:00+09:00"
+}
