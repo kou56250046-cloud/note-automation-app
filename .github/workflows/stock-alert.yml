@@ -33,8 +33,16 @@ jobs:
               raise SystemExit(0)
 
           text = p.read_text(encoding="utf-8")
-          pending = len(re.findall(r"^\s*status:\s*pending\s*$", text, re.M))
-          used = len(re.findall(r"^\s*status:\s*used\s*$", text, re.M))
+
+          # 行末コメントを許容する。themes.md では消化の経緯や打ち切りの理由を
+          #   status: used   # 2026-08-11 notes/... として記事化
+          # の形で status 行に書く運用になっており、完全一致で数えると数え落とす。
+          # 数え落とすと在庫を実際より少なく見て、不要な Issue が立つ。
+          def count(state):
+              return len(re.findall(rf"^\s*status:\s*{state}\s*(?:#.*)?$", text, re.M))
+
+          pending = count("pending")
+          used = count("used")
 
           print(f"pending={pending}")
           print(f"used={used}")

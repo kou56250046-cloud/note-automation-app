@@ -157,7 +157,7 @@ note のアルゴリズムはアカウント単位で「この人は何の人か
 | `scripts/lint.py` | 文体・表記・note で崩れる記法・**実物の有無**・**実績主張** | 全記事 | — | Actions（**トークン0**） |
 | `scripts/dedup.py` | 既出記事との重複 | 全記事 | 0.85超でブロック | Actions（**トークン0**） |
 | `scripts/note_market.py` | 需要と供給。テーマ選定の根拠 | 週次 | — | Actions（**トークン0**） |
-| `reader-feedback` | 離脱しないか | 無料記事 | **週1本だけ** | `critic` |
+| `reader-feedback` | 離脱しないか | 無料記事 | **週1本だけ（月曜）** | `critic` |
 | `letter-audit` | 売れるか（16項目） | 有料note | 2周 | `critic` |
 | **`ethics-line`** | やってはいけないことをしていないか | **有料note必須／無料は検出時のみ** | **上限なし** | `auditor` |
 
@@ -175,7 +175,7 @@ note のアルゴリズムはアカウント単位で「この人は何の人か
 
 | 施策 | 変化 |
 |---|---|
-| `reader-feedback` を週5本 → **週1本**（日曜にサンプリング） | critic 呼び出し −4/週 |
+| `reader-feedback` を週5本 → **週1本**（**月曜の1本**に掛ける） | critic 呼び出し −4/週 |
 | 無料記事の `ethics-line` を `lint.py` の一次判定に置換 | Opus 呼び出し 週5 → **ほぼ0** |
 | `weekly-research` の web 検索を 15件 → **5件** | 週次の最大コスト源が 1/3 |
 | `note_market.py` が需要と供給を実測（Python） | **トークン0** |
