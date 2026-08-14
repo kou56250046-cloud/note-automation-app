@@ -48,7 +48,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 |---|---|---|
 | `/note-init` | 初回のみ。カテゴリとペルソナを確定する | ローカル |
 | `/note-daily` | 今日の記事を1本作る | ローカル（有料は必須） |
-| `/note-preview` | プレビューを生成して `localhost:5173` で開く | **ローカルのみ** |
+| `/note-preview` | プレビューを生成し、**ダッシュボードも更新する** | **ローカルのみ** |
 | `/note-revise {slug} "指示"` | 差し戻して再生成 | ローカル |
 | `/note-letter {slug}` | 有料noteのレター診断ループ | ローカル |
 | `/note-review` | ボトルネックを診断して次の1手を1つ決める | ローカル |
@@ -408,6 +408,18 @@ node scripts/encrypt.mjs --from data/dashboard.json  # ENC に埋め込む
 git commit && push                                # deploy-pages が配信する
 ```
 
+**この3つは `/note-preview` が実行する。** 手で打つ必要はない。
+
+更新の機会をプレビュー生成と同じ場所に置いたのは、**どちらもローカルでしかできない**
+からである。投稿済みの除外・有料部分の暗号化・数値の更新は同じ制約を共有しており、
+別々の作業にすると人間の手数が3倍になる。
+
+**`fetch-metrics` による毎朝の自動取得は動いていない。** `scripts/fetch-public.mjs` が
+未実装のため、ワークフローは起動して即スキップしている（失敗はしないので通知も来ない）。
+実装するときは `fetch-metrics.yml` の `git add data/` に
+`note-factory-dashboard.html` を足すこと。**`encrypt.mjs` が書き換えるのは
+`data/` ではなく HTML の `ENC` である。** 足さないとコミットされず、更新が反映されない。
+
 | ファイル | 追跡 | 理由 |
 |---|:---:|---|
 | `data/dashboard.json` | ✕ | 平文の中間ファイル。埋め込んだら不要 |
@@ -433,7 +445,7 @@ Claude Code Action は Anthropic API キーによる従量課金であり、サ�
 | `lint-and-dedup` | 文体・記法・実物の有無・重複を判定する | 使わない |
 | **`market-research`** | **需要と供給を実測する（日曜21時 JST）** | **使わない** |
 | `deploy-pages` | ダッシュボード・投稿キュー・デモを配信する | 使わない |
-| `fetch-metrics` | 数値を取得して暗号化する | 使わない |
+| `fetch-metrics` | 数値を取得して暗号化する（**未実装。起動して即スキップする**） | 使わない |
 | `stock-alert` | 在庫が3本未満なら Issue を立てる | 使わない |
 
 **`market-research` はこの原則に抵触しない。** やるのは生成ではなく計測である。

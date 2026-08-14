@@ -4,6 +4,10 @@ description: 記事を HTML にして、ローカル確認と公開ページの�
 
 投稿待ちの記事をコピペできる状態にします。**スマホからも投稿できます。**
 
+**ダッシュボードの更新もここで行います。** 数値の更新・投稿済みの除外・有料部分の暗号化は
+どれもローカルでしかできず、実行のたびに人間が3回コマンドを打つ形になっていました。
+このコマンド1回にまとめてあります。
+
 ## 出力先は2つある
 
 | 出力 | 場所 | 有料部分 | 用途 |
@@ -45,18 +49,55 @@ node scripts/build-preview.mjs --public   # 公開用（有料部分を暗号化
 - **投稿済みの記事を除外**（`publishDate` が過去 or `meta.json` の `posted: true`）
 - `noindex` を付与（note の記事より先にインデックスされると重複扱いになる）
 
-### 3. 公開用をコミットして push する
+### 3. ダッシュボードを更新する
+
+**ここで一緒に更新します。** 数値の自動取得（`fetch-metrics`）は
+`scripts/fetch-public.mjs` が未実装のため動いていません。更新の機会はここだけです。
+
+まず今日すでに更新済みかを確認します。`data/history.jsonl` の最終行の日付が
+今日なら**この手順を飛ばして4へ進んでください**（note の API を無駄に叩かないため）。
 
 ```bash
-git add preview/public
-git commit -m "プレビューを更新"
+tail -1 data/history.jsonl
+```
+
+更新する場合は2つを順に実行します。
+
+```bash
+python scripts/note_market.py --write-dashboard
+node scripts/encrypt.mjs --from data/dashboard.json
+```
+
+- 1つ目が `data/dashboard.json` を書き、`data/history.jsonl` にフォロワー数を1点積みます
+- 2つ目が `note-factory-dashboard.html` の `const ENC = "..."` に暗号化して埋め込みます
+
+**時間がかかります。** タグの計測に加えて自分の記事1本ずつに詳細 API を叩くためです。
+合言葉は `secrets/passphrase.txt` を読むので、手順1が済んでいれば追加の入力は要りません。
+
+**失敗してもプレビューの公開は止めないでください。** note の API が落ちている、
+`--max-requests` の上限に当たったといった理由で失敗しても、記事の受け渡しには影響しません。
+その場合は手順4で `preview/public` だけをコミットし、ダッシュボードは次回に回します。
+
+`data/history.jsonl` は**失うと履歴が戻りません。** 消さないでください。
+
+### 4. まとめてコミットして push する
+
+```bash
+git add preview/public note-factory-dashboard.html data/history.jsonl
+git commit -m "プレビューとダッシュボードを更新"
 git push
 ```
 
+**`data/dashboard.json` を追加しないでください。** 平文の中間ファイルで、
+`.gitignore` 対象です（`git add -f` で強制追加しないこと）。
+暗号化して `ENC` に埋め込んだ時点で役目は終わっています。
+
 push すると `deploy-pages` が走り、GitHub Pages が更新されます。
 このワークフローは**配信前に検査**し、有料部分が平文だったり `noindex` が無ければ公開を止めます。
+`note-factory-dashboard.html` も `data/**` も配信トリガーの `paths` に入っているので、
+ダッシュボードだけを更新した場合でも配信されます。
 
-### 4. ローカルで確認する
+### 5. ローカルで確認する
 
 ```bash
 node scripts/serve.mjs
@@ -67,7 +108,11 @@ node scripts/serve.mjs
 ## ユーザーに伝えること
 
 ```
-プレビューを更新しました。
+プレビューとダッシュボードを更新しました。
+
+## ダッシュボード
+フォロワー {n} 人 / 記事 {n} 本（前回から {±n}）
+※ 更新をスキップした場合、または失敗した場合はその旨と最終更新日を書く
 
 ## PC から
 localhost:5173
