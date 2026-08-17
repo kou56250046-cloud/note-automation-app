@@ -60,16 +60,16 @@ v2.0（週1本の有料note）から週7本へ移行するにあたり、3つの
 v2.0 は部署（リサーチ部・編集部・営業部）で分けていた。v3.0 は**周期**で分ける。
 
 ```
-┌─ 週次リサーチ層（Routines / 月曜1回）───────────────────────┐
+┌─ 週次リサーチ層（ローカル / 日曜）──────────────────────────┐
 │  weekly-research                                             │
 │  → web検索・競合解剖・スコアリング → themes.md に7本仕込む   │
 │  → ここでしか web 検索をしない                               │
 └──────────────────────────────────────────────────────────────┘
               ↓ 在庫（research/themes.md）
-┌─ 日次生成層（Routines / 毎日）──────────────────────────────┐
-│  daily-build                                                 │
-│  → 在庫から今日の1本を引く。type で free / paid に分岐       │
-│  → web 検索をしない。これが毎日投稿を成立させている          │
+┌─ 週次生成層（ローカル / 日曜1回）───────────────────────────┐
+│  /note-week（weekly-build）                                  │
+│  → 在庫から7本引く。無料6本は writer を並列起動して書く      │
+│  → 日曜の1本だけ paid。web 検索をしない                      │
 └──────────────────────────────────────────────────────────────┘
               ↓ notes/{slug}/ に push
 ┌─ 決定論ゲート層（GitHub Actions / トークン0）───────────────┐
@@ -103,32 +103,32 @@ v2.0 は `daily-trend-scan` を毎朝走らせる設計だった。1回あたり
 
 週次に集約すると月250円になり、**削減額の1,750円がそのまま記事26本分の原資になる。** 週1本しか出せなかったものが週7本になる転換点がここにある。
 
-### 2.2 Routines の制約が設計を規定している
+### 2.2 Routines を廃止した
 
-| 制約 | 設計への影響 |
+初版は `daily-build` / `weekly-research` / `monthly-review` の3本を Anthropic クラウドの Routines に置いていた。**すべて廃止し、ローカル実行に移した。**
+
+| 廃止の理由 | 内容 |
 |---|---|
-| 日次実行上限（Pro 5回/日） | Routine を3本に絞る（§2.3） |
-| 承認なしで実行される | プロンプトは自己完結形式。「前回の続き」は機能しない |
-| research preview 段階 | 退避先（GitHub Actions + ローカル `/loop`）を確保 |
-| ブラウザ操作ができない | **v3.0 では影響しない。ブラウザ操作そのものを廃止したため** |
+| **有料noteを手元に残せない** | `03-draft.md` は `.gitignore` 対象。クラウドで生成するとコミットされず消える（§11.2） |
+| **日次で起こす必要が消えた** | 生成を日曜1回にまとめたため、毎日クラウドを動かす意味が無い |
+| 公開版の暗号化ができない | `03-draft.md` が Actions 上に存在しないため、暗号化もローカルでしか行えない |
 
-### 2.3 Routines の配分（Pro = 5回/日）
+### 2.3 週次の実行（すべてローカル）
 
-| # | Routine | トリガー | 頻度 |
+| # | 実行 | タイミング | 頻度 |
 |---|---|---|---|
-| 1 | `daily-build` | `0 6 * * 1,2,3,5,6`（月火水金土 06:00） | 週5回 |
-| 2 | `weekly-research` | 月曜 07:00 | 週次 |
-| 3 | `monthly-review` | 月初 08:00 | 月次 |
+| 1 | `weekly-research` | 日曜（在庫が7本未満のとき） | 週次 |
+| 2 | **`/note-week`（weekly-build）** | **日曜。`market-research`（21時）のあと** | **週次** |
+| 3 | `/note-preview` | `/note-week` の直後 | 週次 |
+| 4 | `/note-review` | 月初 | 月次 |
 
-**最大消費は「月初が月曜と重なった日」の3回。** 予備2枠が手動実行用に残る。
+**日曜に人間がやることは2コマンドだけである。** `/note-week` と `/note-preview`。
 
-**`daily-build` が木・日に動かない理由:** 有料部分の本文（`03-draft.md`）を追跡しないため、クラウドで生成すると手元に残らない（§11.2）。有料noteはローカルで作る。
-
-**日次生成を1本に統合できる理由:** `themes.md` の各テーマが `type`（free / paid）と曜日を持つため、ルーチンは在庫から今日の1本を引くだけでよい。
+**7本を1回で作れる理由:** `themes.md` の各テーマが `type`（free / paid）と曜日を持つため、在庫から7本引いて曜日に並べるだけでよい。無料6本は互いに独立しているので `writer` サブエージェントを並列起動できる。
 
 ### 2.4 GitHub Actions で記事を生成しない
 
-Claude Code Action は Anthropic API キーによる従量課金であり、**サブスク枠の外**になる。生成は Routines かローカルに置き、Actions は LLM を使わない処理だけを担当する。
+Claude Code Action は Anthropic API キーによる従量課金であり、**サブスク枠の外**になる。生成はすべてローカルに置き、Actions は LLM を使わない処理だけを担当する。
 
 public repo なので Actions の実行時間は無制限。ただし**公開版プレビューの生成は Actions に置かない**。暗号化には `03-draft.md` が要るが、それは `.gitignore` 対象で Actions 上に存在しないためである（§10.3）。
 
@@ -356,17 +356,17 @@ flowchart TD
     D --> E{"カテゴリ範囲内か"}
     E -- "範囲外" --> F["learnings.md に理由付きで記録して除外"]
     E -- "範囲内" --> G["themes.md に投入（type と曜日を割り当て）"]
-    G --> H["月火水金土 = free / 木日 = paid"]
+    G --> H["月〜土 = free（6本）/ 日 = paid（1本）"]
     H --> I["git commit & push"]
 ```
 
 ### 7.2 日次生成
 
-無料記事（月火水金土）は Routine が自動実行し、有料note（木・日）はローカルで実行する。
+無料6本（月〜土）と有料note 1本（日）を、日曜に `/note-week` がローカルで一括生成する。
 
 ```mermaid
 flowchart TD
-    A["月火水金土 06:00 daily-build（クラウド）<br/>木・日 ローカルで「お願いします」"] --> B["themes.md から今日の曜日のテーマを1本引く"]
+    A["日曜 /note-week（ローカル）"] --> B["themes.md から7本引いて曜日に並べる"]
     B --> C{"type"}
 
     C -- "free" --> D["daily-article（writer / Sonnet 5 / medium）<br/>2500〜4000字＋実物1つ以上"]
@@ -397,7 +397,7 @@ flowchart TD
     S --> T["コピー → note に貼る"]
 ```
 
-**type: paid の分岐はローカルでのみ走る。** `daily-build` Routine は月火水金土しか動かない（§2.3）。
+**type: paid は週1本（日曜）だけである。** 生成はすべてローカルで走る（§2.3）。
 
 **人間の関与はこの図の中で1箇所だけ。** コピーして貼ること。
 
@@ -412,7 +412,7 @@ knowledge/account.md ──┬─→ weekly-research ──→ research/themes.m
 knowledge/voice.md   ──┤        （在庫7本）          │
 research/accounts/   ──┘                             │
                                                      ↓
-                                        daily-build が1本引く
+                                        /note-week が7本引く
                                                      │
                           ┌──────────────────────────┴──────────────┐
                      type: free                                type: paid
@@ -476,7 +476,7 @@ research/accounts/   ──┘                             │
 | 処理 | 実行場所 | 理由 |
 |---|---|---|
 | `weekly-research` | Anthropic クラウド | PC 起動不要。スケジュール実行 |
-| `daily-build`（無料記事） | Anthropic クラウド | 月火水金土に自動実行 |
+| `/note-week`（週7本） | ローカル | 日曜に手で実行 |
 | **有料noteの生成** | **ローカルのみ** | **`03-draft.md` を追跡しないため、クラウドだと手元に残らない（§11.2）** |
 | `monthly-review` | Anthropic クラウド | 定期実行のみで完結 |
 | `lint.py` / `dedup.py` | GitHub Actions | **LLM を使わない。トークン0** |
@@ -636,9 +636,9 @@ v2.0 の未決事項には「検索で発見されにくいリポジトリ名」
 
 **1. 有料noteの生成はローカル実行のみになる。**
 
-Routines はクラウドで動いてコミットするため、`.gitignore` されたファイルを手元に残せない。したがって `daily-build` の cron は `0 6 * * 1,2,3,5,6`（月火水金土）とし、無料記事5本だけを担当する。有料noteは木・日にローカルで作る。
+クラウドで動くものはコミットして完了するため、`.gitignore` されたファイルを手元に残せない。したがって **Routines を廃止し、生成をすべてローカルに移した。** `/note-week` が日曜に7本まとめて作る。
 
-副次的に Routines の消費が週7回から週5回に減り、Pro の枠にさらに余裕が出る。
+副次的に、クラウドの実行枠を一切消費しなくなった。
 
 **2. プレビューの生成もローカルのみになる。**
 
@@ -671,7 +671,6 @@ note-factory/
 │   ├── agents/                   # researcher / writer / letter-writer / critic / auditor
 │   └── commands/                 # note-init / note-preview / note-revise / note-letter / note-review
 │
-├── routines/                     # daily-build / weekly-research / monthly-review
 │
 ├── knowledge/
 │   ├── account.md                # カテゴリとペルソナ。全記事の範囲を決める

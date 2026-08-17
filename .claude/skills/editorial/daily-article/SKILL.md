@@ -1,11 +1,13 @@
 ---
 name: daily-article
-description: 在庫から1本引いて1500〜2500字の無料記事を書くスキル。daily-build Routine から毎朝実行し、ユーザーが「今日の記事を書いて」「お願いします」と言ったときにも使う。web 検索をせず research/themes.md の在庫だけを使う。実績を要する主張を書かない設計になっており、profile.md が空でも成立する。書き上げたら reader-feedback と ethics-line（light モード）へ渡し、自己評価はしない。
+description: 在庫から1本引いて2500〜4000字の無料記事を書くスキル。日曜の weekly-build（/note-week）が無料6本を並列で書かせるときの単位であり、ユーザーが「今日の記事を書いて」「1本だけ作り直して」と言ったときにも使う。web 検索をせず research/themes.md の在庫だけを使う。実績を要する主張を書かない設計になっており、profile.md が空でも成立する。書き上げたら reader-feedback と ethics-line（light モード）へ渡し、自己評価はしない。
 ---
 
 # daily-article
 
-無料記事を1本書く。**週5本（月火水金土）の主力。**
+無料記事を1本書く。**週6本（月〜土）の主力。**
+
+日曜の `/note-week` が、このスキルを単位として `writer` を6つ並列起動する。
 
 ---
 

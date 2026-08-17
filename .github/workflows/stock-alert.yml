@@ -46,7 +46,7 @@ jobs:
 
           print(f"pending={pending}")
           print(f"used={used}")
-          print("state=" + ("empty" if pending == 0 else "low" if pending < 3 else "ok"))
+          print("state=" + ("empty" if pending == 0 else "low" if pending < 7 else "ok"))
           PY
 
       - name: サマリー
@@ -79,7 +79,7 @@ jobs:
           elif [ "$STATE" = "empty" ]; then
             BODY=$'**在庫が空です。記事を生成できません。**\n\n`weekly-research` を手動で実行してください。\n\n在庫が空の状態で記事を書かないでください。その場でテーマを作ると、\nカテゴリの範囲チェックとスコアリングが飛びます。'
           else
-            BODY=$"未使用のテーマが **${PENDING} 本** になりました（3本を下回っています）。\n\n次の月曜を待たず、\`weekly-research\` を手動で実行することを推奨します。\n\n在庫が切れると毎日投稿が止まります。"
+            BODY=$"未使用のテーマが **${PENDING} 本** になりました（7本を下回っています）。\n\n\`/note-week\` は1回の実行で在庫を **7本** 消費します。この本数では日曜の週次生成が停止します。\n\n日曜を待たず、\`weekly-research\` を実行してください。\n\n在庫が切れると毎日投稿が止まります。"
           fi
 
           gh issue create --title "$TITLE" --body "$BODY" --label "stock" 2>/dev/null \

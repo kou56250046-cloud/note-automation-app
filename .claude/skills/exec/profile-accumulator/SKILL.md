@@ -1,6 +1,6 @@
 ---
 name: profile-accumulator
-description: 運用ログと実測データから「言える実績」を knowledge/profile.md に追記するスキル。monthly-review Routine から実行し、ユーザーが「実績を更新して」「profile を更新して」「もう体験談型を書ける？」と言ったときにも使う。出所のない数値を書かない。書けないことリストから項目を外す判断と、experience 型を解禁するかの判定を行う。note_market.py が自動更新する AUTO ブロックには触らない。
+description: 運用ログと実測データから「言える実績」を knowledge/profile.md に追記するスキル。月初に /note-review から実行し、ユーザーが「実績を更新して」「profile を更新して」「もう体験談型を書ける？」と言ったときにも使う。出所のない数値を書かない。書けないことリストから項目を外す判断と、experience 型を解禁するかの判定を行う。note_market.py が自動更新する AUTO ブロックには触らない。
 ---
 
 # profile-accumulator
