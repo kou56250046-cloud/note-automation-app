@@ -1,0 +1,239 @@
+{
+  "productType": "tool",
+  "slug": "2026-08-20-design-tokens",
+  "round": 3,
+  "blocks": [
+    {
+      "n": 1,
+      "type": "hook",
+      "lines": [
+        1,
+        3
+      ]
+    },
+    {
+      "n": 2,
+      "type": "problem",
+      "lines": [
+        5,
+        9
+      ]
+    },
+    {
+      "n": 3,
+      "type": "ideal-future",
+      "lines": [
+        11,
+        13
+      ],
+      "valueAxis": "再現（時間）"
+    },
+    {
+      "n": 4,
+      "type": "reproducibility",
+      "sub": "単純化",
+      "lines": [
+        15,
+        17
+      ]
+    },
+    {
+      "n": 5,
+      "type": "ideal-future",
+      "lines": [
+        19,
+        21
+      ],
+      "valueAxis": "言語（語彙）"
+    },
+    {
+      "n": 6,
+      "type": "reproducibility",
+      "sub": "簡易化",
+      "lines": [
+        23,
+        25
+      ]
+    },
+    {
+      "n": 7,
+      "type": "fear",
+      "lines": [
+        27,
+        29
+      ]
+    },
+    {
+      "n": 8,
+      "type": "ideal-future",
+      "lines": [
+        31,
+        33
+      ],
+      "valueAxis": "持ち出し（場所）"
+    },
+    {
+      "n": 9,
+      "type": "reproducibility",
+      "sub": "成果物の開示＋動作条件",
+      "lines": [
+        35,
+        94
+      ]
+    },
+    {
+      "n": 10,
+      "type": "ideal-future",
+      "lines": [
+        96,
+        102
+      ],
+      "valueAxis": "ダーク（工程数）"
+    },
+    {
+      "n": 11,
+      "type": "reproducibility",
+      "sub": "不便だった状況",
+      "lines": [
+        104,
+        108
+      ]
+    },
+    {
+      "n": 12,
+      "type": "objection-removal",
+      "lines": [
+        110,
+        128
+      ]
+    },
+    {
+      "n": 13,
+      "type": "funnel",
+      "lines": [
+        130,
+        132
+      ]
+    },
+    {
+      "n": 14,
+      "type": "closing",
+      "lines": [
+        134,
+        136
+      ],
+      "valueAxis": "見え方（他者の目）"
+    }
+  ],
+  "valueAxisUsage": {
+    "再現（時間）": [
+      3
+    ],
+    "言語（語彙）": [
+      5
+    ],
+    "持ち出し（場所）": [
+      8
+    ],
+    "ダーク（工程数）": [
+      10
+    ],
+    "見え方（他者の目）": [
+      14
+    ]
+  },
+  "axisReuse": false,
+  "reproducibilityAdjacency": "なし。block 9 と block 11 の間に block 10（理想の未来）を挟んだ",
+  "artifactsDisclosed": [
+    {
+      "what": "色トークン `--color-*` の全定義（ライト / prefers-color-scheme / data-theme の3系統）",
+      "lines": [
+        39,
+        80
+      ]
+    },
+    {
+      "what": "check-tokens.mjs の検出ログ実例3行",
+      "lines": [
+        90,
+        94
+      ]
+    },
+    {
+      "what": "動作条件（Node 18 / CSSカスタムプロパティ / 対応するAI）",
+      "lines": [
+        84,
+        86
+      ]
+    }
+  ],
+  "toolEvidence": {
+    "成果物そのもの": "色トークン全文をコードブロックで公開（39-80行）",
+    "動作条件": "84-86行",
+    "最初の1歩": "17行・114行（tokens.css を直下に置く）",
+    "制約": "102行（切り替えボタンは自分で書く）・124行（1枚も作らせたことがない人には早い）・126行（配色のセンスは良くならない）"
+  },
+  "deadlineClaims": [
+    {
+      "claim": "1,480円は2026年9月30日までの初期価格。10月1日から1,980円に変える",
+      "lines": [
+        116,
+        116
+      ],
+      "type": "price-increase",
+      "effectiveDate": "2026-10-01",
+      "priceFrom": 1480,
+      "priceTo": 1980,
+      "isReal": true,
+      "evidence": "notes/2026-08-20-design-tokens/pricing.json の priceSchedule",
+      "owner": "人間（note の価格設定画面で変更する）",
+      "note": "実行しなければ ethics-line の E1（偽の期限）・景品表示法の有利誤認に該当する。日付で切っているため、実行したかどうかが外から確認できる"
+    }
+  ],
+  "auditHistory": [
+    {
+      "round": 1,
+      "score": "14/16",
+      "pass": false,
+      "failures": [
+        "A1",
+        "C3"
+      ],
+      "fixed": {
+        "A1": "再現性が2連続していた（block 9 の成果物開示＋動作条件 → block 10 の不便だった状況）。未使用だった価値軸「ダーク（工程数）」で理想の未来を1ブロック作り、96-100行に挿入して連続を解消した",
+        "C3": "期限が存在しなかった。pricing-strategy に戻り、pricing.json に priceSchedule（2026-10-01 から 1,980円）を追加。本物の値上げ計画として114行に記載し、deadlineClaims に記録した"
+      }
+    },
+    {
+      "round": 2,
+      "score": "15/16",
+      "pass": false,
+      "failures": [
+        "A1"
+      ],
+      "why": "交互配置は解消したが、理想の未来4か所が全て『〜作業がなくなる／要らない』の否定形に収束していた。価値軸5本が名前は違っても『書き手の作業が減る』1つの便益に帰着しており、軸の違いがメタデータの中にしか存在していなかった。",
+      "upstreamSuspect": "product-concept",
+      "fixed": "00-concept.md に価値軸6「見え方（他者の目）」を追加。レターの理想の未来3か所（13行・33行・134行）を肯定形に書き換え、締めを軸6に差し替えた。C3 は round 2 で解消済み"
+    }
+  ],
+  "upstreamRevision": {
+    "工程": "product-concept",
+    "何を変えたか": "価値軸6「見え方（他者の目）」を追加した。1〜5が全て『書き手の作業工程が減る』に帰着しており、account.md のペルソナの核心（人に見せたときに恥ずかしくないものを毎回出せる）が未来として一度も描かれていなかったため。",
+    "なぜ round 3 なのか": "letter-audit の上限2周は sales-letter への自動差し戻しの上限である。round 2 の upstreamSuspect が product-concept を指したため、レターの言い回しではなく 00-concept.md の価値軸を変えたうえで再判定にかけている。"
+  },
+  "landingPattern": {
+    "block3": "肯定（tokens.css の中に残っている）※round3で変更",
+    "block5": "肯定（同じ言葉で通る）",
+    "block8": "肯定（持っていくものはそれだけで足りる）※round3で変更",
+    "block10": "否定（やることリストから1つ消える）",
+    "block14": "肯定（相手が見るのは自分が決めた色）※round3で変更・締め"
+  },
+  "postAuditEdits": {
+    "いつ": "round 3 合格（16/16）のあと、ethics-line（full）の review 指摘に対応するため",
+    "編集1": "ダークのブロック（block 10）。理想の未来の着地（100行）は残し、102行に『画面内に切り替えボタンを置く場合は data-theme を付け外しする数行を自分で書くことになる』という注記を1段落追加した。prefers-color-scheme は自動で効くが data-theme は実装が要る、という ethics-line の指摘への対応",
+    "編集2": "価格の節（122行）。『配色を1回作り直す手間より、たいてい安く済みます』を削除し、『中身は上に出した色のトークンと、同じ粒度で残り4系統を定義したものです』に差し替えた。母数のない経済的便益の比較だったため",
+    "編集3": "レター91行の出力例のファイル名を Button.tsx → button.css に修正。check-tokens.mjs は .css と .html しか走査しないため、買った人が再現できない状態だった。文字数が同じなので行番号はずれていない",
+    "再判定": "**未実施。** round 4 として letter-audit を起動したが、セッション上限で中断した。この商品は A1 で round 1・2 と2回落ちているため、**編集1が A1 に影響していないかの再判定が残っている**。公開前に実施すること"
+  },
+  "pendingAudit": "round 4（ethics-line 対応の編集後）が未実施"
+}

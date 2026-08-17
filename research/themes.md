@@ -524,9 +524,11 @@
     - https://googleworkspace.tscloud.co.jp/gemini/notebooklm-custom-instructions
     - https://manabinoba.blog/complete-guide-to-notebooklm/
     - https://rutinelabo.com/notebooklm-guide-2026/
-  status: pending   # 2026-08-11 着手したが letter-audit が2周不合格で打ち切り。
-                     # notes/2026-08-11-notebooklm-deepresearch/report.md 参照。
-                     # product-concept で価値軸を追加してから再着手すること（used にしない）
+  status: used   # 2026-08-17 notes/2026-08-23-research-flow として記事化（公開予定 08-23）。
+                 # 2026-08-11 の初回着手（notes/2026-08-11-notebooklm-deepresearch）は
+                 # letter-audit が2周不合格で打ち切り。申し送りどおり product-concept に戻り、
+                 # 価値軸を5本定義してから起こし直して round 2 で 16/16 合格。
+                 # 旧ディレクトリは meta.json を持たないため公開対象にならない。
 
 # ------------------------------------------------------------
 # 2026-08-07 の手動補充分（W33-05 の消化に対する1本）
@@ -773,7 +775,9 @@
     - https://zenn.dev/silverbirder/articles/2078e4a8a2603f
     - https://www.mitsue.co.jp/knowledge/blog/x-tech/202606/24_1330.html
     - https://fumufumuui.com/posts/design-token
-  status: pending
+  status: used   # 2026-08-17 notes/2026-08-20-design-tokens として記事化（公開予定 08-20）。
+                 # letter-audit は round 3 で 16/16 合格（A1 が2周落ち、product-concept で
+                 # 価値軸「見え方（他者の目）」を追加して解消）。
 
 - id: 2026-W34-05
   title: AIが作らない3画面——空・読み込み中・エラーを足す

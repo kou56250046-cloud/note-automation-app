@@ -1,0 +1,718 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#UIデザイン #Webデザイン #LP制作 #生成AI&quot;)">ハッシュタグをコピー</button>
+    <a href="../demo/2026-08-17-dashboard-3points/" target="_blank" rel="noopener"><button>before / after を開く</button></a>
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする</h1>
+  <div class="muted">生成AIで見せられる成果物を作る / AI×Webデザイン ／ 2026-08-17 ／ #UIデザイン #Webデザイン #LP制作 #生成AI</div>
+</header>
+
+<details class="demo-embed" open>
+  <summary>読者が見る before / after</summary>
+  <div class="demo-pair">
+    <div class="demo-pane">
+      <span class="demo-tag">BEFORE</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-08-17-dashboard-3points/before.html" title="before" loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="demo-pane">
+      <span class="demo-tag after">AFTER</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-08-17-dashboard-3points/after.html" title="after" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+  <div class="muted">
+    タブで切り替えられる版は
+    <a href="../demo/2026-08-17-dashboard-3points/" target="_blank" rel="noopener">こちら</a>。
+    記事に載せているURL → <code>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-17-dashboard-3points/</code>
+  </div>
+</details>
+
+<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, &quot;あなたは note の見出し画像を専門とするアートディレクターです。\n以下の条件で16:9の画像を1枚作ってください。\n\n## 被写体（最重要）\n生成り色の紙を敷いた台の上に、細長い金属の角棒が2つの列で並んでいる。\n・左側: 6本の角棒。1本ずつ違う色に塗られている（赤、緑、紫、橙、水色、黄）。\n  下端が揃っておらず、台から浮いて中途半端な高さで止まっている\n・右側: 同じ6本の角棒。すべて同じ濃紺のグレーで、1本だけが藍色に塗られている。\n  6本とも下端が台の面にぴたりと接地し、高さの差だけが見える\nどちらの列にも数字や目盛りの文字を描き込まない。色と接地の有無だけで見せる。\n\n## 構図\n・左に「浮いた色とりどりの棒」、右に「接地した単色の棒」を置き、視線が左から右へ流れる\n・画面上部の3割を平坦な余白として空ける\n・真横やや上からの視点。棒の断面が少しだけ見える角度\n\n## 色\n・背景の基調: #f6f3ec（生成りの紙）\n・インク: #221f19。台の縁と棒の影に使う\n・中間色: #85796a。右側の棒の基本色\n・アクセント: #2456e0（藍）。右側の1本にだけ使う\n・左側の棒の彩度は高く、右側は藍以外を抑える。この対比を強く出す\n\n## 質感とライティング\n・工具や製図器具のカタログ写真。金属の梨地と塗装のマットな質感を描き分ける\n・斜め上からの単一光源。影の方向をすべて揃える\n・接地している棒には短く硬い影を、浮いている棒には離れた柔らかい影を落とす\n・高精細、ノイズなし、4K品質\n\n## テキスト（必須・大きく主張する）\n画面上部の余白に「目盛りを0に戻す」というキーワードを大きく配置してください。\n\n・太い書体（Bold/Black相当）で、棒と同じかそれ以上の視覚的な強さで配置する\n・文字色は #2456e0（藍）で統一し、#f6f3ec の背景とのコントラストを最優先する\n・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない\n・棒の並びと軸を揃えたタイポグラフィとして配置する。ただの貼り付けにしない&quot;)">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">あなたは note の見出し画像を専門とするアートディレクターです。
+以下の条件で16:9の画像を1枚作ってください。
+
+## 被写体（最重要）
+生成り色の紙を敷いた台の上に、細長い金属の角棒が2つの列で並んでいる。
+・左側: 6本の角棒。1本ずつ違う色に塗られている（赤、緑、紫、橙、水色、黄）。
+  下端が揃っておらず、台から浮いて中途半端な高さで止まっている
+・右側: 同じ6本の角棒。すべて同じ濃紺のグレーで、1本だけが藍色に塗られている。
+  6本とも下端が台の面にぴたりと接地し、高さの差だけが見える
+どちらの列にも数字や目盛りの文字を描き込まない。色と接地の有無だけで見せる。
+
+## 構図
+・左に「浮いた色とりどりの棒」、右に「接地した単色の棒」を置き、視線が左から右へ流れる
+・画面上部の3割を平坦な余白として空ける
+・真横やや上からの視点。棒の断面が少しだけ見える角度
+
+## 色
+・背景の基調: #f6f3ec（生成りの紙）
+・インク: #221f19。台の縁と棒の影に使う
+・中間色: #85796a。右側の棒の基本色
+・アクセント: #2456e0（藍）。右側の1本にだけ使う
+・左側の棒の彩度は高く、右側は藍以外を抑える。この対比を強く出す
+
+## 質感とライティング
+・工具や製図器具のカタログ写真。金属の梨地と塗装のマットな質感を描き分ける
+・斜め上からの単一光源。影の方向をすべて揃える
+・接地している棒には短く硬い影を、浮いている棒には離れた柔らかい影を落とす
+・高精細、ノイズなし、4K品質
+
+## テキスト（必須・大きく主張する）
+画面上部の余白に「目盛りを0に戻す」というキーワードを大きく配置してください。
+
+・太い書体（Bold/Black相当）で、棒と同じかそれ以上の視覚的な強さで配置する
+・文字色は #2456e0（藍）で統一し、#f6f3ec の背景とのコントラストを最優先する
+・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない
+・棒の並びと軸を揃えたタイポグラフィとして配置する。ただの貼り付けにしない</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 7 件</div><ul><li class="warn">L28 一文が 90 文字（目安 60）</li><li class="warn">L68 金額の主張。profile.md に根拠が無ければ書けない（ethics-line を起動する）</li><li class="warn">L75 一文が 64 文字（目安 60）</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;AIに出させたダッシュボードのグラフは、見た目ほど正確ではありません。&lt;/p&gt;
+&lt;p&gt;棒グラフの目盛りが0から始まっていなかったり、系列ごとに違う色がついていたりします。&lt;/p&gt;
+&lt;p&gt;一番大事な数字が、画面の隅に置かれていることもあります。&lt;/p&gt;
+&lt;p&gt;直す場所は3つだけです。色数、目盛り、並びです。&lt;/p&gt;
+&lt;p&gt;この3つを直すと、同じ数字のまま伝わり方が変わります。&lt;/p&gt;
+&lt;h2&gt;「動くけど読めない」の中身&lt;/h2&gt;
+&lt;p&gt;指示はたいてい「売上ダッシュボードを作って」の一言です。&lt;/p&gt;
+&lt;p&gt;それでもグラフはひととおり出てきます。棒グラフも、KPIカードも崩れてはいません。&lt;/p&gt;
+&lt;p&gt;それでも、上司や取引先に画面を見せたとき、質問が返ってくることがあります。&lt;/p&gt;
+&lt;p&gt;「このグラフ、なぜこんなに急に伸びているんですか」という質問です。&lt;/p&gt;
+&lt;p&gt;スクリーンショットを撮って、結局共有をためらった人もいるはずです。グラフの見た目に説明を求められると、その場で答えに詰まります。&lt;/p&gt;
+&lt;p&gt;作例を用意しました。左はAIの出力によくある形をそのまま残したもの、右が直したものです。&lt;/p&gt;
+&lt;p&gt;左のHTMLには、どこが問題なのかを示す説明コメントだけをこちらで足してあります。&lt;/p&gt;
+&lt;p&gt;https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-17-dashboard-3points/&lt;/p&gt;
+&lt;p&gt;同じ2つのグラフと1つの数値カードを使っています。並び順と使う数字も同じです。&lt;/p&gt;
+&lt;p&gt;違うのは、色の数、軸の始点、そしてカードの配置だけです。&lt;/p&gt;
+&lt;h2&gt;手1: 色数を1色＋強調1色に絞る&lt;/h2&gt;
+&lt;p&gt;before の月次推移グラフは、6本の棒それぞれに違う色を使っていました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!-- before: 同じ系列なのに棒ごとに色を変えている --&amp;gt;
+&amp;lt;rect fill=&quot;#ff5f6d&quot;/&amp;gt;
+&amp;lt;rect fill=&quot;#38ef7d&quot;/&amp;gt;
+&amp;lt;rect fill=&quot;#4a6cf7&quot;/&amp;gt;
+&amp;lt;rect fill=&quot;#ffd200&quot;/&amp;gt;
+&amp;lt;rect fill=&quot;#8e2de2&quot;/&amp;gt;
+&amp;lt;rect fill=&quot;#11998e&quot;/&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;系列が1つなのに6色使うと、読む人は色の違いに意味を探してしまいます。カテゴリ別のグラフも同様で、4色を個別に割り当てていました。&lt;/p&gt;
+&lt;p&gt;投げた指示は「基本は1色にそろえ、直近の月だけアクセントカラーで強調してください」です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!-- after: 基本は1色。最新月と最大値だけアクセント --&amp;gt;
+&amp;lt;rect fill=&quot;#85796a&quot;/&amp;gt; &amp;lt;!-- 1月〜5月 --&amp;gt;
+&amp;lt;rect fill=&quot;#2456e0&quot;/&amp;gt; &amp;lt;!-- 6月(今月) --&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;書き換わったのは fill 属性だけです。6本あった rect のうち5本が同じ #85796a になり、最後の1本だけが #2456e0 に変わっています。文字ラベルの fill も、対応する1本だけ同じ色にそろえました。&lt;/p&gt;
+&lt;p&gt;「直近の月」という語が、書き換える対象を1本に絞り込んでいます。色を減らせとだけ書くと、AIはどの棒を残すか選べないことがあります。&lt;/p&gt;
+&lt;p&gt;カテゴリ別のグラフも同じ書き換え方です。4色だった fill を1色にそろえ、値が最大のカテゴリの rect とラベルだけ #2456e0 にしています。&lt;/p&gt;
+&lt;h2&gt;手2: 目盛りを0から始める&lt;/h2&gt;
+&lt;p&gt;before の月次推移グラフは、軸の始点が90でした。100万円から145万円への変化が、見た目では5倍近くに伸びていました。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;before: 軸の範囲 90〜150（差が誇張される）
+after:  軸の範囲  0〜150（実際の比率で見える）&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;投げた指示は「縦軸を0から始まる形に直し、目盛りのラベルも0・50・100・150のように分かりやすい間隔にしてください」です。&lt;/p&gt;
+&lt;p&gt;書き換わったのは、軸ラベルの数字4つ(90/110/130/150 → 0/50/100/150)と、6本の rect の y と height です。グリッドの横線自体の位置は変えていません。同じ4本の線に、違う数字を割り当て直しただけです。&lt;/p&gt;
+&lt;p&gt;「0から始める」という語を外すと、AIはラベルの間隔をそろえる程度で止まり、始点までは動かないことがあります。始点を明示した一文が、軸を動かす決め手になっています。&lt;/p&gt;
+&lt;p&gt;カテゴリ別のグラフは before の時点でも0から始まっていたため、今回は触っていません。&lt;/p&gt;
+&lt;h2&gt;手3: 最重要の数値を左上に置く&lt;/h2&gt;
+&lt;p&gt;before では、今月の売上のカードを画面右下に小さく配置していました。グラフのほうが先に目に入る並びです。&lt;/p&gt;
+&lt;p&gt;投げた指示は「今月の売上の数値カードを画面の最上段、左端に大きく配置し直してください」です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/* before: 数値カードは右下、小さい */
+.card.summary { grid-area: summary; justify-self:end; align-self:end; width:220px; }
+
+/* after: 数値カードは最上段、全幅で大きい */
+.card.summary { grid-area: summary; }
+.grid { grid-template-areas: &quot;summary summary&quot; &quot;trend category&quot;; }&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;書き換わったのは2箇所です。grid-template-areas の並び順と、.card.summary の指定です。&lt;/p&gt;
+&lt;p&gt;.card.summary からは、justify-self と align-self と width の3つを外しました。この3つが、カードを右下の小さい位置に留めていた指定です。&lt;/p&gt;
+&lt;p&gt;「最上段」は grid-template-areas の行の並びで、「大きく」は justify-self などの制約を外すことで実現しています。位置を決める語と、大きさを決める語が、別のプロパティに対応しています。&lt;/p&gt;
+&lt;p&gt;grid-template-areas の並び順を書き換えるだけなので、グラフ側のコードには触れていません。数値は動かしていないので、配置を戻すのも同じ書き換えで済みます。&lt;/p&gt;
+&lt;h2&gt;実際に投げた指示&lt;/h2&gt;
+&lt;p&gt;after を作るときに使った指示の全文です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;このダッシュボードを直してください。手順を分けます。
+
+1. 色数
+   月次推移の棒グラフが、6本とも違う色になっています。
+   同じ指標の時系列なので、基本は1色にそろえてください。
+   直近の月(6月)だけ、アクセントカラーで強調してください。
+   カテゴリ別グラフも同様に、基本は1色にそろえ、
+   最も値が大きいカテゴリだけアクセントカラーにしてください。
+
+2. 目盛り
+   月次推移グラフの縦軸が90から始まっていて、
+   実際の変化より急に伸びているように見えます。
+   縦軸を0から始まる形に直し、目盛りのラベルも
+   0・50・100・150のように分かりやすい間隔にしてください。
+
+3. 並び
+   「今月の売上」の数値カードが画面右下の小さい位置にあります。
+   これを画面の最上段、左端に大きく配置し直してください。
+   グラフは数値カードの下に回してください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;3つの指示を番号で分けているのは、直した結果を後から数えられるようにするためです。&lt;/p&gt;
+&lt;p&gt;「グラフを見やすくして」だけでは、AIは色をやや薄くする程度で止まります。&lt;/p&gt;
+&lt;p&gt;軸の始点や配置の変更まで踏み込ませるには、具体的な数値と場所を書く必要があります。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;3つあります。&lt;/p&gt;
+&lt;p&gt;1つ目は、目盛りを直したのに、軸のラベルを更新し忘れることです。&lt;/p&gt;
+&lt;p&gt;棒の高さだけ計算し直し、ラベルの数字が90のまま残っていると、グラフと表示が食い違います。&lt;/p&gt;
+&lt;p&gt;2つ目は、アクセント色を複数の要素に使ってしまうことです。&lt;/p&gt;
+&lt;p&gt;最新月にも最大値にも同じ色を使うと、結局どこが主役か分からなくなります。1つのグラフには、アクセントは1箇所までにしてください。&lt;/p&gt;
+&lt;p&gt;3つ目は、並びを直すときにグラフの中身まで作り直してしまうことです。&lt;/p&gt;
+&lt;p&gt;配置の変更は、grid-template-areas の書き換えだけで済みます。グラフの計算式まで触ると、目盛りの修正と混ざって確認が難しくなります。&lt;/p&gt;
+&lt;p&gt;3つとも、直す前に一度確認すれば防げます。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;自分のダッシュボードで、棒グラフの軸ラベルの一番下の数字を確認してください。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;0以外の数字が入っていたら、その時点で比率が誇張されています。&lt;/p&gt;
+&lt;p&gt;0でなかった場合は、AIに次の指示を投げてください。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;このグラフの縦軸を0から始まる形に直してください。
+目盛りのラベルも、0を含む均等な間隔(例: 0・25・50・75・100)に
+そろえてください。&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;色や配置より、軸を先に直してください。読み間違いへの影響が、いちばん大きいところだからです。&lt;/p&gt;
+&lt;p&gt;色数と目盛りと並びは、センスの問題ではありません。数えたり測ったりできる作業です。&lt;/p&gt;
+&lt;p&gt;次にAIが出したグラフを見るときも、同じところを見てください。&lt;/p&gt;" data-text="AIに出させたダッシュボードのグラフは、見た目ほど正確ではありません。
+
+棒グラフの目盛りが0から始まっていなかったり、系列ごとに違う色がついていたりします。
+
+一番大事な数字が、画面の隅に置かれていることもあります。
+
+直す場所は3つだけです。色数、目盛り、並びです。
+
+この3つを直すと、同じ数字のまま伝わり方が変わります。
+
+
+「動くけど読めない」の中身
+
+指示はたいてい「売上ダッシュボードを作って」の一言です。
+
+それでもグラフはひととおり出てきます。棒グラフも、KPIカードも崩れてはいません。
+
+それでも、上司や取引先に画面を見せたとき、質問が返ってくることがあります。
+
+「このグラフ、なぜこんなに急に伸びているんですか」という質問です。
+
+スクリーンショットを撮って、結局共有をためらった人もいるはずです。グラフの見た目に説明を求められると、その場で答えに詰まります。
+
+作例を用意しました。左はAIの出力によくある形をそのまま残したもの、右が直したものです。
+
+左のHTMLには、どこが問題なのかを示す説明コメントだけをこちらで足してあります。
+
+https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-17-dashboard-3points/
+
+同じ2つのグラフと1つの数値カードを使っています。並び順と使う数字も同じです。
+
+違うのは、色の数、軸の始点、そしてカードの配置だけです。
+
+
+手1: 色数を1色＋強調1色に絞る
+
+before の月次推移グラフは、6本の棒それぞれに違う色を使っていました。
+
+&lt;!-- before: 同じ系列なのに棒ごとに色を変えている --&gt;
+&lt;rect fill=&quot;#ff5f6d&quot;/&gt;
+&lt;rect fill=&quot;#38ef7d&quot;/&gt;
+&lt;rect fill=&quot;#4a6cf7&quot;/&gt;
+&lt;rect fill=&quot;#ffd200&quot;/&gt;
+&lt;rect fill=&quot;#8e2de2&quot;/&gt;
+&lt;rect fill=&quot;#11998e&quot;/&gt;
+
+
+系列が1つなのに6色使うと、読む人は色の違いに意味を探してしまいます。カテゴリ別のグラフも同様で、4色を個別に割り当てていました。
+
+投げた指示は「基本は1色にそろえ、直近の月だけアクセントカラーで強調してください」です。
+
+&lt;!-- after: 基本は1色。最新月と最大値だけアクセント --&gt;
+&lt;rect fill=&quot;#85796a&quot;/&gt; &lt;!-- 1月〜5月 --&gt;
+&lt;rect fill=&quot;#2456e0&quot;/&gt; &lt;!-- 6月(今月) --&gt;
+
+
+書き換わったのは fill 属性だけです。6本あった rect のうち5本が同じ #85796a になり、最後の1本だけが #2456e0 に変わっています。文字ラベルの fill も、対応する1本だけ同じ色にそろえました。
+
+「直近の月」という語が、書き換える対象を1本に絞り込んでいます。色を減らせとだけ書くと、AIはどの棒を残すか選べないことがあります。
+
+カテゴリ別のグラフも同じ書き換え方です。4色だった fill を1色にそろえ、値が最大のカテゴリの rect とラベルだけ #2456e0 にしています。
+
+
+手2: 目盛りを0から始める
+
+before の月次推移グラフは、軸の始点が90でした。100万円から145万円への変化が、見た目では5倍近くに伸びていました。
+
+before: 軸の範囲 90〜150（差が誇張される）
+after:  軸の範囲  0〜150（実際の比率で見える）
+
+
+投げた指示は「縦軸を0から始まる形に直し、目盛りのラベルも0・50・100・150のように分かりやすい間隔にしてください」です。
+
+書き換わったのは、軸ラベルの数字4つ(90/110/130/150 → 0/50/100/150)と、6本の rect の y と height です。グリッドの横線自体の位置は変えていません。同じ4本の線に、違う数字を割り当て直しただけです。
+
+「0から始める」という語を外すと、AIはラベルの間隔をそろえる程度で止まり、始点までは動かないことがあります。始点を明示した一文が、軸を動かす決め手になっています。
+
+カテゴリ別のグラフは before の時点でも0から始まっていたため、今回は触っていません。
+
+
+手3: 最重要の数値を左上に置く
+
+before では、今月の売上のカードを画面右下に小さく配置していました。グラフのほうが先に目に入る並びです。
+
+投げた指示は「今月の売上の数値カードを画面の最上段、左端に大きく配置し直してください」です。
+
+/* before: 数値カードは右下、小さい */
+.card.summary { grid-area: summary; justify-self:end; align-self:end; width:220px; }
+
+/* after: 数値カードは最上段、全幅で大きい */
+.card.summary { grid-area: summary; }
+.grid { grid-template-areas: &quot;summary summary&quot; &quot;trend category&quot;; }
+
+
+書き換わったのは2箇所です。grid-template-areas の並び順と、.card.summary の指定です。
+
+.card.summary からは、justify-self と align-self と width の3つを外しました。この3つが、カードを右下の小さい位置に留めていた指定です。
+
+「最上段」は grid-template-areas の行の並びで、「大きく」は justify-self などの制約を外すことで実現しています。位置を決める語と、大きさを決める語が、別のプロパティに対応しています。
+
+grid-template-areas の並び順を書き換えるだけなので、グラフ側のコードには触れていません。数値は動かしていないので、配置を戻すのも同じ書き換えで済みます。
+
+
+実際に投げた指示
+
+after を作るときに使った指示の全文です。
+
+このダッシュボードを直してください。手順を分けます。
+
+1. 色数
+   月次推移の棒グラフが、6本とも違う色になっています。
+   同じ指標の時系列なので、基本は1色にそろえてください。
+   直近の月(6月)だけ、アクセントカラーで強調してください。
+   カテゴリ別グラフも同様に、基本は1色にそろえ、
+   最も値が大きいカテゴリだけアクセントカラーにしてください。
+
+2. 目盛り
+   月次推移グラフの縦軸が90から始まっていて、
+   実際の変化より急に伸びているように見えます。
+   縦軸を0から始まる形に直し、目盛りのラベルも
+   0・50・100・150のように分かりやすい間隔にしてください。
+
+3. 並び
+   「今月の売上」の数値カードが画面右下の小さい位置にあります。
+   これを画面の最上段、左端に大きく配置し直してください。
+   グラフは数値カードの下に回してください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。
+
+
+3つの指示を番号で分けているのは、直した結果を後から数えられるようにするためです。
+
+「グラフを見やすくして」だけでは、AIは色をやや薄くする程度で止まります。
+
+軸の始点や配置の変更まで踏み込ませるには、具体的な数値と場所を書く必要があります。
+
+
+つまずきどころ
+
+3つあります。
+
+1つ目は、目盛りを直したのに、軸のラベルを更新し忘れることです。
+
+棒の高さだけ計算し直し、ラベルの数字が90のまま残っていると、グラフと表示が食い違います。
+
+2つ目は、アクセント色を複数の要素に使ってしまうことです。
+
+最新月にも最大値にも同じ色を使うと、結局どこが主役か分からなくなります。1つのグラフには、アクセントは1箇所までにしてください。
+
+3つ目は、並びを直すときにグラフの中身まで作り直してしまうことです。
+
+配置の変更は、grid-template-areas の書き換えだけで済みます。グラフの計算式まで触ると、目盛りの修正と混ざって確認が難しくなります。
+
+3つとも、直す前に一度確認すれば防げます。
+
+
+今日できること
+
+自分のダッシュボードで、棒グラフの軸ラベルの一番下の数字を確認してください。
+
+0以外の数字が入っていたら、その時点で比率が誇張されています。
+
+0でなかった場合は、AIに次の指示を投げてください。
+
+このグラフの縦軸を0から始まる形に直してください。
+目盛りのラベルも、0を含む均等な間隔(例: 0・25・50・75・100)に
+そろえてください。
+
+
+色や配置より、軸を先に直してください。読み間違いへの影響が、いちばん大きいところだからです。
+
+
+色数と目盛りと並びは、センスの問題ではありません。数えたり測ったりできる作業です。
+
+次にAIが出したグラフを見るときも、同じところを見てください。"></div>
+
+
+<div class="article">
+<p>AIに出させたダッシュボードのグラフは、見た目ほど正確ではありません。</p>
+<p>棒グラフの目盛りが0から始まっていなかったり、系列ごとに違う色がついていたりします。</p>
+<p>一番大事な数字が、画面の隅に置かれていることもあります。</p>
+<p>直す場所は3つだけです。色数、目盛り、並びです。</p>
+<p>この3つを直すと、同じ数字のまま伝わり方が変わります。</p>
+<h2>「動くけど読めない」の中身</h2>
+<p>指示はたいてい「売上ダッシュボードを作って」の一言です。</p>
+<p>それでもグラフはひととおり出てきます。棒グラフも、KPIカードも崩れてはいません。</p>
+<p>それでも、上司や取引先に画面を見せたとき、質問が返ってくることがあります。</p>
+<p>「このグラフ、なぜこんなに急に伸びているんですか」という質問です。</p>
+<p>スクリーンショットを撮って、結局共有をためらった人もいるはずです。グラフの見た目に説明を求められると、その場で答えに詰まります。</p>
+<p>作例を用意しました。左はAIの出力によくある形をそのまま残したもの、右が直したものです。</p>
+<p>左のHTMLには、どこが問題なのかを示す説明コメントだけをこちらで足してあります。</p>
+<p>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-17-dashboard-3points/</p>
+<p>同じ2つのグラフと1つの数値カードを使っています。並び順と使う数字も同じです。</p>
+<p>違うのは、色の数、軸の始点、そしてカードの配置だけです。</p>
+<h2>手1: 色数を1色＋強調1色に絞る</h2>
+<p>before の月次推移グラフは、6本の棒それぞれに違う色を使っていました。</p>
+<pre><code>&lt;!-- before: 同じ系列なのに棒ごとに色を変えている --&gt;
+&lt;rect fill="#ff5f6d"/&gt;
+&lt;rect fill="#38ef7d"/&gt;
+&lt;rect fill="#4a6cf7"/&gt;
+&lt;rect fill="#ffd200"/&gt;
+&lt;rect fill="#8e2de2"/&gt;
+&lt;rect fill="#11998e"/&gt;</code></pre>
+<p>系列が1つなのに6色使うと、読む人は色の違いに意味を探してしまいます。カテゴリ別のグラフも同様で、4色を個別に割り当てていました。</p>
+<p>投げた指示は「基本は1色にそろえ、直近の月だけアクセントカラーで強調してください」です。</p>
+<pre><code>&lt;!-- after: 基本は1色。最新月と最大値だけアクセント --&gt;
+&lt;rect fill="#85796a"/&gt; &lt;!-- 1月〜5月 --&gt;
+&lt;rect fill="#2456e0"/&gt; &lt;!-- 6月(今月) --&gt;</code></pre>
+<p>書き換わったのは fill 属性だけです。6本あった rect のうち5本が同じ #85796a になり、最後の1本だけが #2456e0 に変わっています。文字ラベルの fill も、対応する1本だけ同じ色にそろえました。</p>
+<p>「直近の月」という語が、書き換える対象を1本に絞り込んでいます。色を減らせとだけ書くと、AIはどの棒を残すか選べないことがあります。</p>
+<p>カテゴリ別のグラフも同じ書き換え方です。4色だった fill を1色にそろえ、値が最大のカテゴリの rect とラベルだけ #2456e0 にしています。</p>
+<h2>手2: 目盛りを0から始める</h2>
+<p>before の月次推移グラフは、軸の始点が90でした。100万円から145万円への変化が、見た目では5倍近くに伸びていました。</p>
+<pre><code>before: 軸の範囲 90〜150（差が誇張される）
+after:  軸の範囲  0〜150（実際の比率で見える）</code></pre>
+<p>投げた指示は「縦軸を0から始まる形に直し、目盛りのラベルも0・50・100・150のように分かりやすい間隔にしてください」です。</p>
+<p>書き換わったのは、軸ラベルの数字4つ(90/110/130/150 → 0/50/100/150)と、6本の rect の y と height です。グリッドの横線自体の位置は変えていません。同じ4本の線に、違う数字を割り当て直しただけです。</p>
+<p>「0から始める」という語を外すと、AIはラベルの間隔をそろえる程度で止まり、始点までは動かないことがあります。始点を明示した一文が、軸を動かす決め手になっています。</p>
+<p>カテゴリ別のグラフは before の時点でも0から始まっていたため、今回は触っていません。</p>
+<h2>手3: 最重要の数値を左上に置く</h2>
+<p>before では、今月の売上のカードを画面右下に小さく配置していました。グラフのほうが先に目に入る並びです。</p>
+<p>投げた指示は「今月の売上の数値カードを画面の最上段、左端に大きく配置し直してください」です。</p>
+<pre><code>/* before: 数値カードは右下、小さい */
+.card.summary { grid-area: summary; justify-self:end; align-self:end; width:220px; }
+
+/* after: 数値カードは最上段、全幅で大きい */
+.card.summary { grid-area: summary; }
+.grid { grid-template-areas: "summary summary" "trend category"; }</code></pre>
+<p>書き換わったのは2箇所です。grid-template-areas の並び順と、.card.summary の指定です。</p>
+<p>.card.summary からは、justify-self と align-self と width の3つを外しました。この3つが、カードを右下の小さい位置に留めていた指定です。</p>
+<p>「最上段」は grid-template-areas の行の並びで、「大きく」は justify-self などの制約を外すことで実現しています。位置を決める語と、大きさを決める語が、別のプロパティに対応しています。</p>
+<p>grid-template-areas の並び順を書き換えるだけなので、グラフ側のコードには触れていません。数値は動かしていないので、配置を戻すのも同じ書き換えで済みます。</p>
+<h2>実際に投げた指示</h2>
+<p>after を作るときに使った指示の全文です。</p>
+<pre><code>このダッシュボードを直してください。手順を分けます。
+
+1. 色数
+   月次推移の棒グラフが、6本とも違う色になっています。
+   同じ指標の時系列なので、基本は1色にそろえてください。
+   直近の月(6月)だけ、アクセントカラーで強調してください。
+   カテゴリ別グラフも同様に、基本は1色にそろえ、
+   最も値が大きいカテゴリだけアクセントカラーにしてください。
+
+2. 目盛り
+   月次推移グラフの縦軸が90から始まっていて、
+   実際の変化より急に伸びているように見えます。
+   縦軸を0から始まる形に直し、目盛りのラベルも
+   0・50・100・150のように分かりやすい間隔にしてください。
+
+3. 並び
+   「今月の売上」の数値カードが画面右下の小さい位置にあります。
+   これを画面の最上段、左端に大きく配置し直してください。
+   グラフは数値カードの下に回してください。
+
+変更した箇所には、どの手に対応するかをコメントで残してください。</code></pre>
+<p>3つの指示を番号で分けているのは、直した結果を後から数えられるようにするためです。</p>
+<p>「グラフを見やすくして」だけでは、AIは色をやや薄くする程度で止まります。</p>
+<p>軸の始点や配置の変更まで踏み込ませるには、具体的な数値と場所を書く必要があります。</p>
+<h2>つまずきどころ</h2>
+<p>3つあります。</p>
+<p>1つ目は、目盛りを直したのに、軸のラベルを更新し忘れることです。</p>
+<p>棒の高さだけ計算し直し、ラベルの数字が90のまま残っていると、グラフと表示が食い違います。</p>
+<p>2つ目は、アクセント色を複数の要素に使ってしまうことです。</p>
+<p>最新月にも最大値にも同じ色を使うと、結局どこが主役か分からなくなります。1つのグラフには、アクセントは1箇所までにしてください。</p>
+<p>3つ目は、並びを直すときにグラフの中身まで作り直してしまうことです。</p>
+<p>配置の変更は、grid-template-areas の書き換えだけで済みます。グラフの計算式まで触ると、目盛りの修正と混ざって確認が難しくなります。</p>
+<p>3つとも、直す前に一度確認すれば防げます。</p>
+<h2>今日できること</h2>
+<p><strong>自分のダッシュボードで、棒グラフの軸ラベルの一番下の数字を確認してください。</strong></p>
+<p>0以外の数字が入っていたら、その時点で比率が誇張されています。</p>
+<p>0でなかった場合は、AIに次の指示を投げてください。</p>
+<pre><code>このグラフの縦軸を0から始まる形に直してください。
+目盛りのラベルも、0を含む均等な間隔(例: 0・25・50・75・100)に
+そろえてください。</code></pre>
+<p>色や配置より、軸を先に直してください。読み間違いへの影響が、いちばん大きいところだからです。</p>
+<p>色数と目盛りと並びは、センスの問題ではありません。数えたり測ったりできる作業です。</p>
+<p>次にAIが出したグラフを見るときも、同じところを見てください。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

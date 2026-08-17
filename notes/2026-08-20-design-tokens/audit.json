@@ -1,0 +1,51 @@
+{
+  "pass": true,
+  "productType": "tool",
+  "round": 3,
+  "maxRounds": 2,
+  "score": "16/16",
+  "failures": [],
+  "returnTo": null,
+  "nextGate": "ethics-line",
+  "roundNote": "letter-audit の上限2周は sales-letter への自動差し戻しの上限である。round 2 の upstreamSuspect が product-concept を指したため、00-concept.md の価値軸を変更したうえでの再判定として round 3 を実施した",
+  "a1Verdict": {
+    "adjacency": "同種2連続 0箇所。IF(11-13) R(15-17) IF(19-21) R(23-25) fear(27-29) IF(31-33) R(35-94) IF(96-100) R(102-106) ... IF(132-134)",
+    "landingPattern": "肯定4（13・21・33・134行）／否定1（100行）。round 2 の『6箇所すべて否定形』は解消",
+    "substanceDistinct": "132-134行（他者の目）と19-21行（語彙）は『書き手の作業が減る』に帰着しない。round 2 の『5軸が1つの便益に収束』は成立しなくなった",
+    "personaDesire": "account.md 112行『人に見せたときに恥ずかしくないものを、毎回出せるようになりたい』は 134行『そのまま撮ったスクリーンショットを、人に送れます』＋132行『次にAIへ作り直してと頼んだとき、出てくるのは前と同じ色の画面です』で描かれている。account.md 116行の反転にあたる",
+    "residualNote": "11行・31行・132行の導入部が『同じ色になる』の反復。ただし着地（13・33・134行）が分かれており、削除を指示できる修正案が立たないため×の根拠にしない"
+  },
+  "typeBranchedItems": {
+    "A3": {
+      "単純化": [15, 17],
+      "簡易化": [23, 25],
+      "成果物の開示": [39, 80, 90, 94],
+      "不便だった状況": [102, 106],
+      "note": "type: tool のため『天井を下げる』『共感』は判定に用いていない"
+    },
+    "C2": {
+      "中身の開示": [39, 80, 90, 94],
+      "最初の1歩": [17, 112],
+      "動作条件": [84, 86],
+      "note": "toolEvidence の記録行を実読して確認済み。type: tool のため『自分以外の結果がない』を×の理由にしていない"
+    }
+  },
+  "resolvedThisRound": [
+    {
+      "id": "A1",
+      "lines": [13, 33, 134],
+      "note": "00-concept.md に価値軸6『見え方（他者の目）』を追加し、13・33・134行を肯定形に変更、締めを軸6に差し替えたことで解消"
+    }
+  ],
+  "history": [
+    { "round": 1, "score": "14/16", "pass": false, "failures": ["A1", "C3"] },
+    { "round": 2, "score": "15/16", "pass": false, "failures": ["A1"], "upstreamSuspect": "product-concept" },
+    { "round": 3, "score": "16/16", "pass": true, "failures": [] }
+  ],
+  "handoffToEthics": {
+    "required": true,
+    "reason": "114行の値上げ告知（1,480円 → 1,980円 / 2026-10-01）は deadlineClaims に isReal: true として記録されているが、実行は人間の作業である。実行しない場合は景品表示法の有利誤認に該当する",
+    "lines": [114, 116, 118],
+    "owner": "人間（note の価格設定画面で 2026-10-01 に変更する）"
+  }
+}

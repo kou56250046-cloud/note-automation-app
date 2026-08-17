@@ -1,0 +1,950 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>GASが6分で強制終了する前に、4分30秒で自分から降りる設計 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;GASが6分で強制終了する前に、4分30秒で自分から降りる設計&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GoogleAppsScript #GAS #業務効率化 #Gemini&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>GASが6分で強制終了する前に、4分30秒で自分から降りる設計</h1>
+  <div class="muted">生成AIで見せられる成果物を作る / Gemini+GASの自動化 ／ 2026-08-22 ／ #GoogleAppsScript #GAS #業務効率化 #Gemini</div>
+</header>
+
+
+
+<div class="thumb-box">
+  <div class="thumb-head">見出し画像のプロンプト</div>
+  <div class="row">
+    <button class="primary" onclick="copyText(this, &quot;あなたは note の見出し画像を専門とするアートディレクターです。\n以下の条件で16:9の画像を1枚作ってください。\n\n## 被写体（最重要）\n真上から見下ろした陸上トラックの1レーン。バトンの受け渡しの瞬間を写している。\n・画面の左から右へ、レーンを区切る2本の白線が水平に走っている\n・レーンの中ほどに、走ってきた側の手と、受け取る側の手が写っている\n・2つの手のあいだに短い円筒形のバトンがあり、まさに渡されている途中\n・画面のやや右寄りに、レーンを横切る太い横線が1本引かれている\n・**バトンも手も、この横線には触れていない。** 手前で受け渡しが完了している\n人物の顔や全身は写さない。腕と手だけが画面に入る。\n数字や文字をトラックに描き込まない。\n\n## 構図\n・真上からの俯瞰。レーンが画面を水平に貫く\n・受け渡しの手は画面の中央やや左に置く\n・横切る太い線は画面の右から3割の位置に置き、そこから右は空けたままにする\n・画面上部の3割を平坦な余白として空ける\n\n## 色\n・背景（トラック面）の基調: #f6f3ec（生成りの、彩度を落としたトラック）\n・インク: #221f19。手の陰影とバトンの影に使う\n・中間色: #85796a。レーンを区切る2本の線\n・アクセント: #2456e0（藍）。バトンの本体にだけ使う\n・警告色: #a24a42（赤茶）。レーンを横切る太い横線にだけ使う。他には一切使わない\n・全体の彩度を抑え、バトンの藍と横線の赤茶だけを立たせる\n\n## 質感とライティング\n・陸上競技の報道写真。ゴムのトラック面の粒状の質感を描写する\n・真上からの拡散光。影は短く、方向をすべて揃える\n・バトンは金属質ではなくマットな塗装\n・手はわずかにぶれ、動きの途中であることが分かる\n・高精細、ノイズなし、4K品質\n\n## テキスト（必須・大きく主張する）\n画面上部の余白に「4分30秒で渡す」というキーワードを大きく配置してください。\n\n・太い書体（Bold/Black相当）で、バトンと同じかそれ以上の視覚的な強さで配置する\n・文字色は #2456e0（藍）で統一し、#f6f3ec の背景とのコントラストを最優先する\n・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない\n・レーンの水平線に揃えた横組みにし、トラックの方向と一体化させる&quot;)">プロンプトをコピー</button>
+    <a href="https://gemini.google.com/" target="_blank" rel="noopener"><button>Gemini を開く</button></a>
+  </div>
+  <details>
+    <summary>全文を見る</summary>
+    <pre class="thumb-prompt">あなたは note の見出し画像を専門とするアートディレクターです。
+以下の条件で16:9の画像を1枚作ってください。
+
+## 被写体（最重要）
+真上から見下ろした陸上トラックの1レーン。バトンの受け渡しの瞬間を写している。
+・画面の左から右へ、レーンを区切る2本の白線が水平に走っている
+・レーンの中ほどに、走ってきた側の手と、受け取る側の手が写っている
+・2つの手のあいだに短い円筒形のバトンがあり、まさに渡されている途中
+・画面のやや右寄りに、レーンを横切る太い横線が1本引かれている
+・**バトンも手も、この横線には触れていない。** 手前で受け渡しが完了している
+人物の顔や全身は写さない。腕と手だけが画面に入る。
+数字や文字をトラックに描き込まない。
+
+## 構図
+・真上からの俯瞰。レーンが画面を水平に貫く
+・受け渡しの手は画面の中央やや左に置く
+・横切る太い線は画面の右から3割の位置に置き、そこから右は空けたままにする
+・画面上部の3割を平坦な余白として空ける
+
+## 色
+・背景（トラック面）の基調: #f6f3ec（生成りの、彩度を落としたトラック）
+・インク: #221f19。手の陰影とバトンの影に使う
+・中間色: #85796a。レーンを区切る2本の線
+・アクセント: #2456e0（藍）。バトンの本体にだけ使う
+・警告色: #a24a42（赤茶）。レーンを横切る太い横線にだけ使う。他には一切使わない
+・全体の彩度を抑え、バトンの藍と横線の赤茶だけを立たせる
+
+## 質感とライティング
+・陸上競技の報道写真。ゴムのトラック面の粒状の質感を描写する
+・真上からの拡散光。影は短く、方向をすべて揃える
+・バトンは金属質ではなくマットな塗装
+・手はわずかにぶれ、動きの途中であることが分かる
+・高精細、ノイズなし、4K品質
+
+## テキスト（必須・大きく主張する）
+画面上部の余白に「4分30秒で渡す」というキーワードを大きく配置してください。
+
+・太い書体（Bold/Black相当）で、バトンと同じかそれ以上の視覚的な強さで配置する
+・文字色は #2456e0（藍）で統一し、#f6f3ec の背景とのコントラストを最優先する
+・文字の縁取りや薄いドロップシャドウで可読性を確保する。背景に溶け込ませない
+・レーンの水平線に揃えた横組みにし、トラックの方向と一体化させる</pre>
+  </details>
+  <div class="muted">
+    16:9 で生成し、note の見出し画像に設定します。<strong>画像内に文字は入りません。</strong>
+    タイトルは note 側で重なります。
+  </div>
+</div>
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 2 件</div><ul><li class="warn">L3 一文が 61 文字（目安 60）</li><li class="warn">L202 一文が 65 文字（目安 60）</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;GASは、実行時間が上限に達すると、途中経過を残さずに強制終了します。&lt;/p&gt;
+&lt;p&gt;あらかじめ4分30秒で自分から処理を降り、続きを次の実行に渡す設計にすれば、同じ処理を最初からやり直す必要がなくなります。今日はその中断と再開のコードを、全文で載せます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;150件目で止まったスプレッドシート&lt;/h2&gt;
+&lt;p&gt;以前の記事で、A列の問い合わせ文をGeminiに読ませ、B列に分類ラベル、C列に理由を書き込むGASを紹介しました。&lt;/p&gt;
+&lt;p&gt;このコードを、実際のデータで試したときの話です。&lt;/p&gt;
+&lt;p&gt;A列に200件の問い合わせを並べて実行しました。1件ごとにGemini APIを呼ぶため、応答待ちの時間が積み重なります。&lt;/p&gt;
+&lt;p&gt;しばらく画面を見ていると、B列がどんどん埋まっていきます。ところが150行目あたりで、埋まる速度が急に止まりました。&lt;/p&gt;
+&lt;p&gt;スクリプトエディタの「実行数」を開くと、ステータスは「失敗」とだけ表示されています。エラーメッセージは特にありません。&lt;/p&gt;
+&lt;p&gt;GASの1回の実行には、時間の上限があります。無料アカウントでは6分です。200件分の応答待ちを積み上げると、6分をあっさり超えてしまいます。&lt;/p&gt;
+&lt;p&gt;止まった時点のB列を見ると、150行目までは埋まっていて、151行目以降は空欄のままでした。&lt;/p&gt;
+&lt;p&gt;ここでもう一度「実行」ボタンを押すと、1行目からやり直すことになります。すでに分類が終わった150件分も、Geminiにもう一度読ませることになります。&lt;/p&gt;
+&lt;p&gt;API呼び出しの回数だけが無駄に増えていきます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;4分30秒で自分から降りる&lt;/h2&gt;
+&lt;p&gt;対処の方向は、時間切れになる前に自分から処理を止め、続きを次の実行に引き継ぐことです。&lt;/p&gt;
+&lt;p&gt;GASの上限は6分ですが、ぴったり6分を狙うと危険です。Geminiの応答が想定より遅れたときに、区切りの前に強制終了してしまう可能性が残るからです。&lt;/p&gt;
+&lt;p&gt;そこで今回のコードでは、4分30秒を区切りにしています。余裕を持たせて、確実に自分の判断で降りられるようにする狙いです。&lt;/p&gt;
+&lt;p&gt;4分30秒が過ぎた時点で、次に処理するはずだった行番号を保存します。保存先はPropertiesServiceです。&lt;/p&gt;
+&lt;p&gt;PropertiesServiceは、スクリプトの実行が終わっても値が消えない保存領域です。次に関数が呼ばれたときも、前回保存した値をそのまま読み出せます。&lt;/p&gt;
+&lt;p&gt;行番号を保存したら、その場で1分後に自分自身を呼び出す時間主導トリガーを設置し、処理を終えます。&lt;/p&gt;
+&lt;p&gt;1分後、そのトリガーが新しい実行を始めます。新しい実行は、保存しておいた行番号を読み込み、そこから続きを処理します。&lt;/p&gt;
+&lt;p&gt;すべての行を処理し終えたら、保存していた行番号を消します。そして、自分で設置したトリガーも自分で削除します。&lt;/p&gt;
+&lt;p&gt;トリガーを消し忘れると、全件が終わったあとも1分ごとに空振りの実行が続くことになります。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;コード全文&lt;/h2&gt;
+&lt;p&gt;以前の記事で紹介した分類処理を、この中断と再開の仕組みで包んだ形が次のコードです。&lt;/p&gt;
+&lt;p&gt;スプレッドシートの1行目は見出し行として扱います。2行目以降のA列に問い合わせ文、B列に分類ラベル、C列に判断理由が入る前提です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/**
+ * 問い合わせ分類ジョブ(中断・再開つき)
+ * 4分30秒で自分から降り、1分後のトリガーで続きから再開する。
+ */
+
+const TIME_LIMIT_MS = 4.5 * 60 * 1000; // 4分30秒
+const RESUME_DELAY_MS = 60 * 1000;     // 1分後
+const PROP_KEY_ROW = 'CLASSIFY_LAST_ROW';
+const PROP_KEY_TRIGGER = 'CLASSIFY_TRIGGER_ID';
+const SHEET_NAME = 'inquiries';
+const LABELS = ['料金', '不具合', '使い方', 'その他'];
+
+// 起点になる関数。手動実行でもトリガーからでも同じ関数を呼ぶ。
+function runClassifyJob() {
+  const startTime = Date.now();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+
+  let row = Number(props.getProperty(PROP_KEY_ROW)) || 2; // 1行目は見出し
+
+  while (row &amp;lt;= lastRow) {
+    if (Date.now() - startTime &amp;gt; TIME_LIMIT_MS) {
+      props.setProperty(PROP_KEY_ROW, String(row));
+      scheduleResume();
+      return;
+    }
+
+    const text = sheet.getRange(row, 1).getValue();
+
+    if (text === '') {
+      row++;
+      continue;
+    }
+
+    try {
+      const result = classifyOne(text);
+      sheet.getRange(row, 2).setValue(result.label);
+      sheet.getRange(row, 3).setValue(result.reason);
+    } catch (e) {
+      sheet.getRange(row, 2).setValue('失敗');
+      sheet.getRange(row, 3).setValue('スキップ: ' + e.message);
+    }
+
+    row++;
+  }
+
+  // 全件終わったので、保存値とトリガーを片付ける
+  props.deleteProperty(PROP_KEY_ROW);
+  clearResumeTrigger();
+}
+
+// 1分後に自分自身を呼ぶトリガーを設置する
+function scheduleResume() {
+  clearResumeTrigger(); // 二重登録を防ぐ
+
+  const trigger = ScriptApp.newTrigger('runClassifyJob')
+    .timeBased()
+    .after(RESUME_DELAY_MS)
+    .create();
+
+  PropertiesService.getScriptProperties()
+    .setProperty(PROP_KEY_TRIGGER, trigger.getUniqueId());
+}
+
+// 自分が設置したトリガーだけを、IDで特定して消す
+function clearResumeTrigger() {
+  const props = PropertiesService.getScriptProperties();
+  const triggerId = props.getProperty(PROP_KEY_TRIGGER);
+
+  if (!triggerId) return;
+
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getUniqueId() === triggerId) {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  props.deleteProperty(PROP_KEY_TRIGGER);
+}
+
+// A列のテキストをGeminiに投げ、ラベルと理由を受け取る
+function classifyOne(text) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + 'gemini-2.0-flash:generateContent?key=' + apiKey;
+
+  const prompt = [
+    '次の問い合わせ文を読み、以下のラベルから1つだけ選んでください。',
+    'ラベル: ' + LABELS.join(' / '),
+    '出力は必ず次のJSON形式のみとし、それ以外の文字を含めないでください。',
+    '{&quot;label&quot;: &quot;選んだラベル&quot;, &quot;reason&quot;: &quot;選んだ理由を一文で&quot;}',
+    '',
+    '--- 問い合わせ文 ---',
+    text
+  ].join('\n');
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0, maxOutputTokens: 256 }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const json = JSON.parse(response.getContentText());
+  const raw = json.candidates[0].content.parts[0].text;
+
+  try {
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    if (LABELS.indexOf(parsed.label) === -1) {
+      return { label: '未分類', reason: '想定外のラベル: ' + parsed.label };
+    }
+
+    return parsed;
+  } catch (e) {
+    return { label: '未分類', reason: 'JSON解析に失敗' };
+  }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;runClassifyJob&lt;/code&gt;が起点になる関数です。手動で実行しても、トリガーから呼ばれても、まったく同じ関数がそのまま動きます。&lt;/p&gt;
+&lt;p&gt;経過時間が4分30秒を超えたら、その時点の行番号を保存して&lt;code&gt;scheduleResume&lt;/code&gt;を呼び、処理を終えます。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;scheduleResume&lt;/code&gt;は、前回自分が設置したトリガーが残っていれば先に消します。そのうえで、1分後のトリガーを新しく作ります。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;classifyOne&lt;/code&gt;の中でエラーが起きた行は、B列に「失敗」、C列にエラー内容を書き込んで次の行に進みます。1件の失敗で全体を止めない設計です。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;動作条件&lt;/h2&gt;
+&lt;p&gt;このコードはスプレッドシートのスクリプトエディタに貼って使う前提です。&lt;/p&gt;
+&lt;p&gt;Gemini APIキーは、スクリプトプロパティに&lt;code&gt;GEMINI_API_KEY&lt;/code&gt;として登録しておく必要があります。プロパティの登録手順は以前の記事で紹介したものと同じです。&lt;/p&gt;
+&lt;p&gt;初回実行時には、外部URLへの接続とスプレッドシートの読み書きについて、承認画面が出ます。求められたスコープを確認してから進めてください。&lt;/p&gt;
+&lt;p&gt;時間主導トリガーの作成には上限があります。1つのスクリプトが持てるトリガーの数には上限があるため、&lt;code&gt;clearResumeTrigger&lt;/code&gt;で毎回片付けておくことが重要です。&lt;/p&gt;
+&lt;p&gt;実行時間の上限そのものは、6分から縮まりません。今回のコードは、その上限に触れる前に自分から処理を止める設計にしています。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;つまずきやすいところ&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;トリガーを消し忘れると増殖する&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;clearResumeTrigger&lt;/code&gt;を呼ばずに&lt;code&gt;scheduleResume&lt;/code&gt;だけを繰り返すと増殖します。1分ごとのトリガーが、実行のたびに1個ずつ増える形です。&lt;/p&gt;
+&lt;p&gt;増えたトリガーはそれぞれが同じ関数を呼びます。複数のトリガーが同時に同じ行を処理しようとして、書き込みが競合することがあります。&lt;/p&gt;
+&lt;p&gt;今回のコードでは、トリガーのIDをPropertiesServiceに保存しています。次にトリガーを設置する前に、そのIDのトリガーだけを探して消す仕組みです。&lt;/p&gt;
+&lt;p&gt;GASのトリガー一覧には、他の関数のトリガーも並ぶことがあります。名前ではなくIDで狙い撃ちしているのは、そのためです。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;JSONの形式が崩れて返ってくることがある&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Geminiの応答が、指定したJSON形式から外れることがあります。コードマークダウンで囲んで返してくることもあれば、前置きの文章を付けて返してくることもあります。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;classifyOne&lt;/code&gt;では、コードマークダウンの記号だけを取り除いてから&lt;code&gt;JSON.parse&lt;/code&gt;を試しています。それでも解析に失敗した場合は、ラベルを「未分類」として記録し、処理は止めずに次の行へ進みます。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;行番号が2から始まる理由&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;1行目を見出し行として扱っているため、初期値を2にしています。&lt;/p&gt;
+&lt;p&gt;見出し行を使わないスプレッドシートで流用する場合は、この初期値を1に変えてください。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;6分制限を回避するライブラリという選択肢もある&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;6分の制限そのものを別のプロジェクトに逃がすライブラリも存在します。今回は、外部ライブラリに依存せず、標準機能だけで完結する形を選びました。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;手元のスプレッドシートに、A列だけ埋めたテスト用のシートを10行ほど作ってみてください。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;TIME_LIMIT_MS&lt;/code&gt;を4.5分ではなく10秒に変えてみてください。&lt;code&gt;runClassifyJob&lt;/code&gt;を1回実行すると、途中で処理が止まります。1分後には自動で続きから再開する様子を、待たずに確認できます。&lt;/p&gt;
+&lt;p&gt;シート名は&lt;code&gt;SHEET_NAME&lt;/code&gt;の値をテスト用シートの名前に合わせてください。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;6分の壁は、回避するものではありません。先に降りて、次の実行に渡す前提で設計するものです。&lt;/p&gt;
+&lt;p&gt;処理を止める判断を自分のコード側に持たせておけば、行数がどれだけ増えても、同じ形のまま動き続けます。&lt;/p&gt;" data-text="GASは、実行時間が上限に達すると、途中経過を残さずに強制終了します。
+
+あらかじめ4分30秒で自分から処理を降り、続きを次の実行に渡す設計にすれば、同じ処理を最初からやり直す必要がなくなります。今日はその中断と再開のコードを、全文で載せます。
+
+---
+
+150件目で止まったスプレッドシート
+
+以前の記事で、A列の問い合わせ文をGeminiに読ませ、B列に分類ラベル、C列に理由を書き込むGASを紹介しました。
+
+このコードを、実際のデータで試したときの話です。
+
+A列に200件の問い合わせを並べて実行しました。1件ごとにGemini APIを呼ぶため、応答待ちの時間が積み重なります。
+
+しばらく画面を見ていると、B列がどんどん埋まっていきます。ところが150行目あたりで、埋まる速度が急に止まりました。
+
+スクリプトエディタの「実行数」を開くと、ステータスは「失敗」とだけ表示されています。エラーメッセージは特にありません。
+
+GASの1回の実行には、時間の上限があります。無料アカウントでは6分です。200件分の応答待ちを積み上げると、6分をあっさり超えてしまいます。
+
+止まった時点のB列を見ると、150行目までは埋まっていて、151行目以降は空欄のままでした。
+
+ここでもう一度「実行」ボタンを押すと、1行目からやり直すことになります。すでに分類が終わった150件分も、Geminiにもう一度読ませることになります。
+
+API呼び出しの回数だけが無駄に増えていきます。
+
+---
+
+4分30秒で自分から降りる
+
+対処の方向は、時間切れになる前に自分から処理を止め、続きを次の実行に引き継ぐことです。
+
+GASの上限は6分ですが、ぴったり6分を狙うと危険です。Geminiの応答が想定より遅れたときに、区切りの前に強制終了してしまう可能性が残るからです。
+
+そこで今回のコードでは、4分30秒を区切りにしています。余裕を持たせて、確実に自分の判断で降りられるようにする狙いです。
+
+4分30秒が過ぎた時点で、次に処理するはずだった行番号を保存します。保存先はPropertiesServiceです。
+
+PropertiesServiceは、スクリプトの実行が終わっても値が消えない保存領域です。次に関数が呼ばれたときも、前回保存した値をそのまま読み出せます。
+
+行番号を保存したら、その場で1分後に自分自身を呼び出す時間主導トリガーを設置し、処理を終えます。
+
+1分後、そのトリガーが新しい実行を始めます。新しい実行は、保存しておいた行番号を読み込み、そこから続きを処理します。
+
+すべての行を処理し終えたら、保存していた行番号を消します。そして、自分で設置したトリガーも自分で削除します。
+
+トリガーを消し忘れると、全件が終わったあとも1分ごとに空振りの実行が続くことになります。
+
+---
+
+コード全文
+
+以前の記事で紹介した分類処理を、この中断と再開の仕組みで包んだ形が次のコードです。
+
+スプレッドシートの1行目は見出し行として扱います。2行目以降のA列に問い合わせ文、B列に分類ラベル、C列に判断理由が入る前提です。
+
+/**
+ * 問い合わせ分類ジョブ(中断・再開つき)
+ * 4分30秒で自分から降り、1分後のトリガーで続きから再開する。
+ */
+
+const TIME_LIMIT_MS = 4.5 * 60 * 1000; // 4分30秒
+const RESUME_DELAY_MS = 60 * 1000;     // 1分後
+const PROP_KEY_ROW = 'CLASSIFY_LAST_ROW';
+const PROP_KEY_TRIGGER = 'CLASSIFY_TRIGGER_ID';
+const SHEET_NAME = 'inquiries';
+const LABELS = ['料金', '不具合', '使い方', 'その他'];
+
+// 起点になる関数。手動実行でもトリガーからでも同じ関数を呼ぶ。
+function runClassifyJob() {
+  const startTime = Date.now();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+
+  let row = Number(props.getProperty(PROP_KEY_ROW)) || 2; // 1行目は見出し
+
+  while (row &lt;= lastRow) {
+    if (Date.now() - startTime &gt; TIME_LIMIT_MS) {
+      props.setProperty(PROP_KEY_ROW, String(row));
+      scheduleResume();
+      return;
+    }
+
+    const text = sheet.getRange(row, 1).getValue();
+
+    if (text === '') {
+      row++;
+      continue;
+    }
+
+    try {
+      const result = classifyOne(text);
+      sheet.getRange(row, 2).setValue(result.label);
+      sheet.getRange(row, 3).setValue(result.reason);
+    } catch (e) {
+      sheet.getRange(row, 2).setValue('失敗');
+      sheet.getRange(row, 3).setValue('スキップ: ' + e.message);
+    }
+
+    row++;
+  }
+
+  // 全件終わったので、保存値とトリガーを片付ける
+  props.deleteProperty(PROP_KEY_ROW);
+  clearResumeTrigger();
+}
+
+// 1分後に自分自身を呼ぶトリガーを設置する
+function scheduleResume() {
+  clearResumeTrigger(); // 二重登録を防ぐ
+
+  const trigger = ScriptApp.newTrigger('runClassifyJob')
+    .timeBased()
+    .after(RESUME_DELAY_MS)
+    .create();
+
+  PropertiesService.getScriptProperties()
+    .setProperty(PROP_KEY_TRIGGER, trigger.getUniqueId());
+}
+
+// 自分が設置したトリガーだけを、IDで特定して消す
+function clearResumeTrigger() {
+  const props = PropertiesService.getScriptProperties();
+  const triggerId = props.getProperty(PROP_KEY_TRIGGER);
+
+  if (!triggerId) return;
+
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getUniqueId() === triggerId) {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  props.deleteProperty(PROP_KEY_TRIGGER);
+}
+
+// A列のテキストをGeminiに投げ、ラベルと理由を受け取る
+function classifyOne(text) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + 'gemini-2.0-flash:generateContent?key=' + apiKey;
+
+  const prompt = [
+    '次の問い合わせ文を読み、以下のラベルから1つだけ選んでください。',
+    'ラベル: ' + LABELS.join(' / '),
+    '出力は必ず次のJSON形式のみとし、それ以外の文字を含めないでください。',
+    '{&quot;label&quot;: &quot;選んだラベル&quot;, &quot;reason&quot;: &quot;選んだ理由を一文で&quot;}',
+    '',
+    '--- 問い合わせ文 ---',
+    text
+  ].join('\n');
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0, maxOutputTokens: 256 }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const json = JSON.parse(response.getContentText());
+  const raw = json.candidates[0].content.parts[0].text;
+
+  try {
+    const parsed = JSON.parse(raw.replace(/json|/g, '').trim());
+
+    if (LABELS.indexOf(parsed.label) === -1) {
+      return { label: '未分類', reason: '想定外のラベル: ' + parsed.label };
+    }
+
+    return parsed;
+  } catch (e) {
+    return { label: '未分類', reason: 'JSON解析に失敗' };
+  }
+}
+
+
+runClassifyJobが起点になる関数です。手動で実行しても、トリガーから呼ばれても、まったく同じ関数がそのまま動きます。
+
+経過時間が4分30秒を超えたら、その時点の行番号を保存してscheduleResumeを呼び、処理を終えます。
+
+scheduleResumeは、前回自分が設置したトリガーが残っていれば先に消します。そのうえで、1分後のトリガーを新しく作ります。
+
+classifyOneの中でエラーが起きた行は、B列に「失敗」、C列にエラー内容を書き込んで次の行に進みます。1件の失敗で全体を止めない設計です。
+
+---
+
+動作条件
+
+このコードはスプレッドシートのスクリプトエディタに貼って使う前提です。
+
+Gemini APIキーは、スクリプトプロパティにGEMINI_API_KEYとして登録しておく必要があります。プロパティの登録手順は以前の記事で紹介したものと同じです。
+
+初回実行時には、外部URLへの接続とスプレッドシートの読み書きについて、承認画面が出ます。求められたスコープを確認してから進めてください。
+
+時間主導トリガーの作成には上限があります。1つのスクリプトが持てるトリガーの数には上限があるため、clearResumeTriggerで毎回片付けておくことが重要です。
+
+実行時間の上限そのものは、6分から縮まりません。今回のコードは、その上限に触れる前に自分から処理を止める設計にしています。
+
+---
+
+つまずきやすいところ
+
+トリガーを消し忘れると増殖する
+
+clearResumeTriggerを呼ばずにscheduleResumeだけを繰り返すと増殖します。1分ごとのトリガーが、実行のたびに1個ずつ増える形です。
+
+増えたトリガーはそれぞれが同じ関数を呼びます。複数のトリガーが同時に同じ行を処理しようとして、書き込みが競合することがあります。
+
+今回のコードでは、トリガーのIDをPropertiesServiceに保存しています。次にトリガーを設置する前に、そのIDのトリガーだけを探して消す仕組みです。
+
+GASのトリガー一覧には、他の関数のトリガーも並ぶことがあります。名前ではなくIDで狙い撃ちしているのは、そのためです。
+
+JSONの形式が崩れて返ってくることがある
+
+Geminiの応答が、指定したJSON形式から外れることがあります。コードマークダウンで囲んで返してくることもあれば、前置きの文章を付けて返してくることもあります。
+
+classifyOneでは、コードマークダウンの記号だけを取り除いてからJSON.parseを試しています。それでも解析に失敗した場合は、ラベルを「未分類」として記録し、処理は止めずに次の行へ進みます。
+
+行番号が2から始まる理由
+
+1行目を見出し行として扱っているため、初期値を2にしています。
+
+見出し行を使わないスプレッドシートで流用する場合は、この初期値を1に変えてください。
+
+6分制限を回避するライブラリという選択肢もある
+
+6分の制限そのものを別のプロジェクトに逃がすライブラリも存在します。今回は、外部ライブラリに依存せず、標準機能だけで完結する形を選びました。
+
+---
+
+今日できること
+
+手元のスプレッドシートに、A列だけ埋めたテスト用のシートを10行ほど作ってみてください。
+
+TIME_LIMIT_MSを4.5分ではなく10秒に変えてみてください。runClassifyJobを1回実行すると、途中で処理が止まります。1分後には自動で続きから再開する様子を、待たずに確認できます。
+
+シート名はSHEET_NAMEの値をテスト用シートの名前に合わせてください。
+
+---
+
+6分の壁は、回避するものではありません。先に降りて、次の実行に渡す前提で設計するものです。
+
+処理を止める判断を自分のコード側に持たせておけば、行数がどれだけ増えても、同じ形のまま動き続けます。"></div>
+
+
+<div class="article">
+<p>GASは、実行時間が上限に達すると、途中経過を残さずに強制終了します。</p>
+<p>あらかじめ4分30秒で自分から処理を降り、続きを次の実行に渡す設計にすれば、同じ処理を最初からやり直す必要がなくなります。今日はその中断と再開のコードを、全文で載せます。</p>
+<hr>
+<h2>150件目で止まったスプレッドシート</h2>
+<p>以前の記事で、A列の問い合わせ文をGeminiに読ませ、B列に分類ラベル、C列に理由を書き込むGASを紹介しました。</p>
+<p>このコードを、実際のデータで試したときの話です。</p>
+<p>A列に200件の問い合わせを並べて実行しました。1件ごとにGemini APIを呼ぶため、応答待ちの時間が積み重なります。</p>
+<p>しばらく画面を見ていると、B列がどんどん埋まっていきます。ところが150行目あたりで、埋まる速度が急に止まりました。</p>
+<p>スクリプトエディタの「実行数」を開くと、ステータスは「失敗」とだけ表示されています。エラーメッセージは特にありません。</p>
+<p>GASの1回の実行には、時間の上限があります。無料アカウントでは6分です。200件分の応答待ちを積み上げると、6分をあっさり超えてしまいます。</p>
+<p>止まった時点のB列を見ると、150行目までは埋まっていて、151行目以降は空欄のままでした。</p>
+<p>ここでもう一度「実行」ボタンを押すと、1行目からやり直すことになります。すでに分類が終わった150件分も、Geminiにもう一度読ませることになります。</p>
+<p>API呼び出しの回数だけが無駄に増えていきます。</p>
+<hr>
+<h2>4分30秒で自分から降りる</h2>
+<p>対処の方向は、時間切れになる前に自分から処理を止め、続きを次の実行に引き継ぐことです。</p>
+<p>GASの上限は6分ですが、ぴったり6分を狙うと危険です。Geminiの応答が想定より遅れたときに、区切りの前に強制終了してしまう可能性が残るからです。</p>
+<p>そこで今回のコードでは、4分30秒を区切りにしています。余裕を持たせて、確実に自分の判断で降りられるようにする狙いです。</p>
+<p>4分30秒が過ぎた時点で、次に処理するはずだった行番号を保存します。保存先はPropertiesServiceです。</p>
+<p>PropertiesServiceは、スクリプトの実行が終わっても値が消えない保存領域です。次に関数が呼ばれたときも、前回保存した値をそのまま読み出せます。</p>
+<p>行番号を保存したら、その場で1分後に自分自身を呼び出す時間主導トリガーを設置し、処理を終えます。</p>
+<p>1分後、そのトリガーが新しい実行を始めます。新しい実行は、保存しておいた行番号を読み込み、そこから続きを処理します。</p>
+<p>すべての行を処理し終えたら、保存していた行番号を消します。そして、自分で設置したトリガーも自分で削除します。</p>
+<p>トリガーを消し忘れると、全件が終わったあとも1分ごとに空振りの実行が続くことになります。</p>
+<hr>
+<h2>コード全文</h2>
+<p>以前の記事で紹介した分類処理を、この中断と再開の仕組みで包んだ形が次のコードです。</p>
+<p>スプレッドシートの1行目は見出し行として扱います。2行目以降のA列に問い合わせ文、B列に分類ラベル、C列に判断理由が入る前提です。</p>
+<pre><code>/**
+ * 問い合わせ分類ジョブ(中断・再開つき)
+ * 4分30秒で自分から降り、1分後のトリガーで続きから再開する。
+ */
+
+const TIME_LIMIT_MS = 4.5 * 60 * 1000; // 4分30秒
+const RESUME_DELAY_MS = 60 * 1000;     // 1分後
+const PROP_KEY_ROW = 'CLASSIFY_LAST_ROW';
+const PROP_KEY_TRIGGER = 'CLASSIFY_TRIGGER_ID';
+const SHEET_NAME = 'inquiries';
+const LABELS = ['料金', '不具合', '使い方', 'その他'];
+
+// 起点になる関数。手動実行でもトリガーからでも同じ関数を呼ぶ。
+function runClassifyJob() {
+  const startTime = Date.now();
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+
+  let row = Number(props.getProperty(PROP_KEY_ROW)) || 2; // 1行目は見出し
+
+  while (row &lt;= lastRow) {
+    if (Date.now() - startTime &gt; TIME_LIMIT_MS) {
+      props.setProperty(PROP_KEY_ROW, String(row));
+      scheduleResume();
+      return;
+    }
+
+    const text = sheet.getRange(row, 1).getValue();
+
+    if (text === '') {
+      row++;
+      continue;
+    }
+
+    try {
+      const result = classifyOne(text);
+      sheet.getRange(row, 2).setValue(result.label);
+      sheet.getRange(row, 3).setValue(result.reason);
+    } catch (e) {
+      sheet.getRange(row, 2).setValue('失敗');
+      sheet.getRange(row, 3).setValue('スキップ: ' + e.message);
+    }
+
+    row++;
+  }
+
+  // 全件終わったので、保存値とトリガーを片付ける
+  props.deleteProperty(PROP_KEY_ROW);
+  clearResumeTrigger();
+}
+
+// 1分後に自分自身を呼ぶトリガーを設置する
+function scheduleResume() {
+  clearResumeTrigger(); // 二重登録を防ぐ
+
+  const trigger = ScriptApp.newTrigger('runClassifyJob')
+    .timeBased()
+    .after(RESUME_DELAY_MS)
+    .create();
+
+  PropertiesService.getScriptProperties()
+    .setProperty(PROP_KEY_TRIGGER, trigger.getUniqueId());
+}
+
+// 自分が設置したトリガーだけを、IDで特定して消す
+function clearResumeTrigger() {
+  const props = PropertiesService.getScriptProperties();
+  const triggerId = props.getProperty(PROP_KEY_TRIGGER);
+
+  if (!triggerId) return;
+
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getUniqueId() === triggerId) {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  props.deleteProperty(PROP_KEY_TRIGGER);
+}
+
+// A列のテキストをGeminiに投げ、ラベルと理由を受け取る
+function classifyOne(text) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'
+    + 'gemini-2.0-flash:generateContent?key=' + apiKey;
+
+  const prompt = [
+    '次の問い合わせ文を読み、以下のラベルから1つだけ選んでください。',
+    'ラベル: ' + LABELS.join(' / '),
+    '出力は必ず次のJSON形式のみとし、それ以外の文字を含めないでください。',
+    '{"label": "選んだラベル", "reason": "選んだ理由を一文で"}',
+    '',
+    '--- 問い合わせ文 ---',
+    text
+  ].join('\n');
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0, maxOutputTokens: 256 }
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  const json = JSON.parse(response.getContentText());
+  const raw = json.candidates[0].content.parts[0].text;
+
+  try {
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    if (LABELS.indexOf(parsed.label) === -1) {
+      return { label: '未分類', reason: '想定外のラベル: ' + parsed.label };
+    }
+
+    return parsed;
+  } catch (e) {
+    return { label: '未分類', reason: 'JSON解析に失敗' };
+  }
+}</code></pre>
+<p><code>runClassifyJob</code>が起点になる関数です。手動で実行しても、トリガーから呼ばれても、まったく同じ関数がそのまま動きます。</p>
+<p>経過時間が4分30秒を超えたら、その時点の行番号を保存して<code>scheduleResume</code>を呼び、処理を終えます。</p>
+<p><code>scheduleResume</code>は、前回自分が設置したトリガーが残っていれば先に消します。そのうえで、1分後のトリガーを新しく作ります。</p>
+<p><code>classifyOne</code>の中でエラーが起きた行は、B列に「失敗」、C列にエラー内容を書き込んで次の行に進みます。1件の失敗で全体を止めない設計です。</p>
+<hr>
+<h2>動作条件</h2>
+<p>このコードはスプレッドシートのスクリプトエディタに貼って使う前提です。</p>
+<p>Gemini APIキーは、スクリプトプロパティに<code>GEMINI_API_KEY</code>として登録しておく必要があります。プロパティの登録手順は以前の記事で紹介したものと同じです。</p>
+<p>初回実行時には、外部URLへの接続とスプレッドシートの読み書きについて、承認画面が出ます。求められたスコープを確認してから進めてください。</p>
+<p>時間主導トリガーの作成には上限があります。1つのスクリプトが持てるトリガーの数には上限があるため、<code>clearResumeTrigger</code>で毎回片付けておくことが重要です。</p>
+<p>実行時間の上限そのものは、6分から縮まりません。今回のコードは、その上限に触れる前に自分から処理を止める設計にしています。</p>
+<hr>
+<h2>つまずきやすいところ</h2>
+<p><strong>トリガーを消し忘れると増殖する</strong></p>
+<p><code>clearResumeTrigger</code>を呼ばずに<code>scheduleResume</code>だけを繰り返すと増殖します。1分ごとのトリガーが、実行のたびに1個ずつ増える形です。</p>
+<p>増えたトリガーはそれぞれが同じ関数を呼びます。複数のトリガーが同時に同じ行を処理しようとして、書き込みが競合することがあります。</p>
+<p>今回のコードでは、トリガーのIDをPropertiesServiceに保存しています。次にトリガーを設置する前に、そのIDのトリガーだけを探して消す仕組みです。</p>
+<p>GASのトリガー一覧には、他の関数のトリガーも並ぶことがあります。名前ではなくIDで狙い撃ちしているのは、そのためです。</p>
+<p><strong>JSONの形式が崩れて返ってくることがある</strong></p>
+<p>Geminiの応答が、指定したJSON形式から外れることがあります。コードマークダウンで囲んで返してくることもあれば、前置きの文章を付けて返してくることもあります。</p>
+<p><code>classifyOne</code>では、コードマークダウンの記号だけを取り除いてから<code>JSON.parse</code>を試しています。それでも解析に失敗した場合は、ラベルを「未分類」として記録し、処理は止めずに次の行へ進みます。</p>
+<p><strong>行番号が2から始まる理由</strong></p>
+<p>1行目を見出し行として扱っているため、初期値を2にしています。</p>
+<p>見出し行を使わないスプレッドシートで流用する場合は、この初期値を1に変えてください。</p>
+<p><strong>6分制限を回避するライブラリという選択肢もある</strong></p>
+<p>6分の制限そのものを別のプロジェクトに逃がすライブラリも存在します。今回は、外部ライブラリに依存せず、標準機能だけで完結する形を選びました。</p>
+<hr>
+<h2>今日できること</h2>
+<p>手元のスプレッドシートに、A列だけ埋めたテスト用のシートを10行ほど作ってみてください。</p>
+<p><code>TIME_LIMIT_MS</code>を4.5分ではなく10秒に変えてみてください。<code>runClassifyJob</code>を1回実行すると、途中で処理が止まります。1分後には自動で続きから再開する様子を、待たずに確認できます。</p>
+<p>シート名は<code>SHEET_NAME</code>の値をテスト用シートの名前に合わせてください。</p>
+<hr>
+<p>6分の壁は、回避するものではありません。先に降りて、次の実行に渡す前提で設計するものです。</p>
+<p>処理を止める判断を自分のコード側に持たせておけば、行数がどれだけ増えても、同じ形のまま動き続けます。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

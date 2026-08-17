@@ -1,0 +1,29 @@
+{
+  "price": 980,
+  "currency": "JPY",
+  "density": "medium",
+  "marketMedian": 800,
+  "multiplier": 1.23,
+  "ceiling": "1つの調査テーマを、分解プロンプトに当てはめて Deep Research に投げ、NotebookLM に取り込み、食い違いを潰して人に渡せる形にまとめるまでを1本の線で通せるところまで",
+  "rationale": "research/market/2026-08-17.json の全体価格中央値は 800円。情報密度は「中」と判定した。根拠は 00-concept.md の「渡すもの」が計7点あるものの、いずれもテキストのプロンプト・手順書・カスタム指示であり、コードのように実行結果が即座に出る形ではないためである。同じ週の木曜に出す 2026-08-20-design-tokens（tokens.css + Node スクリプト）が密度「高」であり、それより1段下と位置づける。密度「中」の倍率 1〜2倍を当てると算出レンジは 800〜1,600円 になる。profile.md に販売実績が無いため下限側を採り 980円 とした。前回の着手（2026-08-11-notebooklm-deepresearch）では 1,480円 としていたが、当時参照した中央値 980円 が今回の実測で 800円 に下がっているため引き下げる。なお前回の letter-audit で価格そのもの（C4）は不合格になっていない。落ちたのは A1（理想の未来が同一文型に収束）である。",
+  "raiseCondition": "販売数の実測値と購入者の結果（出典つき）が profile.md に入ったら、さらに上を検討する",
+  "source": "research/market/2026-08-17.json",
+  "supersedes": "notes/2026-08-11-notebooklm-deepresearch/pricing.json",
+  "priceSchedule": [
+    {
+      "price": 980,
+      "from": "2026-08-23",
+      "until": "2026-09-30",
+      "label": "初期価格"
+    },
+    {
+      "price": 1480,
+      "from": "2026-10-01",
+      "until": null,
+      "label": "通常価格"
+    }
+  ],
+  "priceScheduleNote": "**これは本物の値上げ計画である。** 2026-10-01 に note の販売価格を 1,480円 に変更すること。実行しない場合、レターに書いた期限は偽の期限（ethics-line の E1・景品表示法の有利誤認）に該当する。実行は人間の作業であり、自動化されていない。1,480円 は密度「中」の算出レンジ 800〜1,600円 の内側であり、値上げ後もレンジを超えない。同じ週の木曜に出す 2026-08-20-design-tokens が 1,480円 → 1,980円 と動くため、密度の差（中 / 高）に応じた価格差は維持される。",
+  "deadlineIsReal": true,
+  "deadlineOwner": "人間（note の価格設定画面で変更する）"
+}

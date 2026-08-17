@@ -1,0 +1,22 @@
+{
+  "slug": "2026-08-23-research-flow",
+  "themeId": "2026-W33-07",
+  "type": "paid",
+  "title": "同じテーマに2回以上触れる人へ。NotebookLM調査フロー一式7点",
+  "category": "生成AIで見せられる成果物を作る / NotebookLM・精度向上",
+  "hashtags": [
+    "NotebookLM",
+    "Gemini",
+    "プロンプト",
+    "生成AI"
+  ],
+  "demo": null,
+  "artifacts": [
+    "prompt"
+  ],
+  "price": 980,
+  "publishDate": "2026-08-23",
+  "charCount": 2190,
+  "createdAt": "2026-08-17T00:00:00+09:00",
+  "supersedes": "2026-08-11-notebooklm-deepresearch"
+}

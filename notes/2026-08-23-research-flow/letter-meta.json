@@ -1,0 +1,84 @@
+{
+  "productType": "tool",
+  "round": 2,
+  "blocks": [
+    {"n": 1, "type": "hook", "lines": [1, 5]},
+    {"n": 2, "type": "problem", "lines": [9, 13]},
+    {"n": 3, "type": "ideal-future", "lines": [17, 19], "valueAxis": "工程", "landing": "gain-leaning（続きから始められる）"},
+    {"n": 4, "type": "reproducibility", "lines": [23, 27], "reproTag": "単純化"},
+    {"n": 5, "type": "ideal-future", "lines": [31, 35], "valueAxis": "粒度", "landing": "gain（同じ深さの資料が手元に残る）", "note": "round2で消失形『終わらせずに済みます』から書き換え"},
+    {"n": 6, "type": "reproducibility", "lines": [39, 45], "reproTag": "簡易化"},
+    {"n": 7, "type": "fear", "lines": [49, 51], "note": "round2で末尾の『まだ、今日なら間に合います』を削除。購入期限との誤読を避けた"},
+    {"n": 8, "type": "ideal-future", "lines": [55, 61], "valueAxis": "引き継ぎ", "landing": "loss（trade-offを明示する意図的な着地）", "note": "手数が増えるtrade-offを59行目で明示。round2で冒頭の『もう1つ、別の使い道があります』を削除し、本筋の帰結として書き直した"},
+    {"n": 9, "type": "reproducibility", "lines": [65, 91], "reproTag": "成果物の開示", "note": "分解プロンプト実物5行(70-74)＋Deep Research出力例(80-83)＋動作条件(88-91)。round2で未変更"},
+    {"n": 10, "type": "ideal-future", "lines": [95, 99], "valueAxis": "蓄積", "landing": "gain（手元の資料が積み上がっていく）", "note": "round2で新規挿入。93行と97行(旧)の間に理想の未来を1ブロック追加し、再現性2連続を解消"},
+    {"n": 11, "type": "reproducibility", "lines": [103, 109], "reproTag": "不便だった状況"},
+    {"n": 12, "type": "objections", "lines": [113, 121], "covers": ["再現性がなさそう", "今買う理由がない", "高いしあとでいい", "自分には早い", "本当に結果が出るのか"], "note": "round2で『再現性について』の独立見出しを削除し、113行目に1文で畳んだ（ブロック9・11で既出のため）。『今買う理由について』は本物の値上げ日程に差し替えた"},
+    {"n": 13, "type": "funnel", "lines": [125, 129]},
+    {"n": 14, "type": "closing", "lines": [133, 137], "valueAxis": "追跡", "landing": "gain（あとから追える記録が、手元に残る）", "note": "round2で消失形『今日で線を引けます』から書き換え"}
+  ],
+  "valueAxesUsed": {
+    "工程": 3,
+    "粒度": 5,
+    "引き継ぎ": 8,
+    "蓄積": 10,
+    "追跡": 14,
+    "note": "理想の未来5か所（block3/5/8/10/14）はそれぞれ異なる価値軸。同じ軸は2回使っていない。5つの価値軸すべてが理想の未来ブロックに1回ずつ配置された（round1では蓄積が未使用だった）。"
+  },
+  "landingPattern": {
+    "gain": ["block3(工程)", "block5(粒度)", "block10(蓄積)", "block14(追跡)"],
+    "loss-intentional": ["block8(引き継ぎ)"],
+    "note": "round1では4か所全てが消失形（要らなくなる/済みます/消える/線を引けます）に収束していた。round2ではblock5・block10・block14を獲得形に書き換え、block8のみ00-concept.mdが明示するtrade-off（手数が増える代わりに記録が残る）として意図的に消失形を残した。"
+  },
+  "fearCount": 1,
+  "fearBlock": 7,
+  "reproducibility": ["単純化", "簡易化", "成果物の開示", "不便だった状況"],
+  "closingType": "ideal-future",
+  "exitActions": 1,
+  "promiseConsolidation": {
+    "singlePromise": "1つの調査を、あとから追える記録として残る形で最後まで通す",
+    "note": "round1のA4は、57行目『もう1つ、この線には別の使い道があります』が効果の追加を宣言していたことが原因。round2で削除し、block8（引き継ぎ）とblock14（追跡）を『別の効果』ではなく『記録として残ることの帰結』として書き直した。促す行動は変えていない（exitActions: 1）。"
+  },
+  "deadlineClaims": [
+    {
+      "type": "price-increase",
+      "effectiveDate": "2026-10-01",
+      "priceFrom": 980,
+      "priceTo": 1480,
+      "isReal": true,
+      "evidence": "notes/2026-08-23-research-flow/pricing.json の priceSchedule",
+      "owner": "人間（note の価格設定画面で変更する）"
+    }
+  ],
+  "toolEvidence": {
+    "disclosed": true,
+    "firstStep": "23-27行目「やることは1つです。調べたいテーマを、渡す分解プロンプトに当てはめる。」",
+    "requirements": "88-91行目「動作条件は2つです。Gemini(Deep Research機能が使えるプラン。執筆時点では有償プランが必要です)／NotebookLM(無料枠で動作します)」",
+    "limitations": "121行目「一次情報の正確性は保証しません。出てきた出典は、自分で確認してください。」",
+    "artifactShown": "70-74行目に分解プロンプトの実際の指示文5行、80-83行目にDeep Research出力例を実物として掲載。round2で未変更"
+  },
+  "auditHistory": [
+    {
+      "round": 1,
+      "result": "13/16 不合格",
+      "failures": ["A1", "A4", "C3"]
+    },
+    {
+      "round": 2,
+      "changes": [
+        {
+          "failure": "A1",
+          "fix": "95-99行目に価値軸『蓄積』の理想の未来ブロックを新規挿入し、成果物の開示(65-91)と不便だった状況(103-109)という再現性2連続を解消した。113行目の『再現性について』独立見出しを削除し、既出情報の再説明を無くした。block5・block10・block14の着地を消失形から獲得形に書き換え、4か所中2か所以上を肯定形にした（block8は00-concept.mdが明示するtrade-offとして意図的に消失形を維持）"
+        },
+        {
+          "failure": "A4",
+          "fix": "55行目『もう1つ、この線には別の使い道があります』を削除し、『1つの調査を最後まで通すと、その記録は、そのまま人に渡せる形で残ります』に差し替えた。約束を『記録として残る』の1つに束ね、引き継ぎ・追跡はその帰結として書いた"
+        },
+        {
+          "failure": "C3",
+          "fix": "115行目『今買う理由について』を、pricing.json の priceSchedule に基づく本物の値上げ日程（2026-09-30まで980円／2026-10-01から1,480円）に差し替えた。実績が無いための初期価格であること、先に買った人の価格は上がらないことを明記した。51行目の『まだ、今日なら間に合います』（購入期限と誤読されうる一文）を削除した。先着・数量限定・特典終了は書いていない"
+        }
+      ]
+    }
+  ]
+}
