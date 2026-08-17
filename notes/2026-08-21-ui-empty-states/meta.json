@@ -1,0 +1,22 @@
+{
+  "slug": "2026-08-21-ui-empty-states",
+  "themeId": "2026-W34-05",
+  "type": "free",
+  "title": "AIが作った一覧画面は0件で崩れる。空・読み込み中・エラーを足す",
+  "category": "生成AIで見せられる成果物を作る / AI×Webデザイン",
+  "hashtags": [
+    "UIデザイン",
+    "Webデザイン",
+    "LP制作",
+    "生成AI"
+  ],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-21-ui-empty-states/",
+  "artifacts": [
+    "beforeAfter",
+    "code",
+    "prompt"
+  ],
+  "publishDate": "2026-08-21",
+  "charCount": 2650,
+  "createdAt": "2026-08-17T10:00:00+09:00"
+}

@@ -1,0 +1,22 @@
+{
+  "slug": "2026-08-17-dashboard-3points",
+  "themeId": "2026-W34-01",
+  "type": "free",
+  "title": "AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする",
+  "category": "生成AIで見せられる成果物を作る / AI×Webデザイン",
+  "hashtags": [
+    "UIデザイン",
+    "Webデザイン",
+    "LP制作",
+    "生成AI"
+  ],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-17-dashboard-3points/",
+  "artifacts": [
+    "beforeAfter",
+    "code",
+    "prompt"
+  ],
+  "publishDate": "2026-08-17",
+  "charCount": 2769,
+  "createdAt": "2026-08-17T06:00:00+09:00"
+}

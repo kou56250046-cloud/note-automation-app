@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>after — 空・読み込み中・エラーを足した一覧画面</title>
+<style>
+  :root {
+    --paper:      #f6f3ec;
+    --surface:    #ffffff;
+    --line:       #e6e0d0;
+    --ink:        #221f19;
+    --ink-2:      #85796a;
+    --accent:     #2456e0;
+    --accent-soft:rgba(36,86,224,.08);
+    --bad:        #a24a42;
+    --bad-soft:   rgba(162,74,66,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    padding: 40px 48px;
+  }
+  .app { max-width: 920px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  header h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  header p  { font-size: 13px; color: var(--ink-2); }
+
+  .statebar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .statebar button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .statebar button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px 28px;
+    min-height: 300px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-2);
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    text-align: left;
+    padding: 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--line);
+  }
+  tr:last-child td { border-bottom: none; }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* 空 */
+  .state-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 260px;
+    color: var(--ink-2);
+  }
+  .state-empty .icon {
+    width: 48px;
+    height: 48px;
+    border: 2px dashed var(--line);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .state-empty p { font-size: 14px; }
+
+  /* 読み込み中 */
+  .skeleton-row {
+    height: 16px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    background: linear-gradient(90deg, var(--line) 25%, #f0ead9 37%, var(--line) 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+  }
+
+  /* エラー */
+  .state-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 260px;
+    color: var(--bad);
+    text-align: center;
+  }
+  .state-error .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--bad);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .state-error p {
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .state-error button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid var(--bad);
+    background: var(--bad-soft);
+    color: var(--bad);
+    cursor: pointer;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>問い合わせ一覧</h1>
+      <p>ボタンで表示状態を切り替えられます</p>
+    </header>
+
+    <div class="statebar">
+      <button type="button" data-state="normal" class="active">通常</button>
+      <button type="button" data-state="empty">空</button>
+      <button type="button" data-state="loading">読み込み中</button>
+      <button type="button" data-state="error">エラー</button>
+    </div>
+
+    <div class="panel">
+      <!-- 通常 -->
+      <table id="state-normal">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>件名</th>
+            <th>送信者</th>
+            <th>受信日時</th>
+            <th>状態</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>#1042</td>
+            <td>料金プランについて</td>
+            <td>山田 太郎</td>
+            <td>08/21 09:12</td>
+            <td><span class="status">未対応</span></td>
+          </tr>
+          <tr>
+            <td>#1041</td>
+            <td>ログインできない</td>
+            <td>佐藤 花子</td>
+            <td>08/21 08:47</td>
+            <td><span class="status">未対応</span></td>
+          </tr>
+          <tr>
+            <td>#1040</td>
+            <td>解約の手続きについて</td>
+            <td>鈴木 一郎</td>
+            <td>08/20 22:03</td>
+            <td><span class="status">対応中</span></td>
+          </tr>
+          <tr>
+            <td>#1039</td>
+            <td>請求書の再発行</td>
+            <td>田中 実</td>
+            <td>08/20 18:31</td>
+            <td><span class="status">完了</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 空 -->
+      <div id="state-empty" class="state-empty" hidden>
+        <div class="icon"></div>
+        <p>問い合わせはまだありません</p>
+      </div>
+
+      <!-- 読み込み中 -->
+      <div id="state-loading" hidden>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+        <div class="skeleton-row"></div>
+      </div>
+
+      <!-- エラー -->
+      <div id="state-error" class="state-error" hidden>
+        <div class="icon">!</div>
+        <p>データを取得できませんでした</p>
+        <button type="button" id="retry">再読み込み</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var buttons = document.querySelectorAll('.statebar button');
+    var panels = {
+      normal:  document.getElementById('state-normal'),
+      empty:   document.getElementById('state-empty'),
+      loading: document.getElementById('state-loading'),
+      error:   document.getElementById('state-error')
+    };
+
+    function showState(name) {
+      Object.keys(panels).forEach(function (key) {
+        panels[key].hidden = key !== name;
+      });
+      buttons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.state === name);
+      });
+    }
+
+    buttons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        showState(btn.dataset.state);
+      });
+    });
+
+    document.getElementById('retry').addEventListener('click', function () {
+      showState('loading');
+      setTimeout(function () { showState('normal'); }, 900);
+    });
+  </script>
+</body>
+</html>

@@ -629,7 +629,7 @@
     - https://zenn.dev/bitkey_dev/articles/ef48e093ab780c
     - https://sophiate.co.jp/ダッシュボードのレイアウト原則：ひと目で状態がわかる/
     - https://natic.sojitz-ti.com/insight/dashboard_design/
-  status: pending
+  status: used   # 2026-08-17 notes/2026-08-17-dashboard-3points として記事化（曜日どおり月曜）
 
 - id: 2026-W34-02
   title: 問い合わせの一覧をGeminiに仕分けさせる。スプレッドシート用GASの全文
@@ -675,7 +675,7 @@
     - https://kaire.jp/blog/gas-gemini-automation-2026/
     - https://note.com/samuraijuku_biz/n/nfae097c1e23f
     - https://qiita.com/aipacommander/items/faba7f0674b7c7b0111d
-  status: pending
+  status: used   # 2026-08-17 notes/2026-08-18-gas-classify として記事化（公開予定 08-18）
 
 - id: 2026-W34-03
   title: NotebookLMに、ソース同士の食い違いを先に洗い出させる質問テンプレート
@@ -721,7 +721,7 @@
     - https://note.com/ss_chiebukuro/n/necd70ebb3903
     - https://uravation.com/media/notebooklm-business-prompts-guide/
     - https://www.smartshoki.com/blog/generationai/notebooklm-howto/
-  status: pending
+  status: used   # 2026-08-19 notes/2026-08-19-notebooklm-conflict として記事化（曜日どおり水曜）
 
 - id: 2026-W34-04
   title: AIに毎回同じ見た目を出させる tokens.css 一式と、逸脱を見つけるチェックスクリプト
@@ -820,7 +820,7 @@
     - https://qiita.com/KokiSakano/items/edc1e4384478273661d4
     - https://u-site.jp/alertbox/empty-state-interface-design
     - https://fumufumuui.com/posts/empty-state
-  status: pending
+  status: used   # 2026-08-21 notes/2026-08-21-ui-empty-states として記事化
 
 - id: 2026-W34-06
   title: GASは6分で止まる前に自分で降りる——分割実行のコード全文
@@ -867,4 +867,4 @@
     - https://data-x.jp/blog/gastimeout/
     - https://uncle-gas.com/avoid-timeout-error/
     - https://web-breeze.net/gas-running-over-time-limit/
-  status: pending
+  status: used   # 2026-08-17 notes/2026-08-22-gas-resume として記事化（公開予定 08-22）

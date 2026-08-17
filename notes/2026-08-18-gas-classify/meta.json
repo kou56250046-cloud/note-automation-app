@@ -1,0 +1,21 @@
+{
+  "slug": "2026-08-18-gas-classify",
+  "themeId": "2026-W34-02",
+  "type": "free",
+  "title": "問い合わせをGeminiで自動仕分けする。ラベルを固定するGASの全文",
+  "category": "生成AIで見せられる成果物を作る / Gemini+GASの自動化",
+  "hashtags": [
+    "GoogleAppsScript",
+    "GAS",
+    "業務効率化",
+    "Gemini"
+  ],
+  "demo": null,
+  "artifacts": [
+    "code",
+    "prompt"
+  ],
+  "publishDate": "2026-08-18",
+  "charCount": 2866,
+  "createdAt": "2026-08-18T06:00:00+09:00"
+}

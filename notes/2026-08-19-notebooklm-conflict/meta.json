@@ -1,0 +1,20 @@
+{
+  "slug": "2026-08-19-notebooklm-conflict",
+  "themeId": "2026-W34-03",
+  "type": "free",
+  "title": "NotebookLMの「要約して」が、出典ごとの食い違いを均してしまう話",
+  "category": "生成AIで見せられる成果物を作る / NotebookLM・精度向上",
+  "hashtags": [
+    "NotebookLM",
+    "Gemini",
+    "プロンプト",
+    "生成AI"
+  ],
+  "demo": null,
+  "artifacts": [
+    "prompt"
+  ],
+  "publishDate": "2026-08-19",
+  "charCount": 3054,
+  "createdAt": "2026-08-19T07:00:00+09:00"
+}
