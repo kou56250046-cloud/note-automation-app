@@ -5,9 +5,8 @@ name: stock-alert
 #
 # 在庫が空の状態で記事を書かない。その場でテーマを作らない。
 
+# 自動実行（cron）は停止した。手動実行（workflow_dispatch）のみで回す。
 on:
-  schedule:
-    - cron: '0 22 * * *'   # UTC 22:00 = JST 07:00
   workflow_dispatch:
 
 permissions:

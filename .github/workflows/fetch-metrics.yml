@@ -6,9 +6,8 @@ name: fetch-metrics
 # ステップ7で scripts/fetch-public.mjs を実装するまでは no-op で終わる。
 # ワークフローを先に置いておくことで、スクリプトができた時点で自動的に動き出す。
 
+# 自動実行（cron）は停止した。手動実行（workflow_dispatch）のみで回す。
 on:
-  schedule:
-    - cron: '30 21 * * *'   # UTC 21:30 = JST 06:30
   workflow_dispatch:
 
 permissions:

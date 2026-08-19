@@ -12,9 +12,8 @@ name: market-research
 #
 # 秘密情報を必要としない（公開 API のみ・ログイン不要）。
 
+# 自動実行（cron）は停止した。手動実行（workflow_dispatch）のみで回す。
 on:
-  schedule:
-    - cron: '0 12 * * 0'   # UTC 12:00 = JST 21:00（日曜）
   workflow_dispatch:
     inputs:
       force:

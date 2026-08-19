@@ -22,7 +22,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 | 層 | 役割 | 周期 | 実行 |
 |---|---|---|---|
-| **市場計測層** | 需要と供給を実測する | 日曜21時 | `note_market.py`（Actions・**LLM を使わない**） |
+| **市場計測層** | 需要と供給を実測する | 日曜（**手動起動**） | `note_market.py`（Actions・**LLM を使わない**） |
 | **週次リサーチ層** | 1週間分のテーマを仕込む | 日曜 | `weekly-research`（**ローカル**） |
 | **週次生成層** | 在庫から7本引いて記事にする | 日曜 | **`/note-week`（ローカル）** |
 | **決定論ゲート層** | 文体・重複・note記法を機械判定する | push のたび | GitHub Actions（**LLM を使わない**） |
@@ -40,6 +40,20 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 2. 生成を日曜1回にまとめた以上、**毎日クラウドを起こす必要が無い**
 
 Actions が担当するのは、LLM を使わない処理（計測・検査・配信）だけである。
+
+**`routines/` を消しただけでは止まらない。** クラウドの Routines はリポジトリではなく
+claude.ai 側に登録されており、`routines/` を削除したあとも `daily-build` と
+`weekly-research` が動き続けていた（2026-08-19 に両方 `enabled: false` にして停止）。
+
+| Routine | cron | 状態 |
+|---|---|---|
+| `daily-build` | `0 21 * * 0,1,2,4,5`（JST 6:00） | **停止済み** |
+| `weekly-research` | `0 22 * * 0`（JST 7:00） | **停止済み** |
+
+**完全な削除は https://claude.ai/code/routines からしかできない。** API は無効化までである。
+新しい Routine を作らないこと。作ると、この文書に書いてあることと実際の挙動がずれる。
+
+**Actions の cron もすべて外した。** 時刻で勝手に起きるものは、この repo に1つも無い。
 
 ### 週の並び
 
@@ -86,9 +100,13 @@ Actions が担当するのは、LLM を使わない処理（計測・検査・�
 ### 日曜にやること（これだけ）
 
 ```
-1. /note-week      7本を作る（market-research の21時以降）
+0. gh workflow run market-research.yml   市場データを取り直す（Actions・手動）
+1. /note-week      7本を作る（market-research の完了後）
 2. /note-preview   プレビューとダッシュボードを更新する
 ```
+
+**Actions の cron はすべて外した。** 自動で起きるものは1つも無い。
+0番は手で叩くか、GitHub の Actions 画面から "Run workflow" を押す。
 
 在庫が7本に満たなければ `/note-week` が停止するので、先に `weekly-research` を回す。
 
@@ -455,7 +473,7 @@ git commit && push                                # deploy-pages が配信する
 からである。投稿済みの除外・有料部分の暗号化・数値の更新は同じ制約を共有しており、
 別々の作業にすると人間の手数が3倍になる。
 
-**`fetch-metrics` による毎朝の自動取得は動いていない。** `scripts/fetch-public.mjs` が
+**`fetch-metrics` による自動取得は動いていない（cron も外した）。** `scripts/fetch-public.mjs` が
 未実装のため、ワークフローは起動して即スキップしている（失敗はしないので通知も来ない）。
 実装するときは `fetch-metrics.yml` の `git add data/` に
 `note-factory-dashboard.html` を足すこと。**`encrypt.mjs` が書き換えるのは
@@ -484,15 +502,21 @@ Claude Code Action は Anthropic API キーによる従量課金であり、サ�
 | Actions | 何をするか | LLM |
 |---|---|---|
 | `lint-and-dedup` | 文体・記法・実物の有無・重複を判定する | 使わない |
-| **`market-research`** | **需要と供給を実測する（日曜21時 JST）** | **使わない** |
-| `deploy-pages` | ダッシュボード・投稿キュー・デモを配信する | 使わない |
-| `fetch-metrics` | 数値を取得して暗号化する（**未実装。起動して即スキップする**） | 使わない |
-| `stock-alert` | 在庫が7本未満なら Issue を立てる | 使わない |
+| **`market-research`** | **需要と供給を実測する（手動起動）** | **使わない** |
+| `deploy-pages` | ダッシュボード・投稿キュー・デモを配信する（push で起動） | 使わない |
+| `fetch-metrics` | 数値を取得して暗号化する（**未実装。手動起動・即スキップする**） | 使わない |
+| `stock-alert` | 在庫が7本未満なら Issue を立てる（手動起動） | 使わない |
+| `weekly-digest` | 週次サマリーを Issue にする（手動起動） | 使わない |
+
+**push で起動するのは `lint-and-dedup` と `deploy-pages` の2つだけである。**
+残りは `workflow_dispatch` のみで、時刻で勝手に起きることはない。
 
 **`market-research` はこの原則に抵触しない。** やるのは生成ではなく計測である。
 
-**`market-research` を日曜21時に置いているのは、`/note-week` の直前だからである。**
-その週の実測値を見てからテーマを確定できる。
+**`market-research` は `/note-week` の直前に手で回す。**
+その週の実測値を見てからテーマを確定するためである。cron を外したので、
+回し忘れると `research/market/{date}.md` が古いまま `/note-week` に入る。
+日曜の手順の0番を飛ばさないこと。
 
 ---
 
@@ -572,7 +596,8 @@ scripts/              build-preview.mjs / build-demo.mjs / serve.mjs / fetch-pub
 **週次一括生成では、1回の実行で在庫を7本消費する。** したがって日曜の時点で
 7本そろっていなければ `/note-week` は停止する。
 
-`stock-alert` Actions が毎朝チェックし、未使用テーマが**7本未満**なら Issue を立てる。
-日曜より前に気づけるようにするためである。
+`stock-alert` Actions は在庫を数え、未使用テーマが**7本未満**なら Issue を立てる。
+**cron を外したので自動では起きない。** `/note-week` の前に手で回すか、
+`/note-week` が停止したときに在庫切れだと気づくことになる。
 
 在庫が切れた状態で記事を書かない。空の在庫を埋めるために、その場でテーマを作らない。

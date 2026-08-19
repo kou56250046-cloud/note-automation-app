@@ -107,6 +107,8 @@ v2.0 は `daily-trend-scan` を毎朝走らせる設計だった。1回あたり
 
 初版は `daily-build` / `weekly-research` / `monthly-review` の3本を Anthropic クラウドの Routines に置いていた。**すべて廃止し、ローカル実行に移した。**
 
+**ただし `routines/` の削除では止まらなかった。** 登録は claude.ai 側にあるため、`daily-build` と `weekly-research` は削除後も走り続け、2026-08-19 に `enabled: false` にして初めて止まった。完全な削除は https://claude.ai/code/routines から行う。
+
 | 廃止の理由 | 内容 |
 |---|---|
 | **有料noteを手元に残せない** | `03-draft.md` は `.gitignore` 対象。クラウドで生成するとコミットされず消える（§11.2） |
@@ -455,7 +457,7 @@ research/accounts/   ──┘                             │
 
 **毎日投稿の唯一の停止要因は `research/themes.md` の枯渇である。**
 
-`stock-alert` Actions が毎朝チェックし、未使用が3本未満なら Issue を立てる。**空の在庫を埋めるために、その場でテーマを作らない。**
+`stock-alert` Actions は在庫を数え、未使用が3本未満なら Issue を立てる（**cron は外した。手動起動**）。**空の在庫を埋めるために、その場でテーマを作らない。**
 
 ### 8.4 数字の出所
 
@@ -480,7 +482,7 @@ research/accounts/   ──┘                             │
 | **有料noteの生成** | **ローカルのみ** | **`03-draft.md` を追跡しないため、クラウドだと手元に残らない（§11.2）** |
 | `monthly-review` | Anthropic クラウド | 定期実行のみで完結 |
 | `lint.py` / `dedup.py` | GitHub Actions | **LLM を使わない。トークン0** |
-| **`note_market.py`（`market-research`）** | **GitHub Actions** | **公開 API を叩いて集計・クラスタリングするだけ。日曜21時 JST。トークン0** |
+| **`note_market.py`（`market-research`）** | **GitHub Actions** | **公開 API を叩いて集計・クラスタリングするだけ。手動起動。トークン0** |
 | `fetch-metrics` | GitHub Actions | 公開 API を叩くだけ |
 | `build-demo.mjs` | GitHub Actions ／ ローカル | 暗号化を伴わないのでどちらでも動く |
 | **`build-preview.mjs --public`** | **ローカルのみ** | **暗号化に `03-draft.md` が要る。生成物をコミットして持ち込む** |

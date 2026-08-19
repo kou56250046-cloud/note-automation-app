@@ -3,9 +3,8 @@ name: weekly-digest
 # 週次のサマリーを Issue にする。
 # 人間が過程を見ないので、週に一度だけ全体が見える場所を作る。
 
+# 自動実行（cron）は停止した。手動実行（workflow_dispatch）のみで回す。
 on:
-  schedule:
-    - cron: '0 11 * * 0'   # UTC 日 11:00 = JST 日 20:00
   workflow_dispatch:
 
 permissions:

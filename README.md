@@ -29,7 +29,7 @@ Claude Code で「ひとり出版社」を組み、リサーチから記事生�
 
 | 層 | やること | 周期 |
 |---|---|---|
-| **市場計測** | **note の公開データから需要と供給を実測（トークン0）** | **日曜21時** |
+| **市場計測** | **note の公開データから需要と供給を実測（トークン0）** | **日曜（手動起動）** |
 | 週次リサーチ | 在庫が7本になるまでテーマを補充する | 日曜 |
 | **週次生成** | **在庫から7本引いて記事にする（web検索なし）** | **日曜1回** |
 | 決定論ゲート | 文体・重複・note記法・**実物の有無**を機械判定（**トークン0**） | push のたび |
@@ -162,29 +162,38 @@ ClaudeCode        需要  27 / 供給 390.3件/日 →  比 0.07   埋もれる
 
 ### Routines は廃止した
 
-**生成はすべてローカルで行う。** `routines/` は削除済みである。
+**生成はすべてローカルで行う。** `routines/` は削除済みで、claude.ai 側に登録されていた
+`daily-build` と `weekly-research` も 2026-08-19 に停止した。
 
 理由は2つある。
 
 1. **有料noteの `03-draft.md` は `.gitignore` 対象**であり、クラウドで生成すると手元に残らない
 2. 生成を日曜1回にまとめた以上、**毎日クラウドを起こす必要が無い**
 
+**`routines/` を消しただけでは止まらない。** Routines の登録はリポジトリではなく
+claude.ai 側にあるため、削除後も動き続けていた。完全な削除は
+https://claude.ai/code/routines から行う。
+
 | 週次の作業 | タイミング | やること |
 |---|---|---|
 | `weekly-research` | 日曜（在庫が7本未満のとき） | 7本になるまでテーマを補充する |
-| **`/note-week`** | **日曜（`market-research` の21時以降）** | **翌週の7本を一括生成する** |
+| **`/note-week`** | **日曜（`market-research` を手で回した後）** | **翌週の7本を一括生成する** |
 | `/note-preview` | `/note-week` の直後 | プレビューとダッシュボードを更新する |
 | `/note-review` | 月初 | ボトルネック診断 → 今月の打ち手 |
 
 ### GitHub Actions（トークンを一切消費しない）
 
+**cron はすべて外した。** 時刻で勝手に起きるものは1つも無い。
+push で起動するのは `lint-and-dedup` と `deploy-pages` の2つだけで、
+残りは `gh workflow run {name}.yml` か Actions 画面の "Run workflow" で回す。
+
 | ワークフロー | タイミング | やること |
 |---|---|---|
 | `lint-and-dedup` | `notes/` への push | 文体・note記法・**実物の有無**・重複を判定 |
-| **`market-research`** | **日曜 21:00** | **需要と供給を実測して `research/market/` を更新** |
-| `fetch-metrics` | 毎朝 06:30 | note の数値を取得して暗号化 |
-| `stock-alert` | 毎朝 07:00 | ネタ在庫が**7本未満**なら Issue |
-| `weekly-digest` | 日曜 20:00 | 週次サマリーを Issue 化 |
+| **`market-research`** | **手動起動** | **需要と供給を実測して `research/market/` を更新** |
+| `fetch-metrics` | 手動起動（未実装・即スキップ） | note の数値を取得して暗号化 |
+| `stock-alert` | 手動起動 | ネタ在庫が**7本未満**なら Issue |
+| `weekly-digest` | 手動起動 | 週次サマリーを Issue 化 |
 | `deploy-pages` | `preview/public/` `demo/` への push | ダッシュボード・投稿キュー・**デモ**を Pages へ |
 
 **`deploy-pages` は暗号化しない。配るだけ。** `03-draft.md` は `.gitignore` 対象で Actions 上に存在しないため、暗号化はローカルの `build-preview.mjs --public` が行う。
