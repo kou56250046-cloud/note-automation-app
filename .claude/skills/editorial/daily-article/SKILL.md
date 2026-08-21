@@ -122,9 +122,9 @@ description: 在庫から1本引いて2500〜4000字の無料記事を書くス�
 
 | サブカテゴリ | 何を載せるか |
 |---|---|
-| **1. AI×Webデザイン** | before/after のデモURL ＋ 変更点の CSS/HTML ＋ 指示したプロンプト全文 |
-| **2. Gemini+GAS** | GASコード全文 ＋ プロンプト全文 ＋ 動作条件（トリガー・権限・実行制限） |
-| **3. NotebookLM・精度向上** | 設定とプロンプトの全文 ＋ 適用前後の出力の実物 |
+| **1. 見せられる自動化** | before/after のデモURL ＋ HTML Service の全文 ＋ 変更点の CSS |
+| **2. 自動化フローの設計思想** | **壊れるコード → 直したコード**の対 ＋ 動作条件（トリガー・権限・実行制限） |
+| **3. 差し替えて使うテンプレート** | GASコード全文 ＋ プロンプト全文 ＋ **差し替え箇所の一覧** |
 
 **「出し惜しみ」をしない。** 無料記事で実物を出すことが、有料noteの信用になる。
 
@@ -234,12 +234,14 @@ themes.md の id: 2026-W33-01
 
 ```json
 {
-  "slug": "2026-08-10-admin-ui-spacing",
-  "themeId": "2026-W33-01",
+  "slug": "2026-08-10-gas-dashboard-ui",
+  "themeId": "2026-W33-04",
+  "systemId": "2026-W33-inquiry-triage",
+  "serialRole": "画面",
   "type": "free",
-  "title": "Claude Code に作らせた管理画面の余白を、3箇所だけ直した before/after",
-  "category": "生成AIで見せられる成果物を作る / AI×Webデザイン",
-  "hashtags": ["Webデザイン", "UIデザイン", "LP制作", "生成AI"],
+  "title": "GASの実行結果を見る画面を、スプレッドシートからHTML Serviceに移した before/after",
+  "category": "GASと生成AIで渡せる自動化システムを作る / 見せられる自動化",
+  "hashtags": ["GAS", "UIデザイン", "LP制作"],
   "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-10-admin-ui-spacing/",
   "artifacts": ["beforeAfter", "code", "prompt"],
   "publishDate": "2026-08-10",

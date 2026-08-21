@@ -11,7 +11,8 @@
 >
 > | 項目 | このドキュメントの記述 | 現行 |
 > |---|---|---|
-> | 主カテゴリ | Claude Code の運用と保守 | 生成AIで「人に見せられる成果物」を作る |
+> | 主カテゴリ | Claude Code の運用と保守 | **GAS と生成AI で「他人に渡せる自動化システム」を作る**（第3版・2026-08-21） |
+> | 週の形 | 独立した7本 | **1つの自動化システムを7分割した連載**（日曜に完成版一式を有料で渡す） |
 > | 無料記事の文字数 | 1500〜2500字 | **2500〜4000字**（本文のみ。実物は別） |
 > | `reader-feedback` | 無料記事に毎回1周 | **週1本だけ**（日曜にサンプリング） |
 > | `ethics-line`（無料記事） | 毎回実行 | **`lint.py` の一次判定で検出時のみ** |
@@ -692,7 +693,7 @@ note-factory/
 │   └── trends/{date}.md
 │
 ├── notes/{slug}/                 # 記事単位の成果物
-│   └── demo/                     # ★ before.html / after.html（AI×Webデザインのみ）
+│   └── demo/                     # ★ before.html / after.html（サブ①：木曜の画面・土曜のつまずき集）
 ├── demo/{slug}/                  # ★ build-demo.mjs の出力。Pages で配信。追跡する
 ├── preview/                      # プレビューHTML（.gitignore 対象）
 ├── data/                         # metrics.json / history.jsonl / revenue.json

@@ -237,7 +237,7 @@ note-factory/
 ├── knowledge/             # account.md / profile.md / voice.md / learnings.md
 ├── research/              # themes.md（ネタ在庫）/ market/（需要と供給の実測）/ accounts/
 ├── notes/{slug}/          # 記事単位の成果物
-│   └── demo/              # before.html / after.html（AI×Webデザインの記事）
+│   └── demo/              # before.html / after.html（サブ①：木曜の画面・土曜のつまずき集）
 ├── demo/{slug}/           # ライブデモ。Pages で配信する（追跡する）
 ├── preview/               # プレビューHTML
 │   └── public/            # 公開用（有料部分は暗号化。これだけ追跡する）

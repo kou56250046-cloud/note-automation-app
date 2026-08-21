@@ -914,6 +914,28 @@
 #   - iOS Safari の input 自動ズーム（font-size 16px未満で発生, Android は非該当）
 #   - CSS clamp() によるレスポンシブフォントサイズ（MDN）
 # ============================================================
+#
+# ============================================================
+# 2026-08-21 W35 の7本を全て rejected にした（第3版への改訂）
+# ------------------------------------------------------------
+# knowledge/account.md を第3版（主カテゴリ「GAS と生成AI で他人に渡せる
+# 自動化システムを作る」）に改訂したため、W35 の在庫は使えなくなった。
+#
+# 個々のテーマが範囲外になったのではない。**週の構成が変わった**ためである。
+# 第3版から週は「1つの自動化システムを7つに割った連載」になり、
+# 7本は同じ systemId を共有していなければならない。W35 は単発7本であり、
+# 連載として組み直せない（月=OGP画像 / 火=LockService / 水=NotebookLM…と
+# 題材がばらばらで、1つのシステムに束ねられない）。
+#
+# **端数の補充をしない**（weekly-research の改訂に合わせた）。
+# 一部を残して足すと、連載の7分割が崩れる。
+#
+# 個別のテーマ自体は第3版でも生きているものがある。次の連載を仕込むときに
+# 部品として再利用してよい。
+#   W35-02 LockService の2重実行 → 連載の「水（失敗時の扱い）」の材料
+#   W35-05 Gemini API 429 の再試行 → 同上
+#   W35-07 排他制御と自動リトライの安定運転キット → 連載の「日（完成版）」の骨格
+# ============================================================
 
 - id: 2026-W35-01
   title: AIが出したOGP・シェアカードを、はみ出しと潰れの2箇所だけ直す
@@ -958,7 +980,7 @@
   sources:
     - https://lifestyle.assist-all.co.jp/ogp-image-size-optimization-1200x630/
     - https://apollo-optimize.com/blog/ogp-guide-settings-and-image-size/
-  status: pending
+  status: rejected
 
 - id: 2026-W35-02
   title: GASが2重に走ってGeminiを2回呼ぶ問題。LockServiceで止めるコード全文
@@ -1000,7 +1022,7 @@
   sources:
     - https://qiita.com/kyamadahoge/items/f5d3fafb2eea97af42fe
     - https://web-breeze.net/gas-lockservice/
-  status: pending
+  status: rejected
 
 - id: 2026-W35-03
   title: NotebookLMの回答を、その場で消費しない。ノート機能で積み重ねる型
@@ -1044,7 +1066,7 @@
     あちらが「その場でどう聞くか」という時系列で分かれる。
   sources:
     - https://www.i3design.jp/in-pocket/how-to-use-notebooklm/
-  status: pending
+  status: rejected
 
 - id: 2026-W35-04
   title: AIが出したレイアウトが、スマホ幅で崩れる2箇所を直す
@@ -1088,7 +1110,7 @@
   sources:
     - https://developer.mozilla.org/ja/docs/Web/CSS/clamp
     - https://webrandum.net/css-ios-safari-input-zoom/
-  status: pending
+  status: rejected
 
 - id: 2026-W35-05
   title: Gemini APIが429で落ちたときに、自動で待って再試行するGASコード
@@ -1132,7 +1154,7 @@
   sources:
     - https://ai.google.dev/gemini-api/docs/troubleshooting
     - https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/deploy/error-code-429
-  status: pending
+  status: rejected
 
 - id: 2026-W35-06
   title: NotebookLMは1冊にまとめない。トピックで分けると精度が変わる
@@ -1175,7 +1197,7 @@
     こちらは矛盾ではなく無関係な混入による精度低下を扱う点で症状が異なる。
   sources:
     - https://www.smartshoki.com/blog/generationai/notebooklm-howto/
-  status: pending
+  status: rejected
 
 - id: 2026-W35-07
   title: 夜間も落ちずに動くGAS。排他制御と自動リトライをまとめた安定運転キット
@@ -1233,4 +1255,4 @@
   sources:
     - https://qiita.com/kyamadahoge/items/f5d3fafb2eea97af42fe
     - https://ai.google.dev/gemini-api/docs/troubleshooting
-  status: pending
+  status: rejected

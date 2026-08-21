@@ -95,7 +95,7 @@ MIN_NOTES = 80           # これ未満だとクラスタリングが意味を�
 
 SELF_URLNAME = "kou_cosmos7"
 
-DEFAULT_TAGS = ["ClaudeCode", "Gemini", "NotebookLM", "生成AI", "AI活用"]
+DEFAULT_TAGS = ["GAS", "GoogleAppsScript", "UIデザイン", "NotebookLM", "生成AI"]
 
 # タイトルから単語候補を取る。形態素解析は使わない。
 # 英数字の連なり／カタカナ2文字以上／漢字2文字以上を語とみなす。
