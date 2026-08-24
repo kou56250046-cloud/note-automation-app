@@ -1256,3 +1256,391 @@
     - https://qiita.com/kyamadahoge/items/f5d3fafb2eea97af42fe
     - https://ai.google.dev/gemini-api/docs/troubleshooting
   status: rejected
+
+# ============================================================
+# 2026-08-24 差し戻し対応（二次修正）
+# ------------------------------------------------------------
+# コーディネーターの検証で2件の差し戻しを受け、該当箇所のみ修正した。
+# W35B-01/03/04/05 は無変更。
+#
+# failure1（W35B-06・土）: 挙げていた5件（文字化け・6分制限・権限エラー・
+# 通知重複・シート崩れ）が全てサブ②（自動化フローの設計思想）の障害であり、
+# 木・土に固定のサブ①（見せられる自動化）の内容になっていなかった。
+# → 5件を「Web Appの共有権限」「長文カードの省略」「カテゴリ増加時の折り返し」
+#   「スマホ幅対応」「カード高さの不揃い」という画面・見せ方側のつまずきに
+#   差し替えた。W35B-04（木）の具体的な実物（テンプレ一覧→カテゴリ別カード＋
+#   代表コメントの変換そのもの）とは重複しない、運用後に踏む崩れ側に寄せている。
+# 差し替えに伴い web検索を1件追加した（当初の5件枠には含めない、検証対応の
+# 追加裏取りとして扱う）。
+#   6. https://developers.google.com/apps-script/guides/web
+#      Web AppsのExecute As / Who has access（MYSELF/DOMAIN/ANYONE等）の仕様。
+#      土曜「デプロイ設定が自分のみのままで共有相手が開けない」の裏取り。
+#
+# failure2（W35B-02・07のhashtags）: サブ3既定タグの `NotebookLM` を、
+# 内容と無関係なまま到達目的だけで付けていた（タグスパム）。
+# → **なぜ既定のNotebookLMを使わなかったか**: account.md サブ③の既定タグは
+#   「Gemini API / NotebookLM は自動化の材料として扱う」という前提に基づくが、
+#   今回のシステムはGemini API側だけを材料にしており、NotebookLMの機能
+#   （ソース読み込み・要約・ノート機能）は一切使っていない。内容と一致しない
+#   タグを到達のためだけに付けるとタグスパムになるため、`GeminiAPI`
+#   （market/2026-08-24.md で比21.446・需要27.0/供給1.3件/日・有料率10%・
+#   総563件、計測タグ中1位）に差し替えた。総563件は他タグより母数が小さい
+#   ニッチ帯である点をrationaleに明記した。account.md側のサブ③既定タグの
+#   見直しは親がユーザーに諮る。
+# ============================================================
+
+# ============================================================
+# 2026-W35B（2026-08-24 仕込み・第3版2回目の連載）
+# ------------------------------------------------------------
+# 選んだシステム: 「アンケート自由記述 自動要約ダッシュボード」
+#   （systemId: 2026-W35B-survey-digest）
+#
+# Googleフォームの自由記述回答 → スプレッドシート → Geminiが要約・カテゴリ分類・
+# 感情スコアを付与 → HTML Serviceのカード型ダッシュボードで見せる →
+# ネガティブな回答だけSlackに通知する、という1本のGAS自動化システム。
+# 規模はGAS 300行前後・HTML Service 1画面・外部API 2本（Gemini API / Slack Webhook）で、
+# account.md の目安「GAS 200〜400行 / HTML Service 1画面 / 外部API 1〜2本」に収まる。
+#
+# なぜ7分割できるか:
+#   月(設計)=フォーム→シートの入口とデータ構造だけで1本が独立して読める。
+#   火(中核)=Gemini呼び出しとプロンプトだけで1本が独立して読める（月を読んでいなくても、
+#     「シートのB列に自由記述が入っている」という前提だけで再現できる）。
+#   水(失敗)=二重実行と429だけを扱う。GASで外部APIを叩く自動化なら業種を問わず刺さる。
+#   木(画面)=ダッシュボードのbefore/afterだけで1本が独立して読める（UIデザインの記事として単体で成立）。
+#   金(運用)=トリガーと通知だけで1本が独立して読める。
+#   土(つまずき)=画面の共有・崩れ側の5件はそれぞれ他システムのHTML Service運用にも転用できる独立した知見。
+#   日(完成版)=月〜土の6本の成果物を1つのコード一式に束ね、差し替え表を渡す。
+#   → 各回が「アンケート」という題材を共有しつつ、扱う技術要素（トリガー/API/UI/運用/障害対応）
+#     が明確に分かれているため、単体で読める記事として切り出せる。
+#
+# market の引用（research/market/2026-08-24.md）:
+#   GAS: 需要207.0 / 供給32.9件/日 / 比6.301 / 有料率11%（総12,231件）— 全体の主軸タグ
+#   GoogleAppsScript: 需要90.0 / 供給20.4件/日 / 比4.407 / 有料率10% — サブ2の軸タグ
+#   UIデザイン: 需要81.0 / 供給14.3件/日 / 比5.681 / 有料率6% — サブ1の軸タグ（今回の実測でも上位）
+#   GeminiAPI: 需要27.0 / 供給1.3件/日 / 比21.446 / 有料率10%（総563件・母数が小さいニッチ帯だが
+#     計測タグ中1位）— サブ3の主軸タグ（当初のNotebookLM既定から差し替え。理由は上の差し戻し対応を参照）
+#   クラスタ#6（プロンプト/AI/マジクラ、35記事、スキ中央値206、比5.8857、主なタグ GoogleWorkspace/GAS）
+#     — 「型を渡すテンプレート」がこの帯で強く読まれている実測。日曜の完成版一式の需要根拠にする。
+#
+# web検索5件（一次情報の裏取りのみ。需要判断はmarketデータが担当。6件目は差し戻し対応で追加）:
+#   1. https://developers.google.com/apps-script/guides/triggers/installable
+#      installable trigger（onFormSubmit）の仕様。月曜の入口設計の裏取り。
+#   2. https://ai.google.dev/gemini-api/docs/structured-output
+#      Gemini API の responseSchema による構造化出力（JSON）。火曜の呼び出しコードの裏取り。
+#   3. https://developers.google.com/apps-script/reference/lock/lock-service
+#      LockService の tryLock/waitLock の挙動差（真偽値を返す/例外を投げる）。水曜の二重実行対策の裏取り。
+#   4. https://ai.google.dev/gemini-api/docs/troubleshooting
+#      429 (RESOURCE_EXHAUSTED) 時の指数バックオフ推奨。水曜のリトライ設計の裏取り。
+#   5. https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
+#      UrlFetchApp から Slack Incoming Webhook にJSONをPOSTする実装。金曜の通知コードの裏取り。
+#
+# サブ①②③の使われ方:
+#   サブ1（見せられる自動化）= 木（画面）・土（つまずき、画面・見せ方側のbefore/after中心）
+#   サブ2（自動化フローの設計思想）= 月（設計）・水（失敗時）・金（運用）
+#   サブ3（差し替えテンプレート）= 火（中核処理）・日（完成版・paid）
+#   account.md 121〜129行目の対応表と一致させている。
+#
+# 次点として落としたシステム（system-level）:
+#   1.「問い合わせ返信文自動生成システム（多言語対応込み）」
+#     既出記事「問い合わせをGeminiで自動仕分けする。ラベルを固定するGASの全文」と
+#     中核処理（Gemini分類）が同型になり、dedup.py で高い類似度が出るリスクが高いため見送った。
+#     → 固定ラベルへの分類ではなく「自由記述の要約＋感情スコア＋通知」という
+#       別の変換に差し替えることで、この系統を選ばずに回避した。
+#   2.「経費精算レシート自動チェックシステム（OCR+Gemini）」
+#     Vision API等のOCRとGemini APIで外部API2本には収まるが、画像の前処理・権限周りの
+#     エラーハンドリングまで含めると土曜までに7分割が収まらない見込み。加えて金額・経費という
+#     実績主張に近い題材で ethics-line 観点のリスクが増えるため見送った。
+#   3.「SNS投稿予約＆分析ダッシュボード」
+#     market上で近い内容は AI活用(比0.015)・自動化(比0.079)のタグ帯に寄りやすく、
+#     GAS/UIデザインの側から名乗り直すのが難しい。account.md「書かないこと8」
+#     （自動化を主語にした一般論）に接触するリスクが高く見送った。
+#
+# 次点（スロット単位。木曜候補）:
+#   「円グラフでアンケート結果を可視化するダッシュボード」
+#     既出記事「AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする」と
+#     実物（グラフのbefore/after）が重複するため、カード型（件数＋代表コメント）に差し替えた。
+#
+# ハッシュタグは account.md 246行目〜の既定に従う（サブ3のみ差し戻し対応でNotebookLM→GeminiAPIに差し替え）。
+#   サブ1: GAS, UIデザイン, LP制作 + 生成AI（1つだけ）
+#   サブ2: GoogleAppsScript, GAS + 業務効率化（1つだけ）
+#   サブ3: GAS, GeminiAPI + プロンプト（1つだけ）※既定はNotebookLMだが内容不一致のため差し替え
+#
+# 有料note（日曜）の支払い意欲は5（下記スコア参照）。4以上を満たしている。
+# ============================================================
+
+- id: 2026-W35B-01
+  title: Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計
+  type: free
+  day: mon
+  systemId: 2026-W35B-survey-digest
+  serialRole: 設計
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 5
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 16
+  rationale: |
+    strength5: account.md のペルソナ「GASで自動化を組んだが人に任せられない人」の入口そのもの。
+    installable trigger（onFormSubmit）とシート構造の設計は手元の材料だけで書ける。
+    market4: market/2026-08-24.md の「GAS」は需要207.0 / 供給32.9件/日で比6.301（有料率11%）。
+    「GoogleAppsScript」は需要90.0 / 供給20.4件/日で比4.407（有料率10%）。両方とも埋もれない帯。
+    willingness2: 無料記事想定。設計図だけでは行動が完結せず、次の記事（中核処理）が要る前提。
+    artifact5: onFormSubmitの設定手順＋シート構造の設計図（回答ID/生テキスト/処理状態列）＋
+    入口の受信コード全文を出せる。
+    次点は「経費精算レシートの受付フォーム設計」だったが、経費という題材はethics-line観点で
+    リスクが増えるため、この系統自体を選ばなかった（ヘッダー参照）。
+  artifactPlan: onFormSubmit installable triggerの設定手順＋シート構造の設計図（列定義）＋
+    受信〜シート書き込みのGASコード全文
+  angle: |
+    3行要約: フォームの自由記述をどう受け取り、どう並べればGeminiに渡しやすいかだけを扱う。
+    後続の「Geminiで要約する」記事を読んでいなくても、この1本で「Geminiに渡せる形の
+    シートが作れる」ところまでは完結する。既出の議事録要約記事とは入口の設計思想（処理状態列で
+    二重処理を防ぐ設計）が異なる点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/guides/triggers/installable
+  status: pending
+
+- id: 2026-W35B-02
+  title: アンケートの自由記述をGeminiで要約・分類する。プロンプトと呼び出しコードの全文
+  type: free
+  day: tue
+  systemId: 2026-W35B-survey-digest
+  serialRole: 中核
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート
+  hashtags: [GAS, GeminiAPI, プロンプト]
+  score:
+    strength: 5
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 16
+  rationale: |
+    strength5: account.md サブ3「Gemini APIは自動化の材料として扱う」にど真ん中で対応する。
+    market4: 「GAS」は比6.301（需要207.0/供給32.9件/日、有料率11%）で全体の主軸。ハッシュタグには
+    「GeminiAPI」（比21.446、需要27.0/供給1.3件/日、有料率10%、総563件・計測タグ中1位）を採用した。
+    総563件は他タグより母数が小さいニッチ帯である点をここに明記する。内容（Gemini呼び出しコード）
+    と直接一致するため、NotebookLM（既定タグ）ではなくこちらを主軸にした（ヘッダーの差し戻し対応参照）。
+    willingness2: 無料記事想定。プロンプトを知っても、自分のシートに繋ぎ込む工程がまだ残る。
+    artifact5: 要約＋カテゴリ＋感情スコアを返すプロンプト全文と、responseSchemaでJSON型を固定した
+    UrlFetchApp呼び出しコード全文を出せる。
+    次点は「問い合わせ返信文自動生成（多言語対応）」。既出記事「問い合わせをGeminiで自動仕分けする」
+    と中核処理が同型でdedup.py に高類似度で引っかかるリスクが高く、この系統自体を選ばなかった。
+  artifactPlan: 要約・カテゴリ分類・感情スコアを返すプロンプト全文＋responseSchema定義＋
+    UrlFetchAppでのGemini API呼び出しコード全文
+  angle: |
+    3行要約: シートのB列に自由記述が1件入っている状態から、Geminiに投げて要約・カテゴリ・
+    感情スコアのJSONを受け取るところまでを、この1本だけで再現できるようにする。
+    既出の「問い合わせをGeminiで自動仕分けする」が固定ラベルへのルーティングだったのに対し、
+    こちらは自由記述の要約と感情スコアという、出力の形が異なる変換を扱う点で差別化する。
+  sources:
+    - https://ai.google.dev/gemini-api/docs/structured-output
+  status: pending
+
+- id: 2026-W35B-03
+  title: 二重実行と429エラーを防ぐ。壊れるアンケート集計コードと直したコード
+  type: free
+  day: wed
+  systemId: 2026-W35B-survey-digest
+  serialRole: 失敗
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 5
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 16
+  rationale: |
+    strength5: 旧W35-02（LockServiceの二重実行）・旧W35-05（Gemini API 429の再試行）が
+    「連載の水（失敗時の扱い）の材料」としてlearnings.mdに再利用可と明記されており、
+    手元の材料をそのまま使える。
+    market4: 「GAS」比6.301（需要207.0/供給32.9件/日、有料率11%）、「GoogleAppsScript」比4.407
+    （需要90.0/供給20.4件/日、有料率10%）。
+    willingness2: 無料記事想定。トラブル対処は知って終わりに近く、成果物の受け渡しは発生しない。
+    artifact5: 「同じ回答を2回処理してしまうコード→LockServiceのtryLockで直したコード」と
+    「Gemini 429で処理が止まるコード→指数バックオフで直したコード」の2対を出せる。
+    次点は無し（この2本の材料は既に確定しており、他候補と比較する必要がなかった）。
+  artifactPlan: 壊れるコード（二重処理／429で停止）→ 直したコード（LockService.tryLock／
+    指数バックオフ付きリトライ）の対を2組
+  angle: |
+    3行要約: 「フォーム回答が同時に2件来たときに同じ行を2回処理してしまう」「Geminiが429を
+    返すと処理がそこで止まる」の2つの壊れ方と直し方だけを扱う。月・火を読んでいなくても、
+    「GASから外部APIを叩く自動化」であれば業種を問わず適用できる形で書く。
+    既出のGASトリガー記事（起動しない原因の切り分け）とは、扱う障害の種類（起動しない/
+    二重に走る・止まる）が異なる点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/reference/lock/lock-service
+    - https://ai.google.dev/gemini-api/docs/troubleshooting
+  status: pending
+
+- id: 2026-W35B-04
+  title: アンケート結果を、色数と並びの2箇所だけ直して見せられるダッシュボードにする
+  type: free
+  day: thu
+  systemId: 2026-W35B-survey-digest
+  serialRole: 画面
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化
+  hashtags: [GAS, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 3
+    artifact: 5
+    total: 18
+  rationale: |
+    strength5: account.md「木・土は必ずサブ①」の指定に直接対応する。HTML Serviceでの
+    ダッシュボード作りは第2版から続く得意領域。
+    market5: 「UIデザイン」は比5.681（需要81.0/供給14.3件/日、有料率6%）で今回の実測でも
+    上位。GAS界隈で「スプレッドシートの画面のまま」の記事が多い中、自動化に顔を付ける
+    交差点が空いているという account.md の判断根拠と一致する。
+    willingness3: カード型ダッシュボードは「見せられる形」を丸ごと再現でき、行動（自分の
+    シートに貼る）に直結しやすい。
+    artifact5: テンプレ丸出しの一覧表示（before）→ カテゴリ別カード＋代表コメント表示（after）
+    のデモと、HTML Service全文を出せる。
+    次点は「円グラフでアンケート結果を可視化するダッシュボード」。既出記事「AIが出した
+    ダッシュボードを、色数・目盛り・並びの3箇所で読める形にする」と実物（グラフの
+    before/after）が重複するため、グラフではなくカード型に差し替えて採用した。
+  artifactPlan: before（テンプレ丸出しの一覧）/ after（カテゴリ別カード＋代表コメント）の
+    ライブデモ＋HTML Service全文
+  angle: |
+    3行要約: 集計結果のスプレッドシートを、そのまま人に見せられるカード型ダッシュボードに
+    変える「見た目の直し方」だけを扱う。月〜水を読んでいなくても、「Gemini分類済みの
+    データがシートにある」という前提だけで、この1本の画面デモとコードが動く。
+    既出のグラフ系ダッシュボード記事とは、可視化の形（グラフではなくカード＋代表コメント）
+    で差別化する。
+  sources:
+    - https://ai.google.dev/gemini-api/docs/structured-output
+  status: pending
+
+- id: 2026-W35B-05
+  title: アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定
+  type: free
+  day: fri
+  systemId: 2026-W35B-survey-digest
+  serialRole: 運用
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 4
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 15
+  rationale: |
+    strength4: account.md サブ2「権限・スコープ・実行ユーザー。他人に渡すときに必ず詰まる
+    場所」に対応する。トリガー実行者の権限周りは調べ直しがやや必要なためstrength5ではなく4。
+    market4: 「GAS」比6.301（需要207.0/供給32.9件/日、有料率11%）、「GoogleAppsScript」比4.407
+    （需要90.0/供給20.4件/日、有料率10%）。
+    willingness2: 無料記事想定。通知の仕組みを知っても、Slack Webhook URLの発行など
+    読者側の準備工程が別途残る。
+    artifact5: 時間主導トリガーの設定手順＋ネガティブ回答（感情スコアが閾値以下）を検出して
+    Slack Incoming WebhookにPOSTする通知コード全文を出せる。
+    次点は無し（このスロットは運用面の権限・通知に固定されており、他候補を比較していない）。
+  artifactPlan: 時間主導トリガーの設定手順＋実行権限（誰の権限で動くか）の確認手順＋
+    ネガティブ回答検出→Slack通知のGASコード全文
+  angle: |
+    3行要約: 「誰の権限でトリガーが動くか」「ネガティブな回答だけをどう検出して通知するか」の
+    2点だけを扱う。他の曜日を読んでいなくても、既にGeminiの出力（感情スコア）がシートに
+    ある前提だけで、この1本の通知設定が再現できる。
+    既出のGASトリガー記事（動かない原因の切り分け）とは、対象が「動かない」ではなく
+    「権限と通知の設計」である点で差別化する。
+  sources:
+    - https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
+  status: pending
+
+- id: 2026-W35B-06
+  title: アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す
+  type: free
+  day: sat
+  systemId: 2026-W35B-survey-digest
+  serialRole: つまずき
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化
+  hashtags: [GAS, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 3
+    artifact: 5
+    total: 18
+  rationale: |
+    strength5: account.md「木・土は必ずサブ①（見せられる自動化）」の指定に対応する。
+    Web Appの共有権限やレイアウト崩れは「自分以外が触れる画面にする」に直結する障害である。
+    market5: 「UIデザイン」比5.681（需要81.0/供給14.3件/日、有料率6%）。今回の実測でも
+    最上位帯を維持している。
+    willingness3: 見た目の直し方をそのままコピーすれば再現できるため、行動（自分の画面を
+    直す）に繋がりやすい。
+    artifact5: 「Web Appのデプロイ設定（アクセスできるユーザー）が自分のみのままで共有相手が
+    開けない→ANYONE等に変更」「自由記述が長文だとカードが縦に間延びする→3行省略＋モーダル」
+    「カテゴリが8種類以上に増えると固定幅カードの折り返しが崩れる→flexboxのwrapに変更」
+    「スマホ幅でカードの右側がはみ出す→メディアクエリで1列に落とす」「代表コメントに絵文字・
+    記号が混じるとカード高さが不揃いになる→line-clampと最小高さの固定」の5件をbefore→afterで出せる。
+    次点は当初案（文字化け・6分制限・権限エラー・通知重複・シート崩れ）。コーディネーターの
+    差し戻しにより、これらがサブ②（自動化フローの設計思想）寄りでサブ①の指定に反すると判定され、
+    不採用にした。特に6分制限は既出記事「GASが6分で強制終了する前に、4分30秒で自分から降りる
+    設計」と正面衝突するため、いずれにせよ主項目には置けない。
+  artifactPlan: Web Appのデプロイ・共有権限の設定変更／長文カードの3行省略＋モーダル表示の
+    CSS・JS／カテゴリ増加時のflexbox折り返し修正／スマホ幅のメディアクエリ修正／カード高さを
+    揃えるCSS、の5件をbefore→afterコードで
+  angle: |
+    3行要約: 木曜で作ったダッシュボードを、実際に人に共有したり自由記述のクセ（長文・
+    カテゴリ増加・絵文字混入）に晒したときに踏む5つの見た目の崩れだけを扱う。木曜を
+    読んでいなくても「HTML Serviceで画面を公開している」なら踏む可能性がある崩れとして
+    単体で読める。
+    既出の「AIが出したダッシュボードを、色数・目盛り・並びの3箇所で読める形にする」とは、
+    対象が初期デザインの3点調整ではなく、公開後・運用後に発生する崩れである点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/guides/web
+  status: pending
+
+- id: 2026-W35B-07
+  title: アンケート自由記述 自動要約ダッシュボード完成版一式。差し替えて自分のアンケートで使う手順書
+  type: paid
+  day: sun
+  systemId: 2026-W35B-survey-digest
+  serialRole: 完成版
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート
+  hashtags: [GAS, GeminiAPI, プロンプト]
+  score:
+    strength: 5
+    market: 4
+    willingness: 5
+    artifact: 5
+    total: 19
+  rationale: |
+    strength5: 連載の完成版そのもの。月〜土で出した6本の成果物をそのまま束ねられる。
+    market4: 「GAS」比6.301（需要207.0/供給32.9件/日、有料率11%）を主軸に、ハッシュタグには
+    「GeminiAPI」（比21.446、需要27.0/供給1.3件/日、有料率10%、総563件・母数は他タグより
+    小さいニッチ帯）を採用した。内容（Gemini API呼び出しを含む完成版一式）と一致するため、
+    NotebookLM（既定タグ）ではなくこちらを主軸にした（ヘッダーの差し戻し対応参照）。
+    クラスタ#6（プロンプト/AI/マジクラ、35記事、スキ中央値206、比5.8857、主なタグ
+    GoogleWorkspace/GAS）が「型を渡すテンプレート」が強く読まれる帯であることを示す。
+    willingness5: 手順を丸ごとテンプレートとして渡せる。GAS/GoogleAppsScriptの有料率
+    10〜11%が実測で成立しており、「差し替えるだけで動く」ことに対価が付く領域である。
+    4以上を満たすため paid に割り当てる。
+    artifact5: フォーム受信〜Gemini要約〜ダッシュボード表示〜Slack通知までの全コードと、
+    シート名・列名・カテゴリ一覧・Webhook URLなど「差し替える箇所だけ」をまとめた表を出せる。
+    次点は「経費精算レシート自動チェックシステム」の完成版だったが、系統自体を選ばなかった
+    （ヘッダー参照）ため、この案は候補にしていない。
+  productTypeHint: tool
+  artifactPlan: GASコード一式（入口・中核処理・失敗対策・通知）＋HTML Service一式＋
+    差し替え表（シート名／列名／カテゴリ一覧／閾値／Webhook URL）
+  angle: |
+    3行要約: 月〜土の6本で見せた部品（入口・要約・失敗対策・画面・通知・つまずき集）を
+    1つのコード一式に束ね、読者が自分のアンケートのシート名やカテゴリだけ差し替えれば
+    動く状態で渡す。単体で読んでも「何が手に入るか」が分かるよう、まず完成後の
+    ダッシュボード画面を先に見せる構成にする。
+    減算ではない価値軸: 「毎回シートを開いて自由記述を読み込む作業がなくなる」だけでなく、
+    「担当者が自分の代わりに毎朝ダッシュボードを見るだけでアンケート結果を把握できる状態に
+    なる」という到達・獲得の軸を明示する。これにより読み手自身の作業時間短縮（減算）に加え、
+    「他の人に結果を渡せる状態になる」という獲得の軸を持たせ、letter-audit のA1で
+    否定形の未来像に価値軸が収束するのを避ける。
+  sources:
+    - https://developers.google.com/apps-script/guides/triggers/installable
+    - https://ai.google.dev/gemini-api/docs/structured-output
+    - https://developers.google.com/apps-script/reference/lock/lock-service
+    - https://ai.google.dev/gemini-api/docs/troubleshooting
+    - https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
+  status: pending
