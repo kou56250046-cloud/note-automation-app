@@ -1,0 +1,15 @@
+{
+  "slug": "2026-08-29-dashboard-pitfalls",
+  "themeId": "2026-W35B-06",
+  "systemId": "2026-W35B-survey-digest",
+  "serialRole": "つまずき",
+  "type": "free",
+  "title": "アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化",
+  "hashtags": ["GAS", "UIデザイン", "LP制作", "生成AI"],
+  "demo": null,
+  "artifacts": ["beforeAfter", "code"],
+  "publishDate": "2026-08-29",
+  "charCount": 2700,
+  "createdAt": "2026-08-24T10:00:00+09:00"
+}

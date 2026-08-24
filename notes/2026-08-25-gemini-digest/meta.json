@@ -1,0 +1,15 @@
+{
+  "slug": "2026-08-25-gemini-digest",
+  "themeId": "2026-W35B-02",
+  "systemId": "2026-W35B-survey-digest",
+  "serialRole": "中核",
+  "type": "free",
+  "title": "自由記述の要約をGeminiで返す。JSON型を固定するプロンプトとコード全文",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート",
+  "hashtags": ["GAS", "GeminiAPI", "プロンプト"],
+  "demo": null,
+  "artifacts": ["code", "prompt"],
+  "publishDate": "2026-08-25",
+  "charCount": 2700,
+  "createdAt": "2026-08-24T10:00:00+09:00"
+}

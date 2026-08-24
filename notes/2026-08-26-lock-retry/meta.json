@@ -1,0 +1,15 @@
+{
+  "slug": "2026-08-26-lock-retry",
+  "themeId": "2026-W35B-03",
+  "systemId": "2026-W35B-survey-digest",
+  "serialRole": "失敗",
+  "type": "free",
+  "title": "同時送信で二重処理、429で停止。GASの壊れ方と直し方をコードで",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": ["GoogleAppsScript", "GAS", "業務効率化"],
+  "demo": null,
+  "artifacts": ["code"],
+  "publishDate": "2026-08-26",
+  "charCount": 2612,
+  "createdAt": "2026-08-24T10:00:00+09:00"
+}

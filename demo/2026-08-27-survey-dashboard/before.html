@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>アンケート結果（before）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #ffffff;
+    color: #202124;
+  }
+  .wrap {
+    width: 960px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 12px;
+    font-weight: bold;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    border: 1px solid #dcdcdc;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f0f0f0;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  td.id, td.score {
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>アンケート結果ダッシュボード</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>回答ID</th>
+          <th>カテゴリ</th>
+          <th>感情スコア</th>
+          <th>要約</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="id">R001</td>
+          <td>使いにくい</td>
+          <td class="score">-0.60</td>
+          <td>検索機能が分かりにくく、目的のページにたどり着けない</td>
+        </tr>
+        <tr>
+          <td class="id">R002</td>
+          <td>使いにくい</td>
+          <td class="score">-0.50</td>
+          <td>メニューの並びが分かりづらい</td>
+        </tr>
+        <tr>
+          <td class="id">R003</td>
+          <td>使いにくい</td>
+          <td class="score">0.10</td>
+          <td>慣れれば問題ない</td>
+        </tr>
+        <tr>
+          <td class="id">R004</td>
+          <td>価格への不満</td>
+          <td class="score">-0.80</td>
+          <td>有料プランが急に値上がりして困っている</td>
+        </tr>
+        <tr>
+          <td class="id">R005</td>
+          <td>価格への不満</td>
+          <td class="score">-0.70</td>
+          <td>無料プランの制限が厳しすぎる</td>
+        </tr>
+        <tr>
+          <td class="id">R006</td>
+          <td>価格への不満</td>
+          <td class="score">-0.40</td>
+          <td>もう少し安ければ助かる</td>
+        </tr>
+        <tr>
+          <td class="id">R007</td>
+          <td>機能要望</td>
+          <td class="score">0.00</td>
+          <td>CSV出力機能がほしい</td>
+        </tr>
+        <tr>
+          <td class="id">R008</td>
+          <td>機能要望</td>
+          <td class="score">0.10</td>
+          <td>通知をカスタマイズしたい</td>
+        </tr>
+        <tr>
+          <td class="id">R009</td>
+          <td>満足</td>
+          <td class="score">0.90</td>
+          <td>サポートの対応が丁寧で助かった</td>
+        </tr>
+        <tr>
+          <td class="id">R010</td>
+          <td>バグ報告</td>
+          <td class="score">-0.50</td>
+          <td>保存ボタンを押すとエラーになることがある</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

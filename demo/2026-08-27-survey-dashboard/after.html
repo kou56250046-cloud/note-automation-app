@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>アンケート結果（after）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+  }
+  .wrap {
+    width: 960px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 14px;
+    font-weight: bold;
+  }
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 6px solid #ccc;
+  }
+  .card.negative { border-left-color: #d64545; }
+  .card.neutral  { border-left-color: #9a9a9a; }
+  .card.positive { border-left-color: #3a9a5c; }
+  .card-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .card-counts {
+    font-size: 12px;
+    color: #666666;
+    margin-bottom: 6px;
+  }
+  .card-counts .neg { color: #b03434; font-weight: bold; }
+  .card-sample {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>アンケート結果ダッシュボード</h1>
+    <div class="cards">
+
+      <div class="card negative">
+        <div class="card-title">価格への不満</div>
+        <div class="card-counts">件数 3（<span class="neg">ネガティブ 3</span>）</div>
+        <div class="card-sample">もう少し安ければ助かる</div>
+      </div>
+
+      <div class="card negative">
+        <div class="card-title">使いにくい</div>
+        <div class="card-counts">件数 3（<span class="neg">ネガティブ 2</span>）</div>
+        <div class="card-sample">メニューの並びが分かりづらい</div>
+      </div>
+
+      <div class="card negative">
+        <div class="card-title">バグ報告</div>
+        <div class="card-counts">件数 1（<span class="neg">ネガティブ 1</span>）</div>
+        <div class="card-sample">保存ボタンを押すとエラーになることがある</div>
+      </div>
+
+      <div class="card neutral">
+        <div class="card-title">機能要望</div>
+        <div class="card-counts">件数 2（ネガティブ 0）</div>
+        <div class="card-sample">CSV出力機能がほしい</div>
+      </div>
+
+      <div class="card positive">
+        <div class="card-title">満足</div>
+        <div class="card-counts">件数 1（ネガティブ 0）</div>
+        <div class="card-sample">サポートの対応が丁寧で助かった</div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

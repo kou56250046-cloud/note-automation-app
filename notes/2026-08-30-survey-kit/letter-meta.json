@@ -1,0 +1,31 @@
+{
+  "productType": "tool",
+  "blocks": [
+    {"n": 1, "type": "hook", "lines": [1, 1]},
+    {"n": 2, "type": "problem", "lines": [3, 11]},
+    {"n": 3, "type": "ideal-future-1", "lines": [15, 18]},
+    {"n": 4, "type": "reproducibility-simplify", "lines": [20, 22]},
+    {"n": 5, "type": "ideal-future-2", "lines": [26, 30]},
+    {"n": 6, "type": "reproducibility-ease", "lines": [32, 34]},
+    {"n": 7, "type": "fear", "lines": [38, 43]},
+    {"n": 8, "type": "reproducibility-inconvenience", "lines": [47, 51]},
+    {"n": 9, "type": "ideal-future-3", "lines": [55, 58]},
+    {"n": 10, "type": "reproducibility-disclosure", "lines": [62, 91]},
+    {"n": 11, "type": "objection-removal", "lines": [95, 128]},
+    {"n": 12, "type": "funnel", "lines": [132, 139]},
+    {"n": 13, "type": "closing", "lines": [143, 146]}
+  ],
+  "fearCount": 1,
+  "fearBlock": 7,
+  "reproducibility": ["単純化", "簡易化", "成果物の開示", "不便だった状況"],
+  "closingType": "ideal-future",
+  "exitActions": 1,
+  "deadlineClaims": [],
+  "toolEvidence": {
+    "disclosed": true,
+    "disclosedLines": "64-74行目（プロンプト冒頭8行の実物）／81-83行目（差し替え表7項目中3項目、記述例つき）／89-91行目（木曜記事の公開デモURL）",
+    "firstStep": "95-97行目「最初の1歩は、スクリプトプロパティにAPIキーを登録して、setupFormTrigger()を1回実行することです。テスト回答を1件送って、シートに要約が入るのを確認したら終わりです。」",
+    "requirements": "85-87行目「動く条件も書きます。GoogleアカウントとGemini APIキー、Apps Scriptの実行権限を承認できることです。Slackへの通知は任意です。」",
+    "limitations": "120-128行目「できないこともあります。日本語以外の自由記述は、検証していません。Slack以外の通知先は、notify.gsのPOST先を自分で差し替える必要があります。感情スコアは心理尺度ではなく、閾値で絞るための数値です。約束するのは、日本語のアンケート1つを、シート名とカテゴリの差し替えだけで、ダッシュボードまで動かすところまでです。」"
+  }
+}

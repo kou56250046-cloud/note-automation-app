@@ -1,0 +1,15 @@
+{
+  "slug": "2026-08-28-trigger-slack",
+  "themeId": "2026-W35B-05",
+  "systemId": "2026-W35B-survey-digest",
+  "serialRole": "運用",
+  "type": "free",
+  "title": "アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": ["GoogleAppsScript", "GAS", "業務効率化"],
+  "demo": null,
+  "artifacts": ["code"],
+  "publishDate": "2026-08-28",
+  "charCount": 2890,
+  "createdAt": "2026-08-24T10:00:00+09:00"
+}

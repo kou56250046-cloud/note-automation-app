@@ -1,0 +1,14 @@
+{
+  "price": 1480,
+  "currency": "JPY",
+  "density": "high",
+  "marketMedian": 500,
+  "multiplier": 2.96,
+  "ceiling": "日本語の自由記述アンケート1つについて、シート名とカテゴリを差し替えて、フォーム回答が自動で要約・分類され、カード型ダッシュボードで見られるところまで",
+  "rationale": "research/market/2026-08-24.json の overall.priceMedian は 500円（08-06 時点の 800円から下落している）。情報密度は「高」と判定した。根拠は 00-concept.md の「渡すもの」に、GASコード5ファイル（intake / summarize / guard / notify / config）・HTML Service 1画面・プロンプト全文1本・responseSchema 1本・差し替え表1枚が、いずれも動く単位で入っていること。買った日に自分のフォームへ繋げられる。倍率の目安 2〜3.5倍から算出レンジは 1,000〜1,750円。これと account.md 207行目の想定価格帯 1,480〜2,980円 との重なりは 1,480〜1,750円 であり、profile.md に販売実績が無いためその下限側を採って 1,480円 とした。タグ側の裏付けは GAS の有料率 11%、GoogleAppsScript 10%、GeminiAPI 10%（いずれも research/market/2026-08-24.json）。GAS 領域で有料が成立していることは実測で確認できる。なお同 json のタグ別 priceMedian は全タグ null（取得できていない）ため、価格の根拠は overall.priceMedian のみに置いている。",
+  "raiseCondition": "販売数の実測値と購入者の結果（いずれも出所つき）が profile.md に入ったら、次の商品から 1,980円 を検討する。この商品の値上げは行わない",
+  "priceSchedule": [],
+  "deadlineNote": "値上げの予定は無い。したがってレターに期限・先着・数量限定を一切書かない。C3（今買う理由）は、月〜土の無料6本の完成版であるという記事構造が作る（weekly-build の設計）。偽の期限は ethics-line の E1（景品表示法）に当たる",
+  "ceilingCheck": "00-concept.md の「できないこと」と矛盾しないことを確認した。天井を『日本語の自由記述アンケート1つ』に限定してあり、日本語以外の未検証・Slack以外の通知先・大量回答時のバッチ分割・フォームの設問設計は、いずれも天井の外に置いている",
+  "source": "research/market/2026-08-24.json"
+}

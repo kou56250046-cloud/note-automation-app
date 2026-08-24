@@ -1401,7 +1401,7 @@
     二重処理を防ぐ設計）が異なる点で差別化する。
   sources:
     - https://developers.google.com/apps-script/guides/triggers/installable
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-24-form-intake として記事化
 
 - id: 2026-W35B-02
   title: アンケートの自由記述をGeminiで要約・分類する。プロンプトと呼び出しコードの全文
@@ -1437,7 +1437,7 @@
     こちらは自由記述の要約と感情スコアという、出力の形が異なる変換を扱う点で差別化する。
   sources:
     - https://ai.google.dev/gemini-api/docs/structured-output
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-25-gemini-digest として記事化
 
 - id: 2026-W35B-03
   title: 二重実行と429エラーを防ぐ。壊れるアンケート集計コードと直したコード
@@ -1474,7 +1474,7 @@
   sources:
     - https://developers.google.com/apps-script/reference/lock/lock-service
     - https://ai.google.dev/gemini-api/docs/troubleshooting
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-26-lock-retry として記事化
 
 - id: 2026-W35B-04
   title: アンケート結果を、色数と並びの2箇所だけ直して見せられるダッシュボードにする
@@ -1513,7 +1513,7 @@
     で差別化する。
   sources:
     - https://ai.google.dev/gemini-api/docs/structured-output
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-27-survey-dashboard として記事化（公開予定 08-27）
 
 - id: 2026-W35B-05
   title: アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定
@@ -1549,7 +1549,7 @@
     「権限と通知の設計」である点で差別化する。
   sources:
     - https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-28-trigger-slack として記事化
 
 - id: 2026-W35B-06
   title: アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す
@@ -1593,7 +1593,7 @@
     対象が初期デザインの3点調整ではなく、公開後・運用後に発生する崩れである点で差別化する。
   sources:
     - https://developers.google.com/apps-script/guides/web
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-29-dashboard-pitfalls として記事化
 
 - id: 2026-W35B-07
   title: アンケート自由記述 自動要約ダッシュボード完成版一式。差し替えて自分のアンケートで使う手順書
@@ -1643,4 +1643,4 @@
     - https://developers.google.com/apps-script/reference/lock/lock-service
     - https://ai.google.dev/gemini-api/docs/troubleshooting
     - https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
-  status: pending
+  status: used   # 2026-08-24 notes/2026-08-30-survey-kit として記事化

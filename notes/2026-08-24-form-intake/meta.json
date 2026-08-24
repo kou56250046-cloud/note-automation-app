@@ -1,0 +1,15 @@
+{
+  "slug": "2026-08-24-form-intake",
+  "themeId": "2026-W35B-01",
+  "systemId": "2026-W35B-survey-digest",
+  "serialRole": "設計",
+  "type": "free",
+  "title": "Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": ["GoogleAppsScript", "GAS", "業務効率化"],
+  "demo": null,
+  "artifacts": ["code"],
+  "publishDate": "2026-08-24",
+  "charCount": 2730,
+  "createdAt": "2026-08-24T10:00:00+09:00"
+}
