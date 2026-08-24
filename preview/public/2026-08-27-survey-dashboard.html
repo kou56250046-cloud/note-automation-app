@@ -1,0 +1,907 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>アンケート結果カードを色数3色と並び1点で直したbefore/after — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;アンケート結果カードを色数3色と並び1点で直したbefore/after&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GAS #UIデザイン #LP制作 #生成AI&quot;)">ハッシュタグをコピー</button>
+    <a href="../demo/2026-08-27-survey-dashboard/" target="_blank" rel="noopener"><button>before / after を開く</button></a>
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>アンケート結果カードを色数3色と並び1点で直したbefore/after</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化 ／ 2026-08-27 ／ #GAS #UIデザイン #LP制作 #生成AI</div>
+</header>
+
+<details class="demo-embed" open>
+  <summary>読者が見る before / after</summary>
+  <div class="demo-pair">
+    <div class="demo-pane">
+      <span class="demo-tag">BEFORE</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-08-27-survey-dashboard/before.html" title="before" loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="demo-pane">
+      <span class="demo-tag after">AFTER</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-08-27-survey-dashboard/after.html" title="after" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+  <div class="muted">
+    タブで切り替えられる版は
+    <a href="../demo/2026-08-27-survey-dashboard/" target="_blank" rel="noopener">こちら</a>。
+    記事に載せているURL → <code>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-27-survey-dashboard/</code>
+  </div>
+</details>
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 5 件</div><ul><li class="warn">L21 一文が 66 文字（目安 60）</li><li class="warn">L67 一文が 96 文字（目安 60）</li><li class="warn">L130 前の見出しから 0 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;Gemini分類済みのアンケート回答を、そのままシートで人に見せると誰も読みません。&lt;/p&gt;
+&lt;p&gt;行が並ぶだけの画面では、どこから手を付ければいいか分からないからです。同じ数字を見ているのに、画面の見せ方だけで伝わり方が変わります。&lt;/p&gt;
+&lt;p&gt;私は最初、集計結果を「回答ID」「カテゴリ」「感情スコア」「要約」の4列がそのまま並ぶ画面で共有しました。開いた相手から「結局どこを見ればいいのか」と聞き返され、直すことにしました。&lt;/p&gt;
+&lt;p&gt;この記事で直すのは2箇所だけです。色数を3色に絞ることと、並び順をネガティブが多い順にすることです。&lt;/p&gt;
+&lt;p&gt;前提を3行で置きます。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Gemini APIで自由記述を分類し、要約・カテゴリ・感情スコアがシートに入っている状態から始めます&lt;/li&gt;
+&lt;li&gt;感情スコアは -1（ネガティブ）から1（ポジティブ）までの数値です&lt;/li&gt;
+&lt;li&gt;分類のプロンプトやAPI呼び出しのコードは、この記事では扱いません&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ここから先は、このデータをHTML Serviceのカード画面に変える話だけです。月〜水の記事を読んでいなくても、この1本だけで画面が動きます。&lt;/p&gt;
+&lt;h2&gt;色を感情の3段階にしか使わない&lt;/h2&gt;
+&lt;p&gt;Gemini分類済みのデータには、カテゴリがいくつも入っています。&lt;/p&gt;
+&lt;p&gt;「機能要望」「使いにくい」「価格への不満」「満足」「UIの見た目」「バグ報告」のように、カテゴリごとに違う色を割り当てたくなります。&lt;/p&gt;
+&lt;p&gt;私は最初にこれをやりました。カテゴリの数だけ色を用意し、カードの枠線に塗り分けました。&lt;/p&gt;
+&lt;p&gt;7カテゴリなら7色です。画面はにぎやかになりましたが、開いてすぐには何も読み取れなくなりました。&lt;/p&gt;
+&lt;p&gt;色が5色を超えると、人は「どこが重要か」ではなく「どこが目立つか」で見てしまいます。しかも色とカテゴリ名の対応を、開くたびに覚え直す必要が出ます。&lt;/p&gt;
+&lt;p&gt;そこで色を、感情スコアの3段階だけに絞り直しました。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ネガティブ（スコア -1〜-0.34）はカードの左枠を赤にします&lt;/li&gt;
+&lt;li&gt;ふつう（スコア -0.33〜0.33）はグレーにします&lt;/li&gt;
+&lt;li&gt;ポジティブ（スコア 0.34〜1）は緑にします&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;赤・グレー・緑の3色は、CSSでは &lt;code&gt;#d64545&lt;/code&gt; &lt;code&gt;#9a9a9a&lt;/code&gt; &lt;code&gt;#3a9a5c&lt;/code&gt; として定義しています。赤・グレー・緑の組み合わせは、信号機と同じ並びなので説明なしでも伝わります。初めて開く人でも、赤いカードから見ればいいと直感的に分かります。&lt;/p&gt;
+&lt;p&gt;カテゴリの違いは色ではなく、カードの見出しテキストで示します。&lt;/p&gt;
+&lt;p&gt;色は「感情」という1つの軸だけに使い、「カテゴリ」という別の軸には使いません。&lt;/p&gt;
+&lt;p&gt;2つの軸を同時に色で表そうとすると、どちらの軸も読み取れなくなります。軸が2つあるなら、片方はテキストに任せます。&lt;/p&gt;
+&lt;p&gt;色だけに頼ると、色の判別が苦手な人には伝わりません。私はカードの見出しに「機能要望」のようなカテゴリ名をそのまま出し、色は感情の補助情報として使うようにしています。感情の3色は、カテゴリが何個に増えても変わりません。&lt;/p&gt;
+&lt;h2&gt;並びを、ネガティブが多い順にする&lt;/h2&gt;
+&lt;p&gt;もう1箇所だけ直します。カードを並べる順番です。&lt;/p&gt;
+&lt;p&gt;件数の多い順に並べると、単に回答が多いカテゴリが先頭に来ます。&lt;/p&gt;
+&lt;p&gt;たとえば「使いにくい」が20件のうち3件だけネガティブで、「価格への不満」が8件のうち7件がネガティブだったとします。件数順だと「使いにくい」が上に来てしまい、対応が急ぎの「価格への不満」は下に埋もれます。件数だけを見ていると、緊急度の高いカテゴリを見逃します。&lt;/p&gt;
+&lt;p&gt;回答が多いことと、対応が急ぎであることは別の話です。&lt;/p&gt;
+&lt;p&gt;私はこの画面で、ネガティブ件数の多いカテゴリから先に並べています。&lt;/p&gt;
+&lt;p&gt;画面を開いた瞬間に、対応が必要なところから目に入る並びです。画面を開く人が最初に見るのは、常に対応が急ぎのカードです。&lt;/p&gt;
+&lt;p&gt;件数もポジティブ件数もカードには表示しますが、並び替えの基準には使いません。&lt;/p&gt;
+&lt;p&gt;並び替えの基準を1つに決めておくと、開くたびにどこを見るか迷わずに済みます。ネガティブ件数が同じカテゴリ同士は、シートに最初に登場した順のままになります。&lt;/p&gt;
+&lt;h2&gt;実物: before → after&lt;/h2&gt;
+&lt;p&gt;テンプレ丸出しの一覧表示と、カード型ダッシュボードのライブデモを置きます。&lt;/p&gt;
+&lt;p&gt;デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-27-survey-dashboard/&lt;/p&gt;
+&lt;p&gt;before は、シートの行がそのまま並ぶ一覧です。カテゴリも感情も文字でしか分かりません。並び順もシートに入力された順のままです。&lt;/p&gt;
+&lt;p&gt;after は、カテゴリ別のカードに件数と代表コメントを載せ、感情を3色の左枠で示し、ネガティブが多い順に並べています。このデモには10件のダミー回答を用意し、同じデータをbeforeとafterで表示だけ変えています。&lt;/p&gt;
+&lt;p&gt;シートの列は、A回答ID・B自由記述・C処理状態・D要約・Eカテゴリ・F感情スコアの並びを想定しています。&lt;/p&gt;
+&lt;h3&gt;GAS側（Code.gs）&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('アンケート結果ダッシュボード')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getSurveyCards() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  if (lastRow &amp;lt; 2) return [];
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const grouped = {};
+
+  rows.forEach(function (row) {
+    const summary = row[3];  // D列: 要約
+    const category = row[4]; // E列: カテゴリ
+    const score = Number(row[5]); // F列: 感情スコア
+
+    if (!category) return;
+
+    if (!grouped[category]) {
+      grouped[category] = {
+        category: category,
+        total: 0,
+        negative: 0,
+        neutral: 0,
+        positive: 0,
+        sample: summary
+      };
+    }
+
+    const card = grouped[category];
+    card.total += 1;
+
+    if (score &amp;lt;= -0.34) {
+      card.negative += 1;
+      card.sample = summary; // ネガティブの代表コメントを優先する
+    } else if (score &amp;gt;= 0.34) {
+      card.positive += 1;
+    } else {
+      card.neutral += 1;
+    }
+  });
+
+  return Object.values(grouped).sort(function (a, b) {
+    return b.negative - a.negative;
+  });
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;index.html（テンプレート側）&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!DOCTYPE html&amp;gt;
+&amp;lt;html&amp;gt;
+&amp;lt;head&amp;gt;
+  &amp;lt;base target=&quot;_top&quot;&amp;gt;
+  &amp;lt;style&amp;gt;
+    body {
+      font-family: system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-left: 6px solid #ccc;
+    }
+    .card.negative { border-left-color: #d64545; }
+    .card.neutral  { border-left-color: #9a9a9a; }
+    .card.positive { border-left-color: #3a9a5c; }
+    .card-title { font-weight: bold; margin-bottom: 4px; }
+    .card-counts { font-size: 13px; color: #555; margin-bottom: 8px; }
+    .card-sample { font-size: 14px; line-height: 1.5; }
+  &amp;lt;/style&amp;gt;
+&amp;lt;/head&amp;gt;
+&amp;lt;body&amp;gt;
+  &amp;lt;h1&amp;gt;アンケート結果ダッシュボード&amp;lt;/h1&amp;gt;
+  &amp;lt;div class=&quot;cards&quot; id=&quot;cards&quot;&amp;gt;読み込み中です&amp;lt;/div&amp;gt;
+
+  &amp;lt;script&amp;gt;
+    google.script.run.withSuccessHandler(render).getSurveyCards();
+
+    function dominantClass(card) {
+      if (card.negative &amp;gt;= card.positive &amp;amp;&amp;amp; card.negative &amp;gt;= card.neutral) return 'negative';
+      if (card.positive &amp;gt;= card.neutral) return 'positive';
+      return 'neutral';
+    }
+
+    function render(cards) {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+
+      cards.forEach(function (card) {
+        const el = document.createElement('div');
+        el.className = 'card ' + dominantClass(card);
+        el.innerHTML =
+          '&amp;lt;div class=&quot;card-title&quot;&amp;gt;' + card.category + '&amp;lt;/div&amp;gt;' +
+          '&amp;lt;div class=&quot;card-counts&quot;&amp;gt;件数 ' + card.total +
+          '（ネガティブ ' + card.negative + '）&amp;lt;/div&amp;gt;' +
+          '&amp;lt;div class=&quot;card-sample&quot;&amp;gt;' + card.sample + '&amp;lt;/div&amp;gt;';
+        container.appendChild(el);
+      });
+    }
+  &amp;lt;/script&amp;gt;
+&amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;変更点のCSS&lt;/h3&gt;
+&lt;p&gt;before から after で変えたのは、この3箇所です。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;一覧の &lt;code&gt;&amp;lt;table&amp;gt;&lt;/code&gt; を、カードの &lt;code&gt;&amp;lt;div class=&quot;card&quot;&amp;gt;&lt;/code&gt; に変えました&lt;/li&gt;
+&lt;li&gt;感情スコアの数値表示を、3色の &lt;code&gt;border-left&lt;/code&gt; に置き換えました&lt;/li&gt;
+&lt;li&gt;並び順を、サーバー側の &lt;code&gt;sort()&lt;/code&gt; でネガティブ件数の降順に変えました&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;列の並びを変える場合は、&lt;code&gt;row[3]&lt;/code&gt;〜&lt;code&gt;row[5]&lt;/code&gt; の添字だけ直せば動きます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;/* before: 行が並ぶだけの表 */
+table { width: 100%; border-collapse: collapse; }
+td, th { border: 1px solid #ddd; padding: 6px; font-size: 13px; }
+
+/* after: 感情を3色の左枠だけで示すカード */
+.card { border-left: 6px solid #ccc; border-radius: 8px; padding: 16px; }
+.card.negative { border-left-color: #d64545; }
+.card.neutral  { border-left-color: #9a9a9a; }
+.card.positive { border-left-color: #3a9a5c; }&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;1つ目。感情スコアの境界値を決めずに書き始めると、色分けの条件式がその場しのぎになります。&lt;/p&gt;
+&lt;p&gt;先に3段階の境界（-0.34と0.33）を決めてからコードを書くと、あとで直す量が減ります。スコアの範囲を3等分しただけの単純な境界ですが、迷いが消えます。&lt;/p&gt;
+&lt;p&gt;2つ目。カテゴリごとに色を変える誘惑は、実装の途中で必ず出ます。&lt;/p&gt;
+&lt;p&gt;私は一度カテゴリ色を試し、感情の3色と混ざって読めなくなったので外しました。色を増やしたくなったら、「その色は何の軸を示すか」を自分に聞き直すようにしています。&lt;/p&gt;
+&lt;p&gt;3つ目。ネガティブとポジティブの件数が同数のカテゴリが出ることがあります。&lt;/p&gt;
+&lt;p&gt;私のコードでは &lt;code&gt;dominantClass&lt;/code&gt; 関数で、ネガティブを優先して判定しています。同数のときに紛れさせず、対応漏れが起きにくい側に倒す判断です。&lt;/p&gt;
+&lt;p&gt;3箇所とも、色や並びのルールを先に決めてからコードに落とし込む点は共通しています。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;すでにカテゴリ別の集計をシートに持っている人は、まず感情スコアの色を3色に絞ってください。自分のシートで動かして、色が3つ以上に増えていないか確認してください。&lt;/p&gt;
+&lt;p&gt;カテゴリごとの色分けをすでに実装している場合は、それを外して感情の3色だけに戻すところから始めます。色と並びさえ直せば、あとのカードのレイアウトはそのままで構いません。&lt;/p&gt;
+&lt;p&gt;この1本で、シートのデータがそのまま人に見せられる形になりました。画面ができると、次は「誰が・いつ見るか」という運用の話が残ります。&lt;/p&gt;
+&lt;p&gt;トリガーと権限の設計は、金曜の記事で扱います。&lt;/p&gt;" data-text="Gemini分類済みのアンケート回答を、そのままシートで人に見せると誰も読みません。
+
+行が並ぶだけの画面では、どこから手を付ければいいか分からないからです。同じ数字を見ているのに、画面の見せ方だけで伝わり方が変わります。
+
+私は最初、集計結果を「回答ID」「カテゴリ」「感情スコア」「要約」の4列がそのまま並ぶ画面で共有しました。開いた相手から「結局どこを見ればいいのか」と聞き返され、直すことにしました。
+
+この記事で直すのは2箇所だけです。色数を3色に絞ることと、並び順をネガティブが多い順にすることです。
+
+前提を3行で置きます。
+
+- Gemini APIで自由記述を分類し、要約・カテゴリ・感情スコアがシートに入っている状態から始めます
+- 感情スコアは -1（ネガティブ）から1（ポジティブ）までの数値です
+- 分類のプロンプトやAPI呼び出しのコードは、この記事では扱いません
+
+ここから先は、このデータをHTML Serviceのカード画面に変える話だけです。月〜水の記事を読んでいなくても、この1本だけで画面が動きます。
+
+色を感情の3段階にしか使わない
+
+Gemini分類済みのデータには、カテゴリがいくつも入っています。
+
+「機能要望」「使いにくい」「価格への不満」「満足」「UIの見た目」「バグ報告」のように、カテゴリごとに違う色を割り当てたくなります。
+
+私は最初にこれをやりました。カテゴリの数だけ色を用意し、カードの枠線に塗り分けました。
+
+7カテゴリなら7色です。画面はにぎやかになりましたが、開いてすぐには何も読み取れなくなりました。
+
+色が5色を超えると、人は「どこが重要か」ではなく「どこが目立つか」で見てしまいます。しかも色とカテゴリ名の対応を、開くたびに覚え直す必要が出ます。
+
+そこで色を、感情スコアの3段階だけに絞り直しました。
+
+- ネガティブ（スコア -1〜-0.34）はカードの左枠を赤にします
+- ふつう（スコア -0.33〜0.33）はグレーにします
+- ポジティブ（スコア 0.34〜1）は緑にします
+
+赤・グレー・緑の3色は、CSSでは #d64545 #9a9a9a #3a9a5c として定義しています。赤・グレー・緑の組み合わせは、信号機と同じ並びなので説明なしでも伝わります。初めて開く人でも、赤いカードから見ればいいと直感的に分かります。
+
+カテゴリの違いは色ではなく、カードの見出しテキストで示します。
+
+色は「感情」という1つの軸だけに使い、「カテゴリ」という別の軸には使いません。
+
+2つの軸を同時に色で表そうとすると、どちらの軸も読み取れなくなります。軸が2つあるなら、片方はテキストに任せます。
+
+色だけに頼ると、色の判別が苦手な人には伝わりません。私はカードの見出しに「機能要望」のようなカテゴリ名をそのまま出し、色は感情の補助情報として使うようにしています。感情の3色は、カテゴリが何個に増えても変わりません。
+
+並びを、ネガティブが多い順にする
+
+もう1箇所だけ直します。カードを並べる順番です。
+
+件数の多い順に並べると、単に回答が多いカテゴリが先頭に来ます。
+
+たとえば「使いにくい」が20件のうち3件だけネガティブで、「価格への不満」が8件のうち7件がネガティブだったとします。件数順だと「使いにくい」が上に来てしまい、対応が急ぎの「価格への不満」は下に埋もれます。件数だけを見ていると、緊急度の高いカテゴリを見逃します。
+
+回答が多いことと、対応が急ぎであることは別の話です。
+
+私はこの画面で、ネガティブ件数の多いカテゴリから先に並べています。
+
+画面を開いた瞬間に、対応が必要なところから目に入る並びです。画面を開く人が最初に見るのは、常に対応が急ぎのカードです。
+
+件数もポジティブ件数もカードには表示しますが、並び替えの基準には使いません。
+
+並び替えの基準を1つに決めておくと、開くたびにどこを見るか迷わずに済みます。ネガティブ件数が同じカテゴリ同士は、シートに最初に登場した順のままになります。
+
+実物: before → after
+
+テンプレ丸出しの一覧表示と、カード型ダッシュボードのライブデモを置きます。
+
+デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-27-survey-dashboard/
+
+before は、シートの行がそのまま並ぶ一覧です。カテゴリも感情も文字でしか分かりません。並び順もシートに入力された順のままです。
+
+after は、カテゴリ別のカードに件数と代表コメントを載せ、感情を3色の左枠で示し、ネガティブが多い順に並べています。このデモには10件のダミー回答を用意し、同じデータをbeforeとafterで表示だけ変えています。
+
+シートの列は、A回答ID・B自由記述・C処理状態・D要約・Eカテゴリ・F感情スコアの並びを想定しています。
+
+GAS側（Code.gs）
+
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('アンケート結果ダッシュボード')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getSurveyCards() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) return [];
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const grouped = {};
+
+  rows.forEach(function (row) {
+    const summary = row[3];  // D列: 要約
+    const category = row[4]; // E列: カテゴリ
+    const score = Number(row[5]); // F列: 感情スコア
+
+    if (!category) return;
+
+    if (!grouped[category]) {
+      grouped[category] = {
+        category: category,
+        total: 0,
+        negative: 0,
+        neutral: 0,
+        positive: 0,
+        sample: summary
+      };
+    }
+
+    const card = grouped[category];
+    card.total += 1;
+
+    if (score &lt;= -0.34) {
+      card.negative += 1;
+      card.sample = summary; // ネガティブの代表コメントを優先する
+    } else if (score &gt;= 0.34) {
+      card.positive += 1;
+    } else {
+      card.neutral += 1;
+    }
+  });
+
+  return Object.values(grouped).sort(function (a, b) {
+    return b.negative - a.negative;
+  });
+}
+
+
+index.html（テンプレート側）
+
+
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;base target=&quot;_top&quot;&gt;
+  &lt;style&gt;
+    body {
+      font-family: system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-left: 6px solid #ccc;
+    }
+    .card.negative { border-left-color: #d64545; }
+    .card.neutral  { border-left-color: #9a9a9a; }
+    .card.positive { border-left-color: #3a9a5c; }
+    .card-title { font-weight: bold; margin-bottom: 4px; }
+    .card-counts { font-size: 13px; color: #555; margin-bottom: 8px; }
+    .card-sample { font-size: 14px; line-height: 1.5; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;アンケート結果ダッシュボード&lt;/h1&gt;
+  &lt;div class=&quot;cards&quot; id=&quot;cards&quot;&gt;読み込み中です&lt;/div&gt;
+
+  &lt;script&gt;
+    google.script.run.withSuccessHandler(render).getSurveyCards();
+
+    function dominantClass(card) {
+      if (card.negative &gt;= card.positive &amp;&amp; card.negative &gt;= card.neutral) return 'negative';
+      if (card.positive &gt;= card.neutral) return 'positive';
+      return 'neutral';
+    }
+
+    function render(cards) {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+
+      cards.forEach(function (card) {
+        const el = document.createElement('div');
+        el.className = 'card ' + dominantClass(card);
+        el.innerHTML =
+          '&lt;div class=&quot;card-title&quot;&gt;' + card.category + '&lt;/div&gt;' +
+          '&lt;div class=&quot;card-counts&quot;&gt;件数 ' + card.total +
+          '（ネガティブ ' + card.negative + '）&lt;/div&gt;' +
+          '&lt;div class=&quot;card-sample&quot;&gt;' + card.sample + '&lt;/div&gt;';
+        container.appendChild(el);
+      });
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+
+
+変更点のCSS
+
+before から after で変えたのは、この3箇所です。
+
+- 一覧の &lt;table&gt; を、カードの &lt;div class=&quot;card&quot;&gt; に変えました
+- 感情スコアの数値表示を、3色の border-left に置き換えました
+- 並び順を、サーバー側の sort() でネガティブ件数の降順に変えました
+
+列の並びを変える場合は、row[3]〜row[5] の添字だけ直せば動きます。
+
+
+/* before: 行が並ぶだけの表 */
+table { width: 100%; border-collapse: collapse; }
+td, th { border: 1px solid #ddd; padding: 6px; font-size: 13px; }
+
+/* after: 感情を3色の左枠だけで示すカード */
+.card { border-left: 6px solid #ccc; border-radius: 8px; padding: 16px; }
+.card.negative { border-left-color: #d64545; }
+.card.neutral  { border-left-color: #9a9a9a; }
+.card.positive { border-left-color: #3a9a5c; }
+
+
+つまずきどころ
+
+1つ目。感情スコアの境界値を決めずに書き始めると、色分けの条件式がその場しのぎになります。
+
+先に3段階の境界（-0.34と0.33）を決めてからコードを書くと、あとで直す量が減ります。スコアの範囲を3等分しただけの単純な境界ですが、迷いが消えます。
+
+2つ目。カテゴリごとに色を変える誘惑は、実装の途中で必ず出ます。
+
+私は一度カテゴリ色を試し、感情の3色と混ざって読めなくなったので外しました。色を増やしたくなったら、「その色は何の軸を示すか」を自分に聞き直すようにしています。
+
+3つ目。ネガティブとポジティブの件数が同数のカテゴリが出ることがあります。
+
+私のコードでは dominantClass 関数で、ネガティブを優先して判定しています。同数のときに紛れさせず、対応漏れが起きにくい側に倒す判断です。
+
+3箇所とも、色や並びのルールを先に決めてからコードに落とし込む点は共通しています。
+
+今日できること
+
+すでにカテゴリ別の集計をシートに持っている人は、まず感情スコアの色を3色に絞ってください。自分のシートで動かして、色が3つ以上に増えていないか確認してください。
+
+カテゴリごとの色分けをすでに実装している場合は、それを外して感情の3色だけに戻すところから始めます。色と並びさえ直せば、あとのカードのレイアウトはそのままで構いません。
+
+この1本で、シートのデータがそのまま人に見せられる形になりました。画面ができると、次は「誰が・いつ見るか」という運用の話が残ります。
+
+トリガーと権限の設計は、金曜の記事で扱います。"></div>
+
+
+<div class="article">
+<p>Gemini分類済みのアンケート回答を、そのままシートで人に見せると誰も読みません。</p>
+<p>行が並ぶだけの画面では、どこから手を付ければいいか分からないからです。同じ数字を見ているのに、画面の見せ方だけで伝わり方が変わります。</p>
+<p>私は最初、集計結果を「回答ID」「カテゴリ」「感情スコア」「要約」の4列がそのまま並ぶ画面で共有しました。開いた相手から「結局どこを見ればいいのか」と聞き返され、直すことにしました。</p>
+<p>この記事で直すのは2箇所だけです。色数を3色に絞ることと、並び順をネガティブが多い順にすることです。</p>
+<p>前提を3行で置きます。</p>
+<ul>
+<li>Gemini APIで自由記述を分類し、要約・カテゴリ・感情スコアがシートに入っている状態から始めます</li>
+<li>感情スコアは -1（ネガティブ）から1（ポジティブ）までの数値です</li>
+<li>分類のプロンプトやAPI呼び出しのコードは、この記事では扱いません</li>
+</ul>
+<p>ここから先は、このデータをHTML Serviceのカード画面に変える話だけです。月〜水の記事を読んでいなくても、この1本だけで画面が動きます。</p>
+<h2>色を感情の3段階にしか使わない</h2>
+<p>Gemini分類済みのデータには、カテゴリがいくつも入っています。</p>
+<p>「機能要望」「使いにくい」「価格への不満」「満足」「UIの見た目」「バグ報告」のように、カテゴリごとに違う色を割り当てたくなります。</p>
+<p>私は最初にこれをやりました。カテゴリの数だけ色を用意し、カードの枠線に塗り分けました。</p>
+<p>7カテゴリなら7色です。画面はにぎやかになりましたが、開いてすぐには何も読み取れなくなりました。</p>
+<p>色が5色を超えると、人は「どこが重要か」ではなく「どこが目立つか」で見てしまいます。しかも色とカテゴリ名の対応を、開くたびに覚え直す必要が出ます。</p>
+<p>そこで色を、感情スコアの3段階だけに絞り直しました。</p>
+<ul>
+<li>ネガティブ（スコア -1〜-0.34）はカードの左枠を赤にします</li>
+<li>ふつう（スコア -0.33〜0.33）はグレーにします</li>
+<li>ポジティブ（スコア 0.34〜1）は緑にします</li>
+</ul>
+<p>赤・グレー・緑の3色は、CSSでは <code>#d64545</code> <code>#9a9a9a</code> <code>#3a9a5c</code> として定義しています。赤・グレー・緑の組み合わせは、信号機と同じ並びなので説明なしでも伝わります。初めて開く人でも、赤いカードから見ればいいと直感的に分かります。</p>
+<p>カテゴリの違いは色ではなく、カードの見出しテキストで示します。</p>
+<p>色は「感情」という1つの軸だけに使い、「カテゴリ」という別の軸には使いません。</p>
+<p>2つの軸を同時に色で表そうとすると、どちらの軸も読み取れなくなります。軸が2つあるなら、片方はテキストに任せます。</p>
+<p>色だけに頼ると、色の判別が苦手な人には伝わりません。私はカードの見出しに「機能要望」のようなカテゴリ名をそのまま出し、色は感情の補助情報として使うようにしています。感情の3色は、カテゴリが何個に増えても変わりません。</p>
+<h2>並びを、ネガティブが多い順にする</h2>
+<p>もう1箇所だけ直します。カードを並べる順番です。</p>
+<p>件数の多い順に並べると、単に回答が多いカテゴリが先頭に来ます。</p>
+<p>たとえば「使いにくい」が20件のうち3件だけネガティブで、「価格への不満」が8件のうち7件がネガティブだったとします。件数順だと「使いにくい」が上に来てしまい、対応が急ぎの「価格への不満」は下に埋もれます。件数だけを見ていると、緊急度の高いカテゴリを見逃します。</p>
+<p>回答が多いことと、対応が急ぎであることは別の話です。</p>
+<p>私はこの画面で、ネガティブ件数の多いカテゴリから先に並べています。</p>
+<p>画面を開いた瞬間に、対応が必要なところから目に入る並びです。画面を開く人が最初に見るのは、常に対応が急ぎのカードです。</p>
+<p>件数もポジティブ件数もカードには表示しますが、並び替えの基準には使いません。</p>
+<p>並び替えの基準を1つに決めておくと、開くたびにどこを見るか迷わずに済みます。ネガティブ件数が同じカテゴリ同士は、シートに最初に登場した順のままになります。</p>
+<h2>実物: before → after</h2>
+<p>テンプレ丸出しの一覧表示と、カード型ダッシュボードのライブデモを置きます。</p>
+<p>デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-08-27-survey-dashboard/</p>
+<p>before は、シートの行がそのまま並ぶ一覧です。カテゴリも感情も文字でしか分かりません。並び順もシートに入力された順のままです。</p>
+<p>after は、カテゴリ別のカードに件数と代表コメントを載せ、感情を3色の左枠で示し、ネガティブが多い順に並べています。このデモには10件のダミー回答を用意し、同じデータをbeforeとafterで表示だけ変えています。</p>
+<p>シートの列は、A回答ID・B自由記述・C処理状態・D要約・Eカテゴリ・F感情スコアの並びを想定しています。</p>
+<h3>GAS側（Code.gs）</h3>
+<pre><code>function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('アンケート結果ダッシュボード')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getSurveyCards() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) return [];
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const grouped = {};
+
+  rows.forEach(function (row) {
+    const summary = row[3];  // D列: 要約
+    const category = row[4]; // E列: カテゴリ
+    const score = Number(row[5]); // F列: 感情スコア
+
+    if (!category) return;
+
+    if (!grouped[category]) {
+      grouped[category] = {
+        category: category,
+        total: 0,
+        negative: 0,
+        neutral: 0,
+        positive: 0,
+        sample: summary
+      };
+    }
+
+    const card = grouped[category];
+    card.total += 1;
+
+    if (score &lt;= -0.34) {
+      card.negative += 1;
+      card.sample = summary; // ネガティブの代表コメントを優先する
+    } else if (score &gt;= 0.34) {
+      card.positive += 1;
+    } else {
+      card.neutral += 1;
+    }
+  });
+
+  return Object.values(grouped).sort(function (a, b) {
+    return b.negative - a.negative;
+  });
+}</code></pre>
+<h3>index.html（テンプレート側）</h3>
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;base target="_top"&gt;
+  &lt;style&gt;
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-left: 6px solid #ccc;
+    }
+    .card.negative { border-left-color: #d64545; }
+    .card.neutral  { border-left-color: #9a9a9a; }
+    .card.positive { border-left-color: #3a9a5c; }
+    .card-title { font-weight: bold; margin-bottom: 4px; }
+    .card-counts { font-size: 13px; color: #555; margin-bottom: 8px; }
+    .card-sample { font-size: 14px; line-height: 1.5; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;アンケート結果ダッシュボード&lt;/h1&gt;
+  &lt;div class="cards" id="cards"&gt;読み込み中です&lt;/div&gt;
+
+  &lt;script&gt;
+    google.script.run.withSuccessHandler(render).getSurveyCards();
+
+    function dominantClass(card) {
+      if (card.negative &gt;= card.positive &amp;&amp; card.negative &gt;= card.neutral) return 'negative';
+      if (card.positive &gt;= card.neutral) return 'positive';
+      return 'neutral';
+    }
+
+    function render(cards) {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+
+      cards.forEach(function (card) {
+        const el = document.createElement('div');
+        el.className = 'card ' + dominantClass(card);
+        el.innerHTML =
+          '&lt;div class="card-title"&gt;' + card.category + '&lt;/div&gt;' +
+          '&lt;div class="card-counts"&gt;件数 ' + card.total +
+          '（ネガティブ ' + card.negative + '）&lt;/div&gt;' +
+          '&lt;div class="card-sample"&gt;' + card.sample + '&lt;/div&gt;';
+        container.appendChild(el);
+      });
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<h3>変更点のCSS</h3>
+<p>before から after で変えたのは、この3箇所です。</p>
+<ul>
+<li>一覧の <code>&lt;table&gt;</code> を、カードの <code>&lt;div class="card"&gt;</code> に変えました</li>
+<li>感情スコアの数値表示を、3色の <code>border-left</code> に置き換えました</li>
+<li>並び順を、サーバー側の <code>sort()</code> でネガティブ件数の降順に変えました</li>
+</ul>
+<p>列の並びを変える場合は、<code>row[3]</code>〜<code>row[5]</code> の添字だけ直せば動きます。</p>
+<pre><code>/* before: 行が並ぶだけの表 */
+table { width: 100%; border-collapse: collapse; }
+td, th { border: 1px solid #ddd; padding: 6px; font-size: 13px; }
+
+/* after: 感情を3色の左枠だけで示すカード */
+.card { border-left: 6px solid #ccc; border-radius: 8px; padding: 16px; }
+.card.negative { border-left-color: #d64545; }
+.card.neutral  { border-left-color: #9a9a9a; }
+.card.positive { border-left-color: #3a9a5c; }</code></pre>
+<h2>つまずきどころ</h2>
+<p>1つ目。感情スコアの境界値を決めずに書き始めると、色分けの条件式がその場しのぎになります。</p>
+<p>先に3段階の境界（-0.34と0.33）を決めてからコードを書くと、あとで直す量が減ります。スコアの範囲を3等分しただけの単純な境界ですが、迷いが消えます。</p>
+<p>2つ目。カテゴリごとに色を変える誘惑は、実装の途中で必ず出ます。</p>
+<p>私は一度カテゴリ色を試し、感情の3色と混ざって読めなくなったので外しました。色を増やしたくなったら、「その色は何の軸を示すか」を自分に聞き直すようにしています。</p>
+<p>3つ目。ネガティブとポジティブの件数が同数のカテゴリが出ることがあります。</p>
+<p>私のコードでは <code>dominantClass</code> 関数で、ネガティブを優先して判定しています。同数のときに紛れさせず、対応漏れが起きにくい側に倒す判断です。</p>
+<p>3箇所とも、色や並びのルールを先に決めてからコードに落とし込む点は共通しています。</p>
+<h2>今日できること</h2>
+<p>すでにカテゴリ別の集計をシートに持っている人は、まず感情スコアの色を3色に絞ってください。自分のシートで動かして、色が3つ以上に増えていないか確認してください。</p>
+<p>カテゴリごとの色分けをすでに実装している場合は、それを外して感情の3色だけに戻すところから始めます。色と並びさえ直せば、あとのカードのレイアウトはそのままで構いません。</p>
+<p>この1本で、シートのデータがそのまま人に見せられる形になりました。画面ができると、次は「誰が・いつ見るか」という運用の話が残ります。</p>
+<p>トリガーと権限の設計は、金曜の記事で扱います。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

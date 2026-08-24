@@ -1,0 +1,758 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GoogleAppsScript #GAS #業務効率化&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想 ／ 2026-08-28 ／ #GoogleAppsScript #GAS #業務効率化</div>
+</header>
+
+
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 11 件</div><ul><li class="warn">L13 前の見出しから 207 文字（目安 300）。見出しが多すぎる</li><li class="warn">L21 前の見出しから 128 文字（目安 300）。見出しが多すぎる</li><li class="warn">L33 前の見出しから 200 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;アンケート集計の自動化は、トリガーを1本仕込んだ瞬間に「渡せるもの」と「自分専用」に分かれます。差はコードの出来ではなく、権限の設計です。&lt;/p&gt;
+&lt;h2&gt;この記事の前提&lt;/h2&gt;
+&lt;p&gt;このシステムでは、自由記述の回答をGeminiが読み、感情スコアという数値をシートの1列に書き込む形にしています。&lt;/p&gt;
+&lt;p&gt;この記事では、そのスコア列がすでに埋まっている状態から始めます。&lt;/p&gt;
+&lt;p&gt;必要なのは、感情スコアの列と、通知したかどうかを記録する列がもう1つある、という前提だけです。&lt;/p&gt;
+&lt;p&gt;この記事では、Slack側でのWebhook URLの発行手順そのものは扱いません。すでに1つ発行済みで、その文字列を貼る作業から説明します。&lt;/p&gt;
+&lt;h2&gt;トリガーは「作った人」の権限で動く&lt;/h2&gt;
+&lt;p&gt;GASの時間主導トリガーは、コードを共有しただけでは相手側に生まれません。&lt;/p&gt;
+&lt;p&gt;相手がスプレッドシートを開いて、自分の画面でトリガーを設定して初めて動き出します。&lt;/p&gt;
+&lt;p&gt;ここでよく起きるのが、渡した側が「もう動くはず」と思い込んで自分のトリガーだけ残しておくケースです。&lt;/p&gt;
+&lt;h3&gt;壊れる例&lt;/h3&gt;
+&lt;p&gt;こういう状態を想像してください。&lt;/p&gt;
+&lt;p&gt;自分がトリガーを作り、シートを同僚に共有し、そのまま自分は別の業務に移ります。&lt;/p&gt;
+&lt;p&gt;トリガーは自分の権限で動き続けるので、シートは毎時更新され、しばらくは何も問題が起きません。&lt;/p&gt;
+&lt;p&gt;半年後、自分の異動や権限剥奪があった日を境に、通知がぴたりと止まります。&lt;/p&gt;
+&lt;p&gt;同僚は「なぜ動かなくなったか」を調べる手がかりを持っていません。トリガーの実行者が誰かは、画面から一目では分からないからです。&lt;/p&gt;
+&lt;h3&gt;直す：実行者を確認できる形にする&lt;/h3&gt;
+&lt;p&gt;止まってから気づくのではなく、渡す時点で実行者を確認する手順をセットにします。&lt;/p&gt;
+&lt;p&gt;スクリプトエディタの「トリガー」画面を開くと、各トリガーの「作成者」列に実行者のアカウントが出ます。&lt;/p&gt;
+&lt;p&gt;渡す相手が自分のアカウントで新しくトリガーを作り直すのが、いちばん確実な対処です。&lt;/p&gt;
+&lt;p&gt;自分のトリガーを見せて終わりにせず、相手の画面で同じ手順を一緒に踏んでおきます。&lt;/p&gt;
+&lt;p&gt;「権限で動く」とは、具体的には次のような意味です。&lt;/p&gt;
+&lt;p&gt;トリガーが呼ぶ &lt;code&gt;SpreadsheetApp&lt;/code&gt; や &lt;code&gt;UrlFetchApp&lt;/code&gt; は、トリガーを作成したアカウントの立場でシートを開き、外部にリクエストを送ります。&lt;/p&gt;
+&lt;p&gt;同僚がそのシートを開いているかどうかは関係ありません。動いているのは、あくまでトリガーを作った本人のアカウントです。&lt;/p&gt;
+&lt;p&gt;この仕組みを知らずに渡すと、「共有すれば動くはず」という誤解が起きます。共有はシートの閲覧・編集権限を渡すだけで、トリガーの実行権限までは渡しません。&lt;/p&gt;
+&lt;h2&gt;コードから作る：二重登録を防ぐ&lt;/h2&gt;
+&lt;p&gt;トリガー設定は画面からもできますが、他人に渡すシステムでは関数として持たせておくと再現性が上がります。&lt;/p&gt;
+&lt;p&gt;編集のたびに動くイベントトリガーという選び方もありますが、アンケートの回答は一括で入ってくることが多く、1件ごとの発火は通知が連続する原因になります。&lt;/p&gt;
+&lt;p&gt;このシステムでは、時間主導トリガーで一定間隔ごとにまとめて確認する形にしています。&lt;/p&gt;
+&lt;p&gt;ここで壊れやすいのが、次のようなコードです。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 壊れる例：実行するたびにトリガーが増える
+function setupDailyTrigger() {
+  ScriptApp.newTrigger('checkNegativeAnswers')
+    .timeBased()
+    .everyHours(1)
+    .create();
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;このコードを2回実行すると、同じ関数を呼ぶトリガーが2つ登録されます。3回押せば3つです。&lt;/p&gt;
+&lt;p&gt;通知コードが1時間ごとに複数回走り、Slackに同じ内容が重複して届く原因になります。&lt;/p&gt;
+&lt;p&gt;既存のトリガーを確認してから作る形に直します。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 直したコード：同じ関数のトリガーがあれば作らない
+function setupDailyTrigger() {
+  var functionName = 'checkNegativeAnswers';
+
+  var triggers = ScriptApp.getProjectTriggers();
+  var alreadyExists = triggers.some(function (t) {
+    return t.getHandlerFunction() === functionName;
+  });
+
+  if (alreadyExists) {
+    Logger.log('トリガーは既に登録済みです。処理を終了します');
+    return;
+  }
+
+  ScriptApp.newTrigger(functionName)
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  Logger.log('トリガーを1件作成しました');
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;setupDailyTrigger&lt;/code&gt; を1回だけ実行すれば、以後は何度呼んでも増殖しません。&lt;/p&gt;
+&lt;p&gt;渡す相手にも同じ関数を実行してもらえば、増殖の心配なく自分のトリガーを作れます。&lt;/p&gt;
+&lt;h2&gt;全部通知すると誰も見なくなる&lt;/h2&gt;
+&lt;p&gt;感情スコアがついた回答をすべてSlackに流すやり方も、動くには動きます。&lt;/p&gt;
+&lt;p&gt;ただしこれをやると、良い評価も悪い評価も同じチャンネルに並び、通知は数日で読み飛ばされる対象になります。&lt;/p&gt;
+&lt;p&gt;人が反応する通知は、件数が絞られていて、開く理由がはっきりしているものです。&lt;/p&gt;
+&lt;p&gt;このシステムでは、感情スコアが閾値以下の回答だけを拾います。&lt;/p&gt;
+&lt;p&gt;拾う件数を減らすことが、通知の中身を薄めない設計そのものです。&lt;/p&gt;
+&lt;p&gt;「良い評価も含めて全部見たい」という要望が出ることもあります。&lt;/p&gt;
+&lt;p&gt;その場合でも、Slackへのリアルタイム通知は悪い評価だけに絞り、全件はシート側で見る形をおすすめします。&lt;/p&gt;
+&lt;p&gt;通知は「今すぐ人が動くべきもの」だけに使い、一覧性が要るものは通知の役割から外します。役割を分けると、両方が機能したままになります。&lt;/p&gt;
+&lt;h2&gt;ネガティブな回答だけをSlackに通知するコード&lt;/h2&gt;
+&lt;p&gt;Slack側であらかじめ発行したIncoming Webhook URLを使います。&lt;/p&gt;
+&lt;p&gt;URLはコードに直書きせず、スクリプトプロパティに保存します。スクリプトエディタで次の1行を1回だけ実行してください。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;function setWebhookUrl() {
+  PropertiesService.getScriptProperties().setProperty(
+    'SLACK_WEBHOOK_URL',
+    'ここに発行したWebhook URLを貼る'
+  );
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;通知本体はこちらです。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;function checkNegativeAnswers() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  var data = sheet.getDataRange().getValues();
+
+  // 差し替え箇所：この値以下のスコアだけを通知する
+  var THRESHOLD = 2;
+
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  for (var i = 1; i &amp;lt; data.length; i++) {
+    var comment = data[i][1];
+    var score = data[i][2];
+    var notified = data[i][3];
+
+    if (score === '' || score &amp;gt; THRESHOLD || notified === '通知済み') {
+      continue;
+    }
+
+    var payload = {
+      text: '低評価の回答を検出しました（スコア ' + score + '）\n' + comment
+    };
+
+    var options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload)
+    };
+
+    UrlFetchApp.fetch(webhookUrl, options);
+    sheet.getRange(i + 1, 4).setValue('通知済み');
+  }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;D列に「通知済み」と書き戻すことで、同じ行を次回の実行で再送しないようにしています。&lt;/p&gt;
+&lt;p&gt;閾値の &lt;code&gt;THRESHOLD&lt;/code&gt; は、シートに合わせて数値を差し替える箇所です。5段階評価なら2、10段階評価なら3といった具合に調整します。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;ここまでの手順で、実際に引っかかりやすい箇所が3つあります。&lt;/p&gt;
+&lt;p&gt;1つ目は、&lt;code&gt;checkNegativeAnswers&lt;/code&gt; を手動実行した直後にトリガーを設定すると、テスト用の通知がそのまま届いてしまう点です。D列の通知済みフラグを一度クリアしてから本番のトリガーを動かすと、テストと本番が混ざりません。&lt;/p&gt;
+&lt;p&gt;2つ目は、シートの列位置を後から変えたときです。コード内の &lt;code&gt;data[i][2]&lt;/code&gt; のような列指定がずれ、感情スコアではない列を読みにいきます。列を動かしたら、対応する数字も見直してください。&lt;/p&gt;
+&lt;p&gt;3つ目は、Slackの Webhook URL を発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けてリクエストが飛び続け、通知だけが届かなくなります。URLを変えたら、&lt;code&gt;setWebhookUrl&lt;/code&gt; を書き換えて再度実行してください。&lt;/p&gt;
+&lt;h2&gt;残る手作業&lt;/h2&gt;
+&lt;p&gt;ここまでの仕組みを組んでも、完全に手を離せるわけではありません。&lt;/p&gt;
+&lt;p&gt;トリガーを作った人が異動や退職で権限を失うときは、次に管理する人が同じ画面で自分のアカウントとしてトリガーを作り直す必要があります。&lt;/p&gt;
+&lt;p&gt;この引き継ぎだけは、毎回人の手で行う作業として残しておきます。&lt;/p&gt;
+&lt;p&gt;権限の見直しは、月に一度など決まったタイミングで行うと、引き継ぎ漏れに気づきやすくなります。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;まずは &lt;code&gt;setupDailyTrigger&lt;/code&gt; を自分の環境で1回実行し、トリガー画面に作成者として自分のアカウントが表示されることを確認してください。&lt;/p&gt;
+&lt;p&gt;これだけで、渡す相手にも同じ手順を説明できる状態になります。&lt;/p&gt;
+&lt;p&gt;このシステムを他の人に渡すときは、コードを送って終わりにせず、相手の画面でトリガーを作る場面まで一緒に確認しておくことをおすすめします。&lt;/p&gt;" data-text="アンケート集計の自動化は、トリガーを1本仕込んだ瞬間に「渡せるもの」と「自分専用」に分かれます。差はコードの出来ではなく、権限の設計です。
+
+この記事の前提
+
+このシステムでは、自由記述の回答をGeminiが読み、感情スコアという数値をシートの1列に書き込む形にしています。
+
+この記事では、そのスコア列がすでに埋まっている状態から始めます。
+
+必要なのは、感情スコアの列と、通知したかどうかを記録する列がもう1つある、という前提だけです。
+
+この記事では、Slack側でのWebhook URLの発行手順そのものは扱いません。すでに1つ発行済みで、その文字列を貼る作業から説明します。
+
+トリガーは「作った人」の権限で動く
+
+GASの時間主導トリガーは、コードを共有しただけでは相手側に生まれません。
+
+相手がスプレッドシートを開いて、自分の画面でトリガーを設定して初めて動き出します。
+
+ここでよく起きるのが、渡した側が「もう動くはず」と思い込んで自分のトリガーだけ残しておくケースです。
+
+壊れる例
+
+こういう状態を想像してください。
+
+自分がトリガーを作り、シートを同僚に共有し、そのまま自分は別の業務に移ります。
+
+トリガーは自分の権限で動き続けるので、シートは毎時更新され、しばらくは何も問題が起きません。
+
+半年後、自分の異動や権限剥奪があった日を境に、通知がぴたりと止まります。
+
+同僚は「なぜ動かなくなったか」を調べる手がかりを持っていません。トリガーの実行者が誰かは、画面から一目では分からないからです。
+
+直す：実行者を確認できる形にする
+
+止まってから気づくのではなく、渡す時点で実行者を確認する手順をセットにします。
+
+スクリプトエディタの「トリガー」画面を開くと、各トリガーの「作成者」列に実行者のアカウントが出ます。
+
+渡す相手が自分のアカウントで新しくトリガーを作り直すのが、いちばん確実な対処です。
+
+自分のトリガーを見せて終わりにせず、相手の画面で同じ手順を一緒に踏んでおきます。
+
+「権限で動く」とは、具体的には次のような意味です。
+
+トリガーが呼ぶ SpreadsheetApp や UrlFetchApp は、トリガーを作成したアカウントの立場でシートを開き、外部にリクエストを送ります。
+
+同僚がそのシートを開いているかどうかは関係ありません。動いているのは、あくまでトリガーを作った本人のアカウントです。
+
+この仕組みを知らずに渡すと、「共有すれば動くはず」という誤解が起きます。共有はシートの閲覧・編集権限を渡すだけで、トリガーの実行権限までは渡しません。
+
+コードから作る：二重登録を防ぐ
+
+トリガー設定は画面からもできますが、他人に渡すシステムでは関数として持たせておくと再現性が上がります。
+
+編集のたびに動くイベントトリガーという選び方もありますが、アンケートの回答は一括で入ってくることが多く、1件ごとの発火は通知が連続する原因になります。
+
+このシステムでは、時間主導トリガーで一定間隔ごとにまとめて確認する形にしています。
+
+ここで壊れやすいのが、次のようなコードです。
+
+
+// 壊れる例：実行するたびにトリガーが増える
+function setupDailyTrigger() {
+  ScriptApp.newTrigger('checkNegativeAnswers')
+    .timeBased()
+    .everyHours(1)
+    .create();
+}
+
+
+このコードを2回実行すると、同じ関数を呼ぶトリガーが2つ登録されます。3回押せば3つです。
+
+通知コードが1時間ごとに複数回走り、Slackに同じ内容が重複して届く原因になります。
+
+既存のトリガーを確認してから作る形に直します。
+
+
+// 直したコード：同じ関数のトリガーがあれば作らない
+function setupDailyTrigger() {
+  var functionName = 'checkNegativeAnswers';
+
+  var triggers = ScriptApp.getProjectTriggers();
+  var alreadyExists = triggers.some(function (t) {
+    return t.getHandlerFunction() === functionName;
+  });
+
+  if (alreadyExists) {
+    Logger.log('トリガーは既に登録済みです。処理を終了します');
+    return;
+  }
+
+  ScriptApp.newTrigger(functionName)
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  Logger.log('トリガーを1件作成しました');
+}
+
+
+setupDailyTrigger を1回だけ実行すれば、以後は何度呼んでも増殖しません。
+
+渡す相手にも同じ関数を実行してもらえば、増殖の心配なく自分のトリガーを作れます。
+
+全部通知すると誰も見なくなる
+
+感情スコアがついた回答をすべてSlackに流すやり方も、動くには動きます。
+
+ただしこれをやると、良い評価も悪い評価も同じチャンネルに並び、通知は数日で読み飛ばされる対象になります。
+
+人が反応する通知は、件数が絞られていて、開く理由がはっきりしているものです。
+
+このシステムでは、感情スコアが閾値以下の回答だけを拾います。
+
+拾う件数を減らすことが、通知の中身を薄めない設計そのものです。
+
+「良い評価も含めて全部見たい」という要望が出ることもあります。
+
+その場合でも、Slackへのリアルタイム通知は悪い評価だけに絞り、全件はシート側で見る形をおすすめします。
+
+通知は「今すぐ人が動くべきもの」だけに使い、一覧性が要るものは通知の役割から外します。役割を分けると、両方が機能したままになります。
+
+ネガティブな回答だけをSlackに通知するコード
+
+Slack側であらかじめ発行したIncoming Webhook URLを使います。
+
+URLはコードに直書きせず、スクリプトプロパティに保存します。スクリプトエディタで次の1行を1回だけ実行してください。
+
+
+function setWebhookUrl() {
+  PropertiesService.getScriptProperties().setProperty(
+    'SLACK_WEBHOOK_URL',
+    'ここに発行したWebhook URLを貼る'
+  );
+}
+
+
+通知本体はこちらです。
+
+
+function checkNegativeAnswers() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  var data = sheet.getDataRange().getValues();
+
+  // 差し替え箇所：この値以下のスコアだけを通知する
+  var THRESHOLD = 2;
+
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  for (var i = 1; i &lt; data.length; i++) {
+    var comment = data[i][1];
+    var score = data[i][2];
+    var notified = data[i][3];
+
+    if (score === '' || score &gt; THRESHOLD || notified === '通知済み') {
+      continue;
+    }
+
+    var payload = {
+      text: '低評価の回答を検出しました（スコア ' + score + '）\n' + comment
+    };
+
+    var options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload)
+    };
+
+    UrlFetchApp.fetch(webhookUrl, options);
+    sheet.getRange(i + 1, 4).setValue('通知済み');
+  }
+}
+
+
+D列に「通知済み」と書き戻すことで、同じ行を次回の実行で再送しないようにしています。
+
+閾値の THRESHOLD は、シートに合わせて数値を差し替える箇所です。5段階評価なら2、10段階評価なら3といった具合に調整します。
+
+つまずきどころ
+
+ここまでの手順で、実際に引っかかりやすい箇所が3つあります。
+
+1つ目は、checkNegativeAnswers を手動実行した直後にトリガーを設定すると、テスト用の通知がそのまま届いてしまう点です。D列の通知済みフラグを一度クリアしてから本番のトリガーを動かすと、テストと本番が混ざりません。
+
+2つ目は、シートの列位置を後から変えたときです。コード内の data[i][2] のような列指定がずれ、感情スコアではない列を読みにいきます。列を動かしたら、対応する数字も見直してください。
+
+3つ目は、Slackの Webhook URL を発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けてリクエストが飛び続け、通知だけが届かなくなります。URLを変えたら、setWebhookUrl を書き換えて再度実行してください。
+
+残る手作業
+
+ここまでの仕組みを組んでも、完全に手を離せるわけではありません。
+
+トリガーを作った人が異動や退職で権限を失うときは、次に管理する人が同じ画面で自分のアカウントとしてトリガーを作り直す必要があります。
+
+この引き継ぎだけは、毎回人の手で行う作業として残しておきます。
+
+権限の見直しは、月に一度など決まったタイミングで行うと、引き継ぎ漏れに気づきやすくなります。
+
+今日できること
+
+まずは setupDailyTrigger を自分の環境で1回実行し、トリガー画面に作成者として自分のアカウントが表示されることを確認してください。
+
+これだけで、渡す相手にも同じ手順を説明できる状態になります。
+
+このシステムを他の人に渡すときは、コードを送って終わりにせず、相手の画面でトリガーを作る場面まで一緒に確認しておくことをおすすめします。"></div>
+
+
+<div class="article">
+<p>アンケート集計の自動化は、トリガーを1本仕込んだ瞬間に「渡せるもの」と「自分専用」に分かれます。差はコードの出来ではなく、権限の設計です。</p>
+<h2>この記事の前提</h2>
+<p>このシステムでは、自由記述の回答をGeminiが読み、感情スコアという数値をシートの1列に書き込む形にしています。</p>
+<p>この記事では、そのスコア列がすでに埋まっている状態から始めます。</p>
+<p>必要なのは、感情スコアの列と、通知したかどうかを記録する列がもう1つある、という前提だけです。</p>
+<p>この記事では、Slack側でのWebhook URLの発行手順そのものは扱いません。すでに1つ発行済みで、その文字列を貼る作業から説明します。</p>
+<h2>トリガーは「作った人」の権限で動く</h2>
+<p>GASの時間主導トリガーは、コードを共有しただけでは相手側に生まれません。</p>
+<p>相手がスプレッドシートを開いて、自分の画面でトリガーを設定して初めて動き出します。</p>
+<p>ここでよく起きるのが、渡した側が「もう動くはず」と思い込んで自分のトリガーだけ残しておくケースです。</p>
+<h3>壊れる例</h3>
+<p>こういう状態を想像してください。</p>
+<p>自分がトリガーを作り、シートを同僚に共有し、そのまま自分は別の業務に移ります。</p>
+<p>トリガーは自分の権限で動き続けるので、シートは毎時更新され、しばらくは何も問題が起きません。</p>
+<p>半年後、自分の異動や権限剥奪があった日を境に、通知がぴたりと止まります。</p>
+<p>同僚は「なぜ動かなくなったか」を調べる手がかりを持っていません。トリガーの実行者が誰かは、画面から一目では分からないからです。</p>
+<h3>直す：実行者を確認できる形にする</h3>
+<p>止まってから気づくのではなく、渡す時点で実行者を確認する手順をセットにします。</p>
+<p>スクリプトエディタの「トリガー」画面を開くと、各トリガーの「作成者」列に実行者のアカウントが出ます。</p>
+<p>渡す相手が自分のアカウントで新しくトリガーを作り直すのが、いちばん確実な対処です。</p>
+<p>自分のトリガーを見せて終わりにせず、相手の画面で同じ手順を一緒に踏んでおきます。</p>
+<p>「権限で動く」とは、具体的には次のような意味です。</p>
+<p>トリガーが呼ぶ <code>SpreadsheetApp</code> や <code>UrlFetchApp</code> は、トリガーを作成したアカウントの立場でシートを開き、外部にリクエストを送ります。</p>
+<p>同僚がそのシートを開いているかどうかは関係ありません。動いているのは、あくまでトリガーを作った本人のアカウントです。</p>
+<p>この仕組みを知らずに渡すと、「共有すれば動くはず」という誤解が起きます。共有はシートの閲覧・編集権限を渡すだけで、トリガーの実行権限までは渡しません。</p>
+<h2>コードから作る：二重登録を防ぐ</h2>
+<p>トリガー設定は画面からもできますが、他人に渡すシステムでは関数として持たせておくと再現性が上がります。</p>
+<p>編集のたびに動くイベントトリガーという選び方もありますが、アンケートの回答は一括で入ってくることが多く、1件ごとの発火は通知が連続する原因になります。</p>
+<p>このシステムでは、時間主導トリガーで一定間隔ごとにまとめて確認する形にしています。</p>
+<p>ここで壊れやすいのが、次のようなコードです。</p>
+<pre><code>// 壊れる例：実行するたびにトリガーが増える
+function setupDailyTrigger() {
+  ScriptApp.newTrigger('checkNegativeAnswers')
+    .timeBased()
+    .everyHours(1)
+    .create();
+}</code></pre>
+<p>このコードを2回実行すると、同じ関数を呼ぶトリガーが2つ登録されます。3回押せば3つです。</p>
+<p>通知コードが1時間ごとに複数回走り、Slackに同じ内容が重複して届く原因になります。</p>
+<p>既存のトリガーを確認してから作る形に直します。</p>
+<pre><code>// 直したコード：同じ関数のトリガーがあれば作らない
+function setupDailyTrigger() {
+  var functionName = 'checkNegativeAnswers';
+
+  var triggers = ScriptApp.getProjectTriggers();
+  var alreadyExists = triggers.some(function (t) {
+    return t.getHandlerFunction() === functionName;
+  });
+
+  if (alreadyExists) {
+    Logger.log('トリガーは既に登録済みです。処理を終了します');
+    return;
+  }
+
+  ScriptApp.newTrigger(functionName)
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  Logger.log('トリガーを1件作成しました');
+}</code></pre>
+<p><code>setupDailyTrigger</code> を1回だけ実行すれば、以後は何度呼んでも増殖しません。</p>
+<p>渡す相手にも同じ関数を実行してもらえば、増殖の心配なく自分のトリガーを作れます。</p>
+<h2>全部通知すると誰も見なくなる</h2>
+<p>感情スコアがついた回答をすべてSlackに流すやり方も、動くには動きます。</p>
+<p>ただしこれをやると、良い評価も悪い評価も同じチャンネルに並び、通知は数日で読み飛ばされる対象になります。</p>
+<p>人が反応する通知は、件数が絞られていて、開く理由がはっきりしているものです。</p>
+<p>このシステムでは、感情スコアが閾値以下の回答だけを拾います。</p>
+<p>拾う件数を減らすことが、通知の中身を薄めない設計そのものです。</p>
+<p>「良い評価も含めて全部見たい」という要望が出ることもあります。</p>
+<p>その場合でも、Slackへのリアルタイム通知は悪い評価だけに絞り、全件はシート側で見る形をおすすめします。</p>
+<p>通知は「今すぐ人が動くべきもの」だけに使い、一覧性が要るものは通知の役割から外します。役割を分けると、両方が機能したままになります。</p>
+<h2>ネガティブな回答だけをSlackに通知するコード</h2>
+<p>Slack側であらかじめ発行したIncoming Webhook URLを使います。</p>
+<p>URLはコードに直書きせず、スクリプトプロパティに保存します。スクリプトエディタで次の1行を1回だけ実行してください。</p>
+<pre><code>function setWebhookUrl() {
+  PropertiesService.getScriptProperties().setProperty(
+    'SLACK_WEBHOOK_URL',
+    'ここに発行したWebhook URLを貼る'
+  );
+}</code></pre>
+<p>通知本体はこちらです。</p>
+<pre><code>function checkNegativeAnswers() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('回答');
+  var data = sheet.getDataRange().getValues();
+
+  // 差し替え箇所：この値以下のスコアだけを通知する
+  var THRESHOLD = 2;
+
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  for (var i = 1; i &lt; data.length; i++) {
+    var comment = data[i][1];
+    var score = data[i][2];
+    var notified = data[i][3];
+
+    if (score === '' || score &gt; THRESHOLD || notified === '通知済み') {
+      continue;
+    }
+
+    var payload = {
+      text: '低評価の回答を検出しました（スコア ' + score + '）\n' + comment
+    };
+
+    var options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload)
+    };
+
+    UrlFetchApp.fetch(webhookUrl, options);
+    sheet.getRange(i + 1, 4).setValue('通知済み');
+  }
+}</code></pre>
+<p>D列に「通知済み」と書き戻すことで、同じ行を次回の実行で再送しないようにしています。</p>
+<p>閾値の <code>THRESHOLD</code> は、シートに合わせて数値を差し替える箇所です。5段階評価なら2、10段階評価なら3といった具合に調整します。</p>
+<h2>つまずきどころ</h2>
+<p>ここまでの手順で、実際に引っかかりやすい箇所が3つあります。</p>
+<p>1つ目は、<code>checkNegativeAnswers</code> を手動実行した直後にトリガーを設定すると、テスト用の通知がそのまま届いてしまう点です。D列の通知済みフラグを一度クリアしてから本番のトリガーを動かすと、テストと本番が混ざりません。</p>
+<p>2つ目は、シートの列位置を後から変えたときです。コード内の <code>data[i][2]</code> のような列指定がずれ、感情スコアではない列を読みにいきます。列を動かしたら、対応する数字も見直してください。</p>
+<p>3つ目は、Slackの Webhook URL を発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けてリクエストが飛び続け、通知だけが届かなくなります。URLを変えたら、<code>setWebhookUrl</code> を書き換えて再度実行してください。</p>
+<h2>残る手作業</h2>
+<p>ここまでの仕組みを組んでも、完全に手を離せるわけではありません。</p>
+<p>トリガーを作った人が異動や退職で権限を失うときは、次に管理する人が同じ画面で自分のアカウントとしてトリガーを作り直す必要があります。</p>
+<p>この引き継ぎだけは、毎回人の手で行う作業として残しておきます。</p>
+<p>権限の見直しは、月に一度など決まったタイミングで行うと、引き継ぎ漏れに気づきやすくなります。</p>
+<h2>今日できること</h2>
+<p>まずは <code>setupDailyTrigger</code> を自分の環境で1回実行し、トリガー画面に作成者として自分のアカウントが表示されることを確認してください。</p>
+<p>これだけで、渡す相手にも同じ手順を説明できる状態になります。</p>
+<p>このシステムを他の人に渡すときは、コードを送って終わりにせず、相手の画面でトリガーを作る場面まで一緒に確認しておくことをおすすめします。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

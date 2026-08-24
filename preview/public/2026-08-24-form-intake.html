@@ -1,0 +1,829 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GoogleAppsScript #GAS #業務効率化&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想 ／ 2026-08-24 ／ #GoogleAppsScript #GAS #業務効率化</div>
+</header>
+
+
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 2 件</div><ul><li class="warn">L136 前の見出しから 153 文字（目安 300）。見出しが多すぎる</li><li class="warn">L212 前の見出しから 236 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;Googleフォームの自由記述をGeminiで要約する仕組みは、フォーム側では失敗しません。&lt;/p&gt;
+&lt;p&gt;失敗するのはシート側です。&lt;/p&gt;
+&lt;p&gt;自由記述の列がどこにあるか固定していない、処理済みかどうかを判定する列がない。&lt;br&gt;この2つで、後から積む要約処理がまるごと壊れます。&lt;/p&gt;
+&lt;p&gt;私は最初、シンプルトリガーで組みました。&lt;/p&gt;
+&lt;p&gt;これはスプレッドシートのメニューにある「トリガー」の設定画面を使わず、&lt;br&gt;エディタ上で &lt;code&gt;onFormSubmit(e)&lt;/code&gt; という関数名を置くだけの方式です。&lt;/p&gt;
+&lt;p&gt;フォームを送信すると動くには動きます。&lt;/p&gt;
+&lt;p&gt;ところが、その中でGemini APIを呼ぼうとした瞬間に権限エラーが出ました。&lt;br&gt;シンプルトリガーは外部サービスへの接続を許可されていません。&lt;/p&gt;
+&lt;p&gt;ここから、インストーラブルトリガーへの組み替えと、シート構造の設計をやり直しました。&lt;br&gt;この記事では、その入口の部分だけを書きます。&lt;/p&gt;
+&lt;p&gt;Geminiの呼び出しコードは書きません。次の記事の範囲です。&lt;br&gt;ここで扱うのは「フォームの回答をどう受け取り、どう並べれば後段が処理しやすいか」だけです。&lt;/p&gt;
+&lt;h2&gt;インストーラブルトリガーを設定する&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;onFormSubmit(e)&lt;/code&gt; という関数名を置くだけの「シンプルトリガー」は、&lt;br&gt;関数名がイベント名と一致していれば自動で動きます。&lt;/p&gt;
+&lt;p&gt;ですが権限が実行者の範囲に限定されるため、外部API（Gemini API含む）を呼べません。&lt;br&gt;UrlFetchAppを使う時点で、シンプルトリガーは選択肢から外れます。&lt;/p&gt;
+&lt;p&gt;代わりに「インストーラブルトリガー」を使います。&lt;/p&gt;
+&lt;p&gt;設定は次の手順です。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;スクリプトエディタを開き、左メニューの時計アイコン（トリガー）をクリックする&lt;/li&gt;
+&lt;li&gt;「トリガーを追加」を押す&lt;/li&gt;
+&lt;li&gt;実行する関数を、受信処理を書いた関数名にする&lt;/li&gt;
+&lt;li&gt;イベントのソースを「フォームから」にする&lt;/li&gt;
+&lt;li&gt;イベントの種類を「フォーム送信時」にする&lt;/li&gt;
+&lt;li&gt;保存すると、初回だけ権限の承認ダイアログが出る&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;このとき対象のフォームは、フォーム作成時に生成される固有IDで指定します。&lt;br&gt;スプレッドシートの拡張機能メニューからスクリプトエディタを開いた場合は、&lt;br&gt;自動で連携済みのフォームが候補に出ます。&lt;/p&gt;
+&lt;p&gt;コードから登録する方法もあります。後半のコードに含めています。&lt;br&gt;一度登録すれば、以降はGASのプロジェクトを開かなくても動き続けます。&lt;/p&gt;
+&lt;h2&gt;シートの列設計&lt;/h2&gt;
+&lt;p&gt;Geminiに渡す前提でシートを作るなら、最低限この7列を用意します。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A列: 回答ID（フォームが自動で発行するレスポンスID）&lt;/li&gt;
+&lt;li&gt;B列: タイムスタンプ&lt;/li&gt;
+&lt;li&gt;C列: 生テキスト（自由記述の中身）&lt;/li&gt;
+&lt;li&gt;D列: 処理状態（未処理 / 処理中 / 完了）&lt;/li&gt;
+&lt;li&gt;E列: 要約（Geminiの出力。次の記事で埋める）&lt;/li&gt;
+&lt;li&gt;F列: カテゴリ（同上）&lt;/li&gt;
+&lt;li&gt;G列: 感情スコア（同上）&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;このうちD列の処理状態が、この記事でいちばん伝えたい設計です。&lt;/p&gt;
+&lt;p&gt;回答が届くたびに「未処理」で1行追加します。&lt;br&gt;要約処理を回すバッチは、D列が「未処理」の行だけを拾って処理します。&lt;/p&gt;
+&lt;p&gt;処理を始めたら「処理中」に、終わったら「完了」に書き換えます。&lt;br&gt;これだけで、後段のバッチが「どこまで処理したか」を自分で判断できるようになります。&lt;/p&gt;
+&lt;h2&gt;受信からシート書き込みまでのコード&lt;/h2&gt;
+&lt;p&gt;トリガー登録と、フォーム送信を受けてシートに1行追加するところまでの全文です。&lt;br&gt;フォームIDとシート名は、自分の環境の値に置き換えてください。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// トリガーを1回だけ登録する関数。
+// スクリプトエディタから手動で1回実行すれば十分です。
+function setupFormTrigger() {
+  const formId = 'YOUR_FORM_ID'; // フォームの固有ID
+  const form = FormApp.openById(formId);
+
+  // 既存の同名トリガーが二重登録されないように、いったん削除する
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'onFormSubmitHandler') {
+      ScriptApp.deleteTrigger(t);
+    }
+  }
+
+  ScriptApp.newTrigger('onFormSubmitHandler')
+    .forForm(form)
+    .onFormSubmit()
+    .create();
+}
+
+// フォーム送信のたびに呼ばれる本体。
+// e.response からその回答だけを取り出せる。
+function onFormSubmitHandler(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答'); // シート名は環境に合わせて変更する
+
+  const response = e.response;
+  const itemResponses = response.getItemResponses();
+
+  // 自由記述の質問だけを拾う。
+  // フォームの質問順が変わっても列位置がずれないように、
+  // インデックスではなく質問タイプで判定する。
+  let freeText = '';
+  for (const item of itemResponses) {
+    const type = item.getItem().getType();
+    if (type === FormApp.ItemType.PARAGRAPH_TEXT) {
+      freeText = item.getResponse();
+      break;
+    }
+  }
+
+  const responseId = response.getId();
+  const timestamp = response.getTimestamp();
+
+  sheet.appendRow([
+    responseId,
+    timestamp,
+    freeText,
+    '未処理', // D列: 処理状態の初期値
+    '',       // E列: 要約（後段で埋める）
+    '',       // F列: カテゴリ（後段で埋める）
+    ''        // G列: 感情スコア（後段で埋める）
+  ]);
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;setupFormTrigger&lt;/code&gt; を1回実行すると、承認ダイアログが出ます。&lt;br&gt;Googleアカウントで許可すれば、以降はフォーム送信のたびに自動で行が追加されます。&lt;/p&gt;
+&lt;h2&gt;処理状態列がないと何が起きるか&lt;/h2&gt;
+&lt;p&gt;処理状態列を作らず、行数だけで未処理を判断する書き方もできます。&lt;br&gt;最後に処理した行番号をプロパティに保存しておく方式です。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 壊れる例: 行数だけで未処理を判断する
+function processUnhandledRowsBad() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+  const lastProcessed = Number(props.getProperty('lastRow') || 1);
+
+  for (let row = lastProcessed + 1; row &amp;lt;= lastRow; row++) {
+    // ここでGemini呼び出し（省略）
+  }
+
+  // 全行を処理し終えた前提で更新する
+  props.setProperty('lastRow', String(lastRow));
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;一見動きますが、途中の行でGemini呼び出しが失敗すると壊れます。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;lastRow&lt;/code&gt; はループの最後で一括更新しているため、&lt;br&gt;途中で止まっても更新されず、次回同じ範囲を丸ごと再処理します。&lt;/p&gt;
+&lt;p&gt;逆に、途中で更新するタイミングを早めると、&lt;br&gt;今度は失敗した行が「処理済み」扱いになって二度と拾われません。&lt;/p&gt;
+&lt;p&gt;行数という1つの数値だけで進捗を持つと、&lt;br&gt;「どこまで終わったか」と「どこで失敗したか」を同時に表現できないのです。&lt;/p&gt;
+&lt;p&gt;D列の処理状態を使えば、行ごとに独立して状態を持てます。&lt;br&gt;1行が失敗しても、その行だけ「処理中」のまま残るので、次回改めて拾えます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 直した例: 行ごとの処理状態で判断する
+function processUnhandledRowsGood() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i &amp;lt; data.length; i++) {
+    const status = data[i][3]; // D列
+    if (status !== '未処理') continue;
+
+    const row = i + 1;
+    sheet.getRange(row, 4).setValue('処理中');
+
+    // ここでGemini呼び出し（火曜の記事で扱う）
+
+    sheet.getRange(row, 4).setValue('完了');
+  }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;この対比が、その理由です。&lt;br&gt;入口の設計を1列増やすだけで、後段の処理が二重実行に強くなります。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;トリガーの承認は、シートの所有者本人でログインした状態で行う必要があります。&lt;br&gt;共有アカウントで作業していると、承認ダイアログが出ずに止まって見えることがあります。&lt;/p&gt;
+&lt;p&gt;もう1つは質問の並び替えです。&lt;/p&gt;
+&lt;p&gt;フォームの質問を後から並び替えると、&lt;code&gt;getItemResponses()&lt;/code&gt; が返す配列の順序も変わります。&lt;br&gt;インデックスで自由記述の列を決めていると、ここで無言で崩れます。&lt;/p&gt;
+&lt;p&gt;前述のコードでは質問タイプ（&lt;code&gt;PARAGRAPH_TEXT&lt;/code&gt;）で判定しているため、&lt;br&gt;並び替えの影響を受けません。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;自分のフォームとシートに対して、&lt;code&gt;setupFormTrigger&lt;/code&gt; を1回実行してください。&lt;/p&gt;
+&lt;p&gt;そのあとテスト送信を1件行い、D列に「未処理」が入った行が&lt;br&gt;自動で追加されるかを確認します。&lt;/p&gt;
+&lt;p&gt;ここまで確認できれば、Geminiに渡す入口は完成しています。&lt;/p&gt;
+&lt;p&gt;火曜の記事では、この「未処理」の行を拾ってGeminiに投げるコードを書きます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;今週は「アンケート自由記述 自動要約ダッシュボード」というひとつの自動化システムを、&lt;br&gt;7本に分けて書いています。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;月: Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計&lt;/li&gt;
+&lt;li&gt;火: アンケートの自由記述をGeminiで要約・分類する。プロンプトと呼び出しコードの全文&lt;/li&gt;
+&lt;li&gt;水: 二重実行と429エラーを防ぐ。壊れるアンケート集計コードと直したコード&lt;/li&gt;
+&lt;li&gt;木: アンケート結果を、色数と並びの2箇所だけ直して見せられるダッシュボードにする&lt;/li&gt;
+&lt;li&gt;金: アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定&lt;/li&gt;
+&lt;li&gt;土: アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す&lt;/li&gt;
+&lt;li&gt;日: アンケート自由記述 自動要約ダッシュボード完成版一式（有料）&lt;/li&gt;
+&lt;/ul&gt;" data-text="Googleフォームの自由記述をGeminiで要約する仕組みは、フォーム側では失敗しません。
+
+失敗するのはシート側です。
+
+自由記述の列がどこにあるか固定していない、処理済みかどうかを判定する列がない。
+この2つで、後から積む要約処理がまるごと壊れます。
+
+私は最初、シンプルトリガーで組みました。
+
+これはスプレッドシートのメニューにある「トリガー」の設定画面を使わず、
+エディタ上で onFormSubmit(e) という関数名を置くだけの方式です。
+
+フォームを送信すると動くには動きます。
+
+ところが、その中でGemini APIを呼ぼうとした瞬間に権限エラーが出ました。
+シンプルトリガーは外部サービスへの接続を許可されていません。
+
+ここから、インストーラブルトリガーへの組み替えと、シート構造の設計をやり直しました。
+この記事では、その入口の部分だけを書きます。
+
+Geminiの呼び出しコードは書きません。次の記事の範囲です。
+ここで扱うのは「フォームの回答をどう受け取り、どう並べれば後段が処理しやすいか」だけです。
+
+インストーラブルトリガーを設定する
+
+onFormSubmit(e) という関数名を置くだけの「シンプルトリガー」は、
+関数名がイベント名と一致していれば自動で動きます。
+
+ですが権限が実行者の範囲に限定されるため、外部API（Gemini API含む）を呼べません。
+UrlFetchAppを使う時点で、シンプルトリガーは選択肢から外れます。
+
+代わりに「インストーラブルトリガー」を使います。
+
+設定は次の手順です。
+
+- スクリプトエディタを開き、左メニューの時計アイコン（トリガー）をクリックする
+- 「トリガーを追加」を押す
+- 実行する関数を、受信処理を書いた関数名にする
+- イベントのソースを「フォームから」にする
+- イベントの種類を「フォーム送信時」にする
+- 保存すると、初回だけ権限の承認ダイアログが出る
+
+このとき対象のフォームは、フォーム作成時に生成される固有IDで指定します。
+スプレッドシートの拡張機能メニューからスクリプトエディタを開いた場合は、
+自動で連携済みのフォームが候補に出ます。
+
+コードから登録する方法もあります。後半のコードに含めています。
+一度登録すれば、以降はGASのプロジェクトを開かなくても動き続けます。
+
+シートの列設計
+
+Geminiに渡す前提でシートを作るなら、最低限この7列を用意します。
+
+- A列: 回答ID（フォームが自動で発行するレスポンスID）
+- B列: タイムスタンプ
+- C列: 生テキスト（自由記述の中身）
+- D列: 処理状態（未処理 / 処理中 / 完了）
+- E列: 要約（Geminiの出力。次の記事で埋める）
+- F列: カテゴリ（同上）
+- G列: 感情スコア（同上）
+
+このうちD列の処理状態が、この記事でいちばん伝えたい設計です。
+
+回答が届くたびに「未処理」で1行追加します。
+要約処理を回すバッチは、D列が「未処理」の行だけを拾って処理します。
+
+処理を始めたら「処理中」に、終わったら「完了」に書き換えます。
+これだけで、後段のバッチが「どこまで処理したか」を自分で判断できるようになります。
+
+受信からシート書き込みまでのコード
+
+トリガー登録と、フォーム送信を受けてシートに1行追加するところまでの全文です。
+フォームIDとシート名は、自分の環境の値に置き換えてください。
+
+
+// トリガーを1回だけ登録する関数。
+// スクリプトエディタから手動で1回実行すれば十分です。
+function setupFormTrigger() {
+  const formId = 'YOUR_FORM_ID'; // フォームの固有ID
+  const form = FormApp.openById(formId);
+
+  // 既存の同名トリガーが二重登録されないように、いったん削除する
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'onFormSubmitHandler') {
+      ScriptApp.deleteTrigger(t);
+    }
+  }
+
+  ScriptApp.newTrigger('onFormSubmitHandler')
+    .forForm(form)
+    .onFormSubmit()
+    .create();
+}
+
+// フォーム送信のたびに呼ばれる本体。
+// e.response からその回答だけを取り出せる。
+function onFormSubmitHandler(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答'); // シート名は環境に合わせて変更する
+
+  const response = e.response;
+  const itemResponses = response.getItemResponses();
+
+  // 自由記述の質問だけを拾う。
+  // フォームの質問順が変わっても列位置がずれないように、
+  // インデックスではなく質問タイプで判定する。
+  let freeText = '';
+  for (const item of itemResponses) {
+    const type = item.getItem().getType();
+    if (type === FormApp.ItemType.PARAGRAPH_TEXT) {
+      freeText = item.getResponse();
+      break;
+    }
+  }
+
+  const responseId = response.getId();
+  const timestamp = response.getTimestamp();
+
+  sheet.appendRow([
+    responseId,
+    timestamp,
+    freeText,
+    '未処理', // D列: 処理状態の初期値
+    '',       // E列: 要約（後段で埋める）
+    '',       // F列: カテゴリ（後段で埋める）
+    ''        // G列: 感情スコア（後段で埋める）
+  ]);
+}
+
+
+setupFormTrigger を1回実行すると、承認ダイアログが出ます。
+Googleアカウントで許可すれば、以降はフォーム送信のたびに自動で行が追加されます。
+
+処理状態列がないと何が起きるか
+
+処理状態列を作らず、行数だけで未処理を判断する書き方もできます。
+最後に処理した行番号をプロパティに保存しておく方式です。
+
+
+// 壊れる例: 行数だけで未処理を判断する
+function processUnhandledRowsBad() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+  const lastProcessed = Number(props.getProperty('lastRow') || 1);
+
+  for (let row = lastProcessed + 1; row &lt;= lastRow; row++) {
+    // ここでGemini呼び出し（省略）
+  }
+
+  // 全行を処理し終えた前提で更新する
+  props.setProperty('lastRow', String(lastRow));
+}
+
+
+一見動きますが、途中の行でGemini呼び出しが失敗すると壊れます。
+
+lastRow はループの最後で一括更新しているため、
+途中で止まっても更新されず、次回同じ範囲を丸ごと再処理します。
+
+逆に、途中で更新するタイミングを早めると、
+今度は失敗した行が「処理済み」扱いになって二度と拾われません。
+
+行数という1つの数値だけで進捗を持つと、
+「どこまで終わったか」と「どこで失敗したか」を同時に表現できないのです。
+
+D列の処理状態を使えば、行ごとに独立して状態を持てます。
+1行が失敗しても、その行だけ「処理中」のまま残るので、次回改めて拾えます。
+
+
+// 直した例: 行ごとの処理状態で判断する
+function processUnhandledRowsGood() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i &lt; data.length; i++) {
+    const status = data[i][3]; // D列
+    if (status !== '未処理') continue;
+
+    const row = i + 1;
+    sheet.getRange(row, 4).setValue('処理中');
+
+    // ここでGemini呼び出し（火曜の記事で扱う）
+
+    sheet.getRange(row, 4).setValue('完了');
+  }
+}
+
+
+この対比が、その理由です。
+入口の設計を1列増やすだけで、後段の処理が二重実行に強くなります。
+
+つまずきどころ
+
+トリガーの承認は、シートの所有者本人でログインした状態で行う必要があります。
+共有アカウントで作業していると、承認ダイアログが出ずに止まって見えることがあります。
+
+もう1つは質問の並び替えです。
+
+フォームの質問を後から並び替えると、getItemResponses() が返す配列の順序も変わります。
+インデックスで自由記述の列を決めていると、ここで無言で崩れます。
+
+前述のコードでは質問タイプ（PARAGRAPH_TEXT）で判定しているため、
+並び替えの影響を受けません。
+
+今日できること
+
+自分のフォームとシートに対して、setupFormTrigger を1回実行してください。
+
+そのあとテスト送信を1件行い、D列に「未処理」が入った行が
+自動で追加されるかを確認します。
+
+ここまで確認できれば、Geminiに渡す入口は完成しています。
+
+火曜の記事では、この「未処理」の行を拾ってGeminiに投げるコードを書きます。
+
+---
+
+今週は「アンケート自由記述 自動要約ダッシュボード」というひとつの自動化システムを、
+7本に分けて書いています。
+
+- 月: Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計
+- 火: アンケートの自由記述をGeminiで要約・分類する。プロンプトと呼び出しコードの全文
+- 水: 二重実行と429エラーを防ぐ。壊れるアンケート集計コードと直したコード
+- 木: アンケート結果を、色数と並びの2箇所だけ直して見せられるダッシュボードにする
+- 金: アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定
+- 土: アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す
+- 日: アンケート自由記述 自動要約ダッシュボード完成版一式（有料）"></div>
+
+
+<div class="article">
+<p>Googleフォームの自由記述をGeminiで要約する仕組みは、フォーム側では失敗しません。</p>
+<p>失敗するのはシート側です。</p>
+<p>自由記述の列がどこにあるか固定していない、処理済みかどうかを判定する列がない。<br>この2つで、後から積む要約処理がまるごと壊れます。</p>
+<p>私は最初、シンプルトリガーで組みました。</p>
+<p>これはスプレッドシートのメニューにある「トリガー」の設定画面を使わず、<br>エディタ上で <code>onFormSubmit(e)</code> という関数名を置くだけの方式です。</p>
+<p>フォームを送信すると動くには動きます。</p>
+<p>ところが、その中でGemini APIを呼ぼうとした瞬間に権限エラーが出ました。<br>シンプルトリガーは外部サービスへの接続を許可されていません。</p>
+<p>ここから、インストーラブルトリガーへの組み替えと、シート構造の設計をやり直しました。<br>この記事では、その入口の部分だけを書きます。</p>
+<p>Geminiの呼び出しコードは書きません。次の記事の範囲です。<br>ここで扱うのは「フォームの回答をどう受け取り、どう並べれば後段が処理しやすいか」だけです。</p>
+<h2>インストーラブルトリガーを設定する</h2>
+<p><code>onFormSubmit(e)</code> という関数名を置くだけの「シンプルトリガー」は、<br>関数名がイベント名と一致していれば自動で動きます。</p>
+<p>ですが権限が実行者の範囲に限定されるため、外部API（Gemini API含む）を呼べません。<br>UrlFetchAppを使う時点で、シンプルトリガーは選択肢から外れます。</p>
+<p>代わりに「インストーラブルトリガー」を使います。</p>
+<p>設定は次の手順です。</p>
+<ul>
+<li>スクリプトエディタを開き、左メニューの時計アイコン（トリガー）をクリックする</li>
+<li>「トリガーを追加」を押す</li>
+<li>実行する関数を、受信処理を書いた関数名にする</li>
+<li>イベントのソースを「フォームから」にする</li>
+<li>イベントの種類を「フォーム送信時」にする</li>
+<li>保存すると、初回だけ権限の承認ダイアログが出る</li>
+</ul>
+<p>このとき対象のフォームは、フォーム作成時に生成される固有IDで指定します。<br>スプレッドシートの拡張機能メニューからスクリプトエディタを開いた場合は、<br>自動で連携済みのフォームが候補に出ます。</p>
+<p>コードから登録する方法もあります。後半のコードに含めています。<br>一度登録すれば、以降はGASのプロジェクトを開かなくても動き続けます。</p>
+<h2>シートの列設計</h2>
+<p>Geminiに渡す前提でシートを作るなら、最低限この7列を用意します。</p>
+<ul>
+<li>A列: 回答ID（フォームが自動で発行するレスポンスID）</li>
+<li>B列: タイムスタンプ</li>
+<li>C列: 生テキスト（自由記述の中身）</li>
+<li>D列: 処理状態（未処理 / 処理中 / 完了）</li>
+<li>E列: 要約（Geminiの出力。次の記事で埋める）</li>
+<li>F列: カテゴリ（同上）</li>
+<li>G列: 感情スコア（同上）</li>
+</ul>
+<p>このうちD列の処理状態が、この記事でいちばん伝えたい設計です。</p>
+<p>回答が届くたびに「未処理」で1行追加します。<br>要約処理を回すバッチは、D列が「未処理」の行だけを拾って処理します。</p>
+<p>処理を始めたら「処理中」に、終わったら「完了」に書き換えます。<br>これだけで、後段のバッチが「どこまで処理したか」を自分で判断できるようになります。</p>
+<h2>受信からシート書き込みまでのコード</h2>
+<p>トリガー登録と、フォーム送信を受けてシートに1行追加するところまでの全文です。<br>フォームIDとシート名は、自分の環境の値に置き換えてください。</p>
+<pre><code>// トリガーを1回だけ登録する関数。
+// スクリプトエディタから手動で1回実行すれば十分です。
+function setupFormTrigger() {
+  const formId = 'YOUR_FORM_ID'; // フォームの固有ID
+  const form = FormApp.openById(formId);
+
+  // 既存の同名トリガーが二重登録されないように、いったん削除する
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const t of triggers) {
+    if (t.getHandlerFunction() === 'onFormSubmitHandler') {
+      ScriptApp.deleteTrigger(t);
+    }
+  }
+
+  ScriptApp.newTrigger('onFormSubmitHandler')
+    .forForm(form)
+    .onFormSubmit()
+    .create();
+}
+
+// フォーム送信のたびに呼ばれる本体。
+// e.response からその回答だけを取り出せる。
+function onFormSubmitHandler(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答'); // シート名は環境に合わせて変更する
+
+  const response = e.response;
+  const itemResponses = response.getItemResponses();
+
+  // 自由記述の質問だけを拾う。
+  // フォームの質問順が変わっても列位置がずれないように、
+  // インデックスではなく質問タイプで判定する。
+  let freeText = '';
+  for (const item of itemResponses) {
+    const type = item.getItem().getType();
+    if (type === FormApp.ItemType.PARAGRAPH_TEXT) {
+      freeText = item.getResponse();
+      break;
+    }
+  }
+
+  const responseId = response.getId();
+  const timestamp = response.getTimestamp();
+
+  sheet.appendRow([
+    responseId,
+    timestamp,
+    freeText,
+    '未処理', // D列: 処理状態の初期値
+    '',       // E列: 要約（後段で埋める）
+    '',       // F列: カテゴリ（後段で埋める）
+    ''        // G列: 感情スコア（後段で埋める）
+  ]);
+}</code></pre>
+<p><code>setupFormTrigger</code> を1回実行すると、承認ダイアログが出ます。<br>Googleアカウントで許可すれば、以降はフォーム送信のたびに自動で行が追加されます。</p>
+<h2>処理状態列がないと何が起きるか</h2>
+<p>処理状態列を作らず、行数だけで未処理を判断する書き方もできます。<br>最後に処理した行番号をプロパティに保存しておく方式です。</p>
+<pre><code>// 壊れる例: 行数だけで未処理を判断する
+function processUnhandledRowsBad() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const lastRow = sheet.getLastRow();
+  const props = PropertiesService.getScriptProperties();
+  const lastProcessed = Number(props.getProperty('lastRow') || 1);
+
+  for (let row = lastProcessed + 1; row &lt;= lastRow; row++) {
+    // ここでGemini呼び出し（省略）
+  }
+
+  // 全行を処理し終えた前提で更新する
+  props.setProperty('lastRow', String(lastRow));
+}</code></pre>
+<p>一見動きますが、途中の行でGemini呼び出しが失敗すると壊れます。</p>
+<p><code>lastRow</code> はループの最後で一括更新しているため、<br>途中で止まっても更新されず、次回同じ範囲を丸ごと再処理します。</p>
+<p>逆に、途中で更新するタイミングを早めると、<br>今度は失敗した行が「処理済み」扱いになって二度と拾われません。</p>
+<p>行数という1つの数値だけで進捗を持つと、<br>「どこまで終わったか」と「どこで失敗したか」を同時に表現できないのです。</p>
+<p>D列の処理状態を使えば、行ごとに独立して状態を持てます。<br>1行が失敗しても、その行だけ「処理中」のまま残るので、次回改めて拾えます。</p>
+<pre><code>// 直した例: 行ごとの処理状態で判断する
+function processUnhandledRowsGood() {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('回答');
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i &lt; data.length; i++) {
+    const status = data[i][3]; // D列
+    if (status !== '未処理') continue;
+
+    const row = i + 1;
+    sheet.getRange(row, 4).setValue('処理中');
+
+    // ここでGemini呼び出し（火曜の記事で扱う）
+
+    sheet.getRange(row, 4).setValue('完了');
+  }
+}</code></pre>
+<p>この対比が、その理由です。<br>入口の設計を1列増やすだけで、後段の処理が二重実行に強くなります。</p>
+<h2>つまずきどころ</h2>
+<p>トリガーの承認は、シートの所有者本人でログインした状態で行う必要があります。<br>共有アカウントで作業していると、承認ダイアログが出ずに止まって見えることがあります。</p>
+<p>もう1つは質問の並び替えです。</p>
+<p>フォームの質問を後から並び替えると、<code>getItemResponses()</code> が返す配列の順序も変わります。<br>インデックスで自由記述の列を決めていると、ここで無言で崩れます。</p>
+<p>前述のコードでは質問タイプ（<code>PARAGRAPH_TEXT</code>）で判定しているため、<br>並び替えの影響を受けません。</p>
+<h2>今日できること</h2>
+<p>自分のフォームとシートに対して、<code>setupFormTrigger</code> を1回実行してください。</p>
+<p>そのあとテスト送信を1件行い、D列に「未処理」が入った行が<br>自動で追加されるかを確認します。</p>
+<p>ここまで確認できれば、Geminiに渡す入口は完成しています。</p>
+<p>火曜の記事では、この「未処理」の行を拾ってGeminiに投げるコードを書きます。</p>
+<hr>
+<p>今週は「アンケート自由記述 自動要約ダッシュボード」というひとつの自動化システムを、<br>7本に分けて書いています。</p>
+<ul>
+<li>月: Googleフォームの自由記述を、Geminiが読める形でシートに集める入口設計</li>
+<li>火: アンケートの自由記述をGeminiで要約・分類する。プロンプトと呼び出しコードの全文</li>
+<li>水: 二重実行と429エラーを防ぐ。壊れるアンケート集計コードと直したコード</li>
+<li>木: アンケート結果を、色数と並びの2箇所だけ直して見せられるダッシュボードにする</li>
+<li>金: アンケート自動集計のトリガーと権限。ネガティブな回答だけSlackに通知する設定</li>
+<li>土: アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す</li>
+<li>日: アンケート自由記述 自動要約ダッシュボード完成版一式（有料）</li>
+</ul>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

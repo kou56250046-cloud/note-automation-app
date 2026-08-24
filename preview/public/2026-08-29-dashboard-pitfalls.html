@@ -1,0 +1,829 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GAS #UIデザイン #LP制作 #生成AI&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>アンケートダッシュボードの見せ方でつまずいた5箇所。before→afterで直す</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化 ／ 2026-08-29 ／ #GAS #UIデザイン #LP制作 #生成AI</div>
+</header>
+
+
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 13 件</div><ul><li class="warn">L5 一文が 67 文字（目安 60）</li><li class="warn">L7 一文が 74 文字（目安 60）</li><li class="warn">L9 一文が 69 文字（目安 60）</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;GASのHTML Serviceで作った画面は、公開した瞬間と、運用が始まった瞬間で別の崩れ方をします。&lt;/p&gt;
+&lt;p&gt;この記事では、公開したあとに実際に踏んだ5箇所を、before→afterのコードでそのまま直します。&lt;/p&gt;
+&lt;p&gt;このシステムは、アンケートの自由記述をGASとGeminiで自動要約し、HTML Serviceのダッシュボードで公開する仕組みです。&lt;/p&gt;
+&lt;p&gt;この記事は、そのダッシュボードを実際に人へ共有し、自由記述のクセ（長文・カテゴリ増加・絵文字混入）に晒したあとに起きる、見た目の崩れだけを扱います。&lt;/p&gt;
+&lt;p&gt;初期デザインの作り方を読んでいなくても、HTML Serviceで画面を公開しているなら踏む可能性がある崩れなので、この1本で完結します。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;1. デプロイ設定で共有相手が画面を開けない&lt;/h2&gt;
+&lt;p&gt;自分の画面では動くのに、URLを渡した相手だけ「アクセスできません」と表示される状態です。&lt;/p&gt;
+&lt;p&gt;原因は、Web Appのデプロイ設定にある2つの項目です。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Execute as（実行者）&lt;/strong&gt;は、スクリプトを誰の権限で動かすかを決めます。「自分」を選ぶと、共有相手はあなたの権限で読み取りだけを行う形になります。&lt;/p&gt;
+&lt;p&gt;もう一つの選択肢である「アクセスしているユーザーとして実行」を選ぶと、開いた人自身の権限でスクリプトが動きます。共有相手にもGoogleアカウントでのアクセス権限が必要になるため、社内向けの用途に向いています。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Who has access（アクセスできるユーザー）&lt;/strong&gt;は、誰が画面を開けるかを決めます。既定は「自分のみ」です。ここを変えないまま、いくらURLを渡しても相手は開けません。&lt;/p&gt;
+&lt;p&gt;修正はデプロイ設定の画面で、Who has accessを「自分のみ」から「全員」または「同じドメインの全員」に変更するだけです。&lt;/p&gt;
+&lt;p&gt;公式ドキュメントにも、この2項目の組み合わせでアクセス範囲が決まる、と明記されています。&lt;/p&gt;
+&lt;p&gt;出典: https://developers.google.com/apps-script/guides/web&lt;/p&gt;
+&lt;p&gt;ここで注意が要ります。&lt;strong&gt;「全員」にすると、URLを知っている人なら誰でも画面を開けます。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;社内の限定的な共有であれば「同じドメインの全員」を選び、外部に渡すURLは別途アクセス制御を検討したほうがよい設定です。&lt;/p&gt;
+&lt;p&gt;「渡せる画面にする」と「誰にでも見せる画面にする」は別の話なので、共有相手の範囲を決めてから設定を選びます。&lt;/p&gt;
+&lt;h2&gt;2. 自由記述が長文だとカードが縦に間延びする&lt;/h2&gt;
+&lt;p&gt;自由記述をそのまま全文表示すると、1件だけ3行のカードの隣に、20行のカードが並びます。&lt;/p&gt;
+&lt;p&gt;高さがバラバラになり、一覧としての見やすさが崩れます。&lt;/p&gt;
+&lt;p&gt;before（全文表示）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;after（3行で省略し、クリックで全文をモーダル表示する）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-box {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;document.querySelectorAll('.comment-text').forEach(function (el) {
+  el.addEventListener('click', function () {
+    var full = el.dataset.full;
+    document.getElementById('modalBody').textContent = full;
+    document.getElementById('modalOverlay').classList.add('active');
+  });
+});
+
+document.getElementById('modalOverlay').addEventListener('click', function (e) {
+  if (e.target === this) this.classList.remove('active');
+});&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;カード側のHTMLには、省略前の全文を&lt;code&gt;data-full&lt;/code&gt;属性に持たせておきます。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;textContent&lt;/code&gt;で全文を差し込んでいるので、自由記述にHTMLタグが混じっていても、そのままタグとして表示されず安全です。&lt;/p&gt;
+&lt;h2&gt;3. カテゴリが8種類以上に増えると固定幅カードが崩れる&lt;/h2&gt;
+&lt;p&gt;初期のカテゴリは4〜5種類だったのに、運用が進むと8種類、10種類と増えていきます。&lt;/p&gt;
+&lt;p&gt;固定幅のカードを横並びにしていると、画面の右端からはみ出し、横スクロールが発生します。&lt;/p&gt;
+&lt;p&gt;before（固定幅で横並び）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.category-row {
+  display: block;
+}
+
+.category-card {
+  width: 220px;
+  display: inline-block;
+  margin-right: 12px;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;after（flexboxで折り返す）&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.category-card {
+  flex: 1 1 220px;
+  max-width: 280px;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;flex: 1 1 220px&lt;/code&gt;は、基準幅220pxを保ちつつ、余った幅を均等に伸ばし、入りきらなければ次の行に折り返す指定です。&lt;/p&gt;
+&lt;p&gt;カテゴリが何種類に増えても、横スクロールを起こさずに並びます。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;gap&lt;/code&gt;でカード同士の間隔を指定できるので、&lt;code&gt;margin-right&lt;/code&gt;を個別に打ち消す調整も不要になります。&lt;/p&gt;
+&lt;h2&gt;4. スマホ幅でカードの右側がはみ出す&lt;/h2&gt;
+&lt;p&gt;PCで確認して問題なかった画面が、スマホで開くと右側が切れて、横にスクロールしないと見えない状態になります。&lt;/p&gt;
+&lt;p&gt;原因は、カード幅をpxで固定していることと、&lt;code&gt;box-sizing&lt;/code&gt;の指定漏れです。&lt;/p&gt;
+&lt;p&gt;before&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.category-card {
+  width: 220px;
+  padding: 16px;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;width: 220px&lt;/code&gt;に&lt;code&gt;padding: 16px&lt;/code&gt;が加わると、実際の描画幅は252pxになります。&lt;strong&gt;&lt;code&gt;box-sizing: border-box&lt;/code&gt;を書き忘れると、paddingの分だけ幅がはみ出します。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;左右合わせて32pxのpaddingが、指定した220pxの外側に足されるためです。&lt;/p&gt;
+&lt;p&gt;after&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.category-card {
+  width: 220px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .category-row {
+    flex-direction: column;
+  }
+
+  .category-card {
+    width: 100%;
+  }
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;box-sizing: border-box&lt;/code&gt;を指定すると、paddingを含めた220pxで描画されます。&lt;/p&gt;
+&lt;p&gt;さらにメディアクエリで640px以下のときに1列表示へ切り替えると、スマホ幅でも右側が切れなくなります。&lt;/p&gt;
+&lt;h2&gt;5. 代表コメントに絵文字や記号が混じると高さが不揃いになる&lt;/h2&gt;
+&lt;p&gt;自由記述の代表コメントをカードに載せると、絵文字や記号入りの行だけ高さが変わり、カードの並びがガタつきます。&lt;/p&gt;
+&lt;p&gt;絵文字はフォントによって行の高さを押し上げるため、&lt;code&gt;line-height&lt;/code&gt;を指定していないと、行によって高さがずれます。&lt;/p&gt;
+&lt;p&gt;絵文字は「👍」「🎉」のように、通常の文字より縦方向に大きく描画されるフォントが多いためです。&lt;/p&gt;
+&lt;p&gt;before&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.rep-comment {
+  font-size: 14px;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;after&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;.rep-comment {
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 63px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;line-height: 1.5&lt;/code&gt;で行の高さを固定し、&lt;code&gt;-webkit-line-clamp: 3&lt;/code&gt;で3行までに揃えます。&lt;/p&gt;
+&lt;p&gt;そのうえで&lt;code&gt;min-height&lt;/code&gt;を、フォントサイズ14px・行間1.5・3行分に相当する63px前後に指定すると、コメントが1行だけの短いカードでも、高さが他のカードと揃います。&lt;/p&gt;
+&lt;hr&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;まず、公開しているWeb AppのURLを、自分以外の端末かブラウザのプライベートウィンドウで開いてください。&lt;/p&gt;
+&lt;p&gt;開けなければ、デプロイ設定のWho has accessを確認するところから始めます。&lt;/p&gt;
+&lt;p&gt;次に、スマホの実機かブラウザの検証ツールで幅を640px以下にして、カードが1列になるか確認します。&lt;/p&gt;
+&lt;p&gt;見た目の崩れは、共有相手が画面を開けて初めて気づけるものが大半です。開けない状態のままでは、残り4つの崩れにすら出会えません。&lt;/p&gt;
+&lt;h2&gt;おわりに&lt;/h2&gt;
+&lt;p&gt;今回の5箇所は、どれも公開したあと、実際に人へ共有したり、自由記述の量や中身が増えたりして初めて表面化するものでした。&lt;/p&gt;
+&lt;p&gt;初期デザインを作った時点では気づけない崩れなので、公開後にもう一度、共有相手の画面とスマホ幅の両方で見直す価値があります。&lt;/p&gt;
+&lt;p&gt;今回の5箇所はどれもCSSとJSの範囲で直せるため、サーバー側のコードは変更していません。&lt;/p&gt;" data-text="GASのHTML Serviceで作った画面は、公開した瞬間と、運用が始まった瞬間で別の崩れ方をします。
+
+この記事では、公開したあとに実際に踏んだ5箇所を、before→afterのコードでそのまま直します。
+
+このシステムは、アンケートの自由記述をGASとGeminiで自動要約し、HTML Serviceのダッシュボードで公開する仕組みです。
+
+この記事は、そのダッシュボードを実際に人へ共有し、自由記述のクセ（長文・カテゴリ増加・絵文字混入）に晒したあとに起きる、見た目の崩れだけを扱います。
+
+初期デザインの作り方を読んでいなくても、HTML Serviceで画面を公開しているなら踏む可能性がある崩れなので、この1本で完結します。
+
+---
+
+1. デプロイ設定で共有相手が画面を開けない
+
+自分の画面では動くのに、URLを渡した相手だけ「アクセスできません」と表示される状態です。
+
+原因は、Web Appのデプロイ設定にある2つの項目です。
+
+Execute as（実行者）は、スクリプトを誰の権限で動かすかを決めます。「自分」を選ぶと、共有相手はあなたの権限で読み取りだけを行う形になります。
+
+もう一つの選択肢である「アクセスしているユーザーとして実行」を選ぶと、開いた人自身の権限でスクリプトが動きます。共有相手にもGoogleアカウントでのアクセス権限が必要になるため、社内向けの用途に向いています。
+
+Who has access（アクセスできるユーザー）は、誰が画面を開けるかを決めます。既定は「自分のみ」です。ここを変えないまま、いくらURLを渡しても相手は開けません。
+
+修正はデプロイ設定の画面で、Who has accessを「自分のみ」から「全員」または「同じドメインの全員」に変更するだけです。
+
+公式ドキュメントにも、この2項目の組み合わせでアクセス範囲が決まる、と明記されています。
+
+出典: https://developers.google.com/apps-script/guides/web
+
+ここで注意が要ります。「全員」にすると、URLを知っている人なら誰でも画面を開けます。
+
+社内の限定的な共有であれば「同じドメインの全員」を選び、外部に渡すURLは別途アクセス制御を検討したほうがよい設定です。
+
+「渡せる画面にする」と「誰にでも見せる画面にする」は別の話なので、共有相手の範囲を決めてから設定を選びます。
+
+2. 自由記述が長文だとカードが縦に間延びする
+
+自由記述をそのまま全文表示すると、1件だけ3行のカードの隣に、20行のカードが並びます。
+
+高さがバラバラになり、一覧としての見やすさが崩れます。
+
+before（全文表示）
+
+
+.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+
+after（3行で省略し、クリックで全文をモーダル表示する）
+
+
+.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-box {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+
+
+document.querySelectorAll('.comment-text').forEach(function (el) {
+  el.addEventListener('click', function () {
+    var full = el.dataset.full;
+    document.getElementById('modalBody').textContent = full;
+    document.getElementById('modalOverlay').classList.add('active');
+  });
+});
+
+document.getElementById('modalOverlay').addEventListener('click', function (e) {
+  if (e.target === this) this.classList.remove('active');
+});
+
+
+カード側のHTMLには、省略前の全文をdata-full属性に持たせておきます。
+
+textContentで全文を差し込んでいるので、自由記述にHTMLタグが混じっていても、そのままタグとして表示されず安全です。
+
+3. カテゴリが8種類以上に増えると固定幅カードが崩れる
+
+初期のカテゴリは4〜5種類だったのに、運用が進むと8種類、10種類と増えていきます。
+
+固定幅のカードを横並びにしていると、画面の右端からはみ出し、横スクロールが発生します。
+
+before（固定幅で横並び）
+
+
+.category-row {
+  display: block;
+}
+
+.category-card {
+  width: 220px;
+  display: inline-block;
+  margin-right: 12px;
+}
+
+
+after（flexboxで折り返す）
+
+
+.category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.category-card {
+  flex: 1 1 220px;
+  max-width: 280px;
+}
+
+
+flex: 1 1 220pxは、基準幅220pxを保ちつつ、余った幅を均等に伸ばし、入りきらなければ次の行に折り返す指定です。
+
+カテゴリが何種類に増えても、横スクロールを起こさずに並びます。
+
+gapでカード同士の間隔を指定できるので、margin-rightを個別に打ち消す調整も不要になります。
+
+4. スマホ幅でカードの右側がはみ出す
+
+PCで確認して問題なかった画面が、スマホで開くと右側が切れて、横にスクロールしないと見えない状態になります。
+
+原因は、カード幅をpxで固定していることと、box-sizingの指定漏れです。
+
+before
+
+
+.category-card {
+  width: 220px;
+  padding: 16px;
+}
+
+
+width: 220pxにpadding: 16pxが加わると、実際の描画幅は252pxになります。box-sizing: border-boxを書き忘れると、paddingの分だけ幅がはみ出します。
+
+左右合わせて32pxのpaddingが、指定した220pxの外側に足されるためです。
+
+after
+
+
+.category-card {
+  width: 220px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .category-row {
+    flex-direction: column;
+  }
+
+  .category-card {
+    width: 100%;
+  }
+}
+
+
+box-sizing: border-boxを指定すると、paddingを含めた220pxで描画されます。
+
+さらにメディアクエリで640px以下のときに1列表示へ切り替えると、スマホ幅でも右側が切れなくなります。
+
+5. 代表コメントに絵文字や記号が混じると高さが不揃いになる
+
+自由記述の代表コメントをカードに載せると、絵文字や記号入りの行だけ高さが変わり、カードの並びがガタつきます。
+
+絵文字はフォントによって行の高さを押し上げるため、line-heightを指定していないと、行によって高さがずれます。
+
+絵文字は「👍」「🎉」のように、通常の文字より縦方向に大きく描画されるフォントが多いためです。
+
+before
+
+
+.rep-comment {
+  font-size: 14px;
+}
+
+
+after
+
+
+.rep-comment {
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 63px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+
+line-height: 1.5で行の高さを固定し、-webkit-line-clamp: 3で3行までに揃えます。
+
+そのうえでmin-heightを、フォントサイズ14px・行間1.5・3行分に相当する63px前後に指定すると、コメントが1行だけの短いカードでも、高さが他のカードと揃います。
+
+---
+
+今日できること
+
+まず、公開しているWeb AppのURLを、自分以外の端末かブラウザのプライベートウィンドウで開いてください。
+
+開けなければ、デプロイ設定のWho has accessを確認するところから始めます。
+
+次に、スマホの実機かブラウザの検証ツールで幅を640px以下にして、カードが1列になるか確認します。
+
+見た目の崩れは、共有相手が画面を開けて初めて気づけるものが大半です。開けない状態のままでは、残り4つの崩れにすら出会えません。
+
+おわりに
+
+今回の5箇所は、どれも公開したあと、実際に人へ共有したり、自由記述の量や中身が増えたりして初めて表面化するものでした。
+
+初期デザインを作った時点では気づけない崩れなので、公開後にもう一度、共有相手の画面とスマホ幅の両方で見直す価値があります。
+
+今回の5箇所はどれもCSSとJSの範囲で直せるため、サーバー側のコードは変更していません。"></div>
+
+
+<div class="article">
+<p>GASのHTML Serviceで作った画面は、公開した瞬間と、運用が始まった瞬間で別の崩れ方をします。</p>
+<p>この記事では、公開したあとに実際に踏んだ5箇所を、before→afterのコードでそのまま直します。</p>
+<p>このシステムは、アンケートの自由記述をGASとGeminiで自動要約し、HTML Serviceのダッシュボードで公開する仕組みです。</p>
+<p>この記事は、そのダッシュボードを実際に人へ共有し、自由記述のクセ（長文・カテゴリ増加・絵文字混入）に晒したあとに起きる、見た目の崩れだけを扱います。</p>
+<p>初期デザインの作り方を読んでいなくても、HTML Serviceで画面を公開しているなら踏む可能性がある崩れなので、この1本で完結します。</p>
+<hr>
+<h2>1. デプロイ設定で共有相手が画面を開けない</h2>
+<p>自分の画面では動くのに、URLを渡した相手だけ「アクセスできません」と表示される状態です。</p>
+<p>原因は、Web Appのデプロイ設定にある2つの項目です。</p>
+<p><strong>Execute as（実行者）</strong>は、スクリプトを誰の権限で動かすかを決めます。「自分」を選ぶと、共有相手はあなたの権限で読み取りだけを行う形になります。</p>
+<p>もう一つの選択肢である「アクセスしているユーザーとして実行」を選ぶと、開いた人自身の権限でスクリプトが動きます。共有相手にもGoogleアカウントでのアクセス権限が必要になるため、社内向けの用途に向いています。</p>
+<p><strong>Who has access（アクセスできるユーザー）</strong>は、誰が画面を開けるかを決めます。既定は「自分のみ」です。ここを変えないまま、いくらURLを渡しても相手は開けません。</p>
+<p>修正はデプロイ設定の画面で、Who has accessを「自分のみ」から「全員」または「同じドメインの全員」に変更するだけです。</p>
+<p>公式ドキュメントにも、この2項目の組み合わせでアクセス範囲が決まる、と明記されています。</p>
+<p>出典: https://developers.google.com/apps-script/guides/web</p>
+<p>ここで注意が要ります。<strong>「全員」にすると、URLを知っている人なら誰でも画面を開けます。</strong></p>
+<p>社内の限定的な共有であれば「同じドメインの全員」を選び、外部に渡すURLは別途アクセス制御を検討したほうがよい設定です。</p>
+<p>「渡せる画面にする」と「誰にでも見せる画面にする」は別の話なので、共有相手の範囲を決めてから設定を選びます。</p>
+<h2>2. 自由記述が長文だとカードが縦に間延びする</h2>
+<p>自由記述をそのまま全文表示すると、1件だけ3行のカードの隣に、20行のカードが並びます。</p>
+<p>高さがバラバラになり、一覧としての見やすさが崩れます。</p>
+<p>before（全文表示）</p>
+<pre><code>.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+}</code></pre>
+<p>after（3行で省略し、クリックで全文をモーダル表示する）</p>
+<pre><code>.comment-text {
+  font-size: 14px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-box {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+}</code></pre>
+<pre><code>document.querySelectorAll('.comment-text').forEach(function (el) {
+  el.addEventListener('click', function () {
+    var full = el.dataset.full;
+    document.getElementById('modalBody').textContent = full;
+    document.getElementById('modalOverlay').classList.add('active');
+  });
+});
+
+document.getElementById('modalOverlay').addEventListener('click', function (e) {
+  if (e.target === this) this.classList.remove('active');
+});</code></pre>
+<p>カード側のHTMLには、省略前の全文を<code>data-full</code>属性に持たせておきます。</p>
+<p><code>textContent</code>で全文を差し込んでいるので、自由記述にHTMLタグが混じっていても、そのままタグとして表示されず安全です。</p>
+<h2>3. カテゴリが8種類以上に増えると固定幅カードが崩れる</h2>
+<p>初期のカテゴリは4〜5種類だったのに、運用が進むと8種類、10種類と増えていきます。</p>
+<p>固定幅のカードを横並びにしていると、画面の右端からはみ出し、横スクロールが発生します。</p>
+<p>before（固定幅で横並び）</p>
+<pre><code>.category-row {
+  display: block;
+}
+
+.category-card {
+  width: 220px;
+  display: inline-block;
+  margin-right: 12px;
+}</code></pre>
+<p>after（flexboxで折り返す）</p>
+<pre><code>.category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.category-card {
+  flex: 1 1 220px;
+  max-width: 280px;
+}</code></pre>
+<p><code>flex: 1 1 220px</code>は、基準幅220pxを保ちつつ、余った幅を均等に伸ばし、入りきらなければ次の行に折り返す指定です。</p>
+<p>カテゴリが何種類に増えても、横スクロールを起こさずに並びます。</p>
+<p><code>gap</code>でカード同士の間隔を指定できるので、<code>margin-right</code>を個別に打ち消す調整も不要になります。</p>
+<h2>4. スマホ幅でカードの右側がはみ出す</h2>
+<p>PCで確認して問題なかった画面が、スマホで開くと右側が切れて、横にスクロールしないと見えない状態になります。</p>
+<p>原因は、カード幅をpxで固定していることと、<code>box-sizing</code>の指定漏れです。</p>
+<p>before</p>
+<pre><code>.category-card {
+  width: 220px;
+  padding: 16px;
+}</code></pre>
+<p><code>width: 220px</code>に<code>padding: 16px</code>が加わると、実際の描画幅は252pxになります。<strong><code>box-sizing: border-box</code>を書き忘れると、paddingの分だけ幅がはみ出します。</strong></p>
+<p>左右合わせて32pxのpaddingが、指定した220pxの外側に足されるためです。</p>
+<p>after</p>
+<pre><code>.category-card {
+  width: 220px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .category-row {
+    flex-direction: column;
+  }
+
+  .category-card {
+    width: 100%;
+  }
+}</code></pre>
+<p><code>box-sizing: border-box</code>を指定すると、paddingを含めた220pxで描画されます。</p>
+<p>さらにメディアクエリで640px以下のときに1列表示へ切り替えると、スマホ幅でも右側が切れなくなります。</p>
+<h2>5. 代表コメントに絵文字や記号が混じると高さが不揃いになる</h2>
+<p>自由記述の代表コメントをカードに載せると、絵文字や記号入りの行だけ高さが変わり、カードの並びがガタつきます。</p>
+<p>絵文字はフォントによって行の高さを押し上げるため、<code>line-height</code>を指定していないと、行によって高さがずれます。</p>
+<p>絵文字は「👍」「🎉」のように、通常の文字より縦方向に大きく描画されるフォントが多いためです。</p>
+<p>before</p>
+<pre><code>.rep-comment {
+  font-size: 14px;
+}</code></pre>
+<p>after</p>
+<pre><code>.rep-comment {
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 63px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}</code></pre>
+<p><code>line-height: 1.5</code>で行の高さを固定し、<code>-webkit-line-clamp: 3</code>で3行までに揃えます。</p>
+<p>そのうえで<code>min-height</code>を、フォントサイズ14px・行間1.5・3行分に相当する63px前後に指定すると、コメントが1行だけの短いカードでも、高さが他のカードと揃います。</p>
+<hr>
+<h2>今日できること</h2>
+<p>まず、公開しているWeb AppのURLを、自分以外の端末かブラウザのプライベートウィンドウで開いてください。</p>
+<p>開けなければ、デプロイ設定のWho has accessを確認するところから始めます。</p>
+<p>次に、スマホの実機かブラウザの検証ツールで幅を640px以下にして、カードが1列になるか確認します。</p>
+<p>見た目の崩れは、共有相手が画面を開けて初めて気づけるものが大半です。開けない状態のままでは、残り4つの崩れにすら出会えません。</p>
+<h2>おわりに</h2>
+<p>今回の5箇所は、どれも公開したあと、実際に人へ共有したり、自由記述の量や中身が増えたりして初めて表面化するものでした。</p>
+<p>初期デザインを作った時点では気づけない崩れなので、公開後にもう一度、共有相手の画面とスマホ幅の両方で見直す価値があります。</p>
+<p>今回の5箇所はどれもCSSとJSの範囲で直せるため、サーバー側のコードは変更していません。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>
