@@ -1,0 +1,21 @@
+{
+  "slug": "2026-08-31-schedule-intake",
+  "themeId": "2026-W36-01",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "設計",
+  "type": "free",
+  "title": "参加者の空き状況を自由記述で集める。日程調整フォームの入口設計",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": [
+    "GoogleAppsScript",
+    "GAS",
+    "業務効率化"
+  ],
+  "demo": null,
+  "artifacts": [
+    "code"
+  ],
+  "publishDate": "2026-08-31",
+  "charCount": 2797,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

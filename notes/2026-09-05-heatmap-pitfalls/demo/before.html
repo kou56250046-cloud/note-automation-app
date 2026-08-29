@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日程調整ヒートマップ（before）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #ffffff;
+    color: #202124;
+  }
+  .wrap {
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 12px;
+    font-weight: bold;
+  }
+  .sub {
+    font-size: 12px;
+    color: #666666;
+    margin: 0 0 16px;
+  }
+  .heatmap-wrap {
+    width: 900px;
+  }
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: max-content repeat(15, 1fr);
+    grid-template-rows: 30px repeat(24, 1fr);
+    height: 460px;
+    border: 1px solid #cccccc;
+  }
+  .cell {
+    border: 1px solid #e8e8e8;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .cell.corner,
+  .cell.head {
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    background: #eeeeee;
+  }
+  .cell.label {
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    background: #fafafa;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日程調整ヒートマップ</h1>
+    <p class="sub">参加者24人 / 月〜金 × 午前・午後・夜</p>
+    <div class="heatmap-wrap">
+      <div class="heatmap-grid" id="grid"></div>
+    </div>
+  </div>
+<script>
+  var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+  var SLOTS = ['am', 'pm', 'eve'];
+  var DAY_LABELS = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
+  var SLOT_SHORT = { am: 'AM', pm: 'PM', eve: '夜' };
+
+  var PARTICIPANTS = [
+    { name: '佐藤健太', responded: true, avail: [1,0,1,0,1,1,1,1,0,0,0,1,1,1,0] },
+    { name: '田中さくら', responded: true, avail: [0,1,1,1,0,0,1,0,1,1,1,0,0,1,1] },
+    { name: '高橋大輔(リーダー)', responded: true, avail: [1,1,0,1,1,0,0,1,1,0,1,1,1,0,0] },
+    { name: '伊藤舞', responded: true, avail: [0,0,1,1,1,1,0,0,1,1,0,0,1,1,1] },
+    { name: '渡辺翔太', responded: false, avail: [] },
+    { name: '山本美咲', responded: true, avail: [1,1,1,0,0,0,1,1,0,1,1,1,0,0,1] },
+    { name: '中村拓也', responded: true, avail: [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0] },
+    { name: '小林彩香', responded: true, avail: [1,0,0,1,1,0,1,0,0,1,1,0,1,0,1] },
+    { name: '加藤颯太', responded: true, avail: [0,0,1,0,1,1,1,0,1,0,1,1,0,1,0] },
+    { name: '吉田陽菜', responded: true, avail: [1,1,0,0,1,1,0,1,1,0,0,1,1,0,1] },
+    { name: '山田健一(サブリーダー)', responded: true, avail: [0,1,1,1,0,0,1,1,0,1,0,0,1,1,0] },
+    { name: '佐々木涼', responded: true, avail: [1,0,1,1,0,1,0,0,1,1,1,0,0,0,1] },
+    { name: '松本あかり', responded: false, avail: [] },
+    { name: '井上大樹', responded: true, avail: [0,1,0,0,1,0,1,1,0,0,1,1,0,1,1] },
+    { name: '木村ひなた', responded: true, avail: [1,1,1,1,0,0,0,0,1,1,0,1,1,0,0] },
+    { name: '林悠真', responded: true, avail: [0,0,0,1,1,1,1,0,1,0,1,0,1,1,0] },
+    { name: '斎藤結衣', responded: true, avail: [1,0,1,0,0,1,0,1,0,1,0,1,0,0,1] },
+    { name: '清水蓮', responded: true, avail: [0,1,0,1,1,0,1,0,1,0,1,1,1,0,0] },
+    { name: '山口莉子', responded: true, avail: [1,1,0,0,0,1,1,1,0,0,1,0,0,1,1] },
+    { name: '松田大和', responded: false, avail: [] },
+    { name: '井田美穂(パートタイム)', responded: true, avail: [0,0,1,1,0,0,0,1,1,1,0,0,1,1,0] },
+    { name: '岡田翔', responded: true, avail: [1,0,0,0,1,1,1,0,0,1,1,1,0,0,1] },
+    { name: '長谷川花', responded: true, avail: [0,1,1,0,1,0,0,1,1,0,0,1,1,1,0] },
+    { name: '村上健(新入社員研修中)', responded: true, avail: [1,1,1,1,1,0,0,0,1,1,0,0,0,1,1] }
+  ];
+
+  // 3段階（空き/不可/未回答）しか無いのに、行・列のインデックスから
+  // 明度を連続的に変化させてしまっている。同じ状態のセルでも濃淡が揃わない。
+  function colorFor(status, pi, si) {
+    if (status === 'unanswered') {
+      var l = 55 + ((pi + si) % 6) * 3;
+      return 'hsl(0,0%,' + l + '%)';
+    }
+    var hue = status === 'available' ? 125 : 5;
+    var l = 42 + ((pi * 5 + si * 3) % 18);
+    return 'hsl(' + hue + ',55%,' + l + '%)';
+  }
+
+  var html = '<div class="cell corner">参加者</div>';
+  DAYS.forEach(function (d) {
+    SLOTS.forEach(function (s) {
+      html += '<div class="cell head">' + DAY_LABELS[d] + SLOT_SHORT[s] + '</div>';
+    });
+  });
+
+  PARTICIPANTS.forEach(function (p, pi) {
+    html += '<div class="cell label">' + p.name + '</div>';
+    for (var si = 0; si < 15; si++) {
+      var status = !p.responded ? 'unanswered' : (p.avail[si] ? 'available' : 'unavailable');
+      var color = colorFor(status, pi, si);
+      html += '<div class="cell" style="background:' + color + '"></div>';
+    }
+  });
+
+  document.getElementById('grid').innerHTML = html;
+</script>
+</body>
+</html>

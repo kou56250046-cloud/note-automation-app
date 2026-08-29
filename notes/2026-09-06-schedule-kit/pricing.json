@@ -1,0 +1,15 @@
+{
+  "price": 1480,
+  "currency": "JPY",
+  "density": "high",
+  "marketMedian": 500,
+  "multiplier": 2.96,
+  "ceiling": "曜日×時間帯の繰り返し枠1つについて、シート名と時間帯の粒度を差し替えて、フォーム回答が自動で構造化され、ヒートマップ画面で見られ、締切後に全員一致の枠がSlackに届くところまで",
+  "rationale": "research/market/2026-08-29.json の overall.priceMedian は 500円（有料率 11.5%）。情報密度は「高」と判定した。根拠は 00-concept.md の「渡すもの」に、GASコード4ファイル（config / intake / extract / notify）・HTML Service 1画面（ヒートマップ）・プロンプト全文1本・responseSchema 1本・差し替え表1枚が、いずれも動く単位で入っていること。買った日に自分のフォームへ繋げられる。倍率の目安 2〜3.5倍から算出レンジは 1,000〜1,750円。これと account.md の想定価格帯 1,480〜2,980円 との重なりは 1,480〜1,750円 であり、profile.md に販売実績が無いためその下限側を採って 1,480円 とした。タグ側の裏付けは GoogleAppsScript の有料率 13%（計測17タグ中で最も高い）、GAS 11%、GeminiAPI 8%（いずれも research/market/2026-08-29.json）。gapScore は GeminiAPI 19.747 / GAS 9.683 / GoogleAppsScript 8.879 で、いずれも上位帯であり、低gapタグで高値を付ける形にはなっていない。なお同 json のタグ別 priceMedian は全タグ null（取得できていない）ため、価格の根拠は overall.priceMedian のみに置いている。",
+  "priceComparison": "前週の 2026-08-30-survey-kit も 1,480円 である。成果物の点数はコードが5ファイルから4ファイルへ1つ減るが、HTML Service 1画面・プロンプト全文・responseSchema・差し替え表は同数であり、加えて『全員一致が0件だったときに一番多い枠と空いていない人を提示する』処理と、離散段階の配色・未回答表現を含むヒートマップ画面が今回の固有要素である。点数の減少と要素の追加が相殺するため据え置きとした。連載ごとに価格が上下すると、読者から見て価格の意味が分からなくなる点も考慮している",
+  "raiseCondition": "販売数の実測値と購入者の結果（いずれも出所つき）が profile.md に入ったら、次の商品から 1,980円 を検討する。この商品の値上げは行わない",
+  "priceSchedule": [],
+  "deadlineNote": "値上げの予定は無い。したがってレターに期限・先着・数量限定を一切書かない。C3（今買う理由）は、月〜土の無料6本の完成版であるという記事構造が作る（weekly-build の設計）。偽の期限は ethics-line の E1（景品表示法）に当たる",
+  "ceilingCheck": "00-concept.md の「できないこと」と矛盾しないことを確認した。天井を『曜日×時間帯の繰り返し枠1つ』に限定してあり、特定日付の調整・1時間単位への分割・日本語以外の自由記述・Slack以外の通知先・Googleカレンダー連携・100人超の規模は、いずれも天井の外に置いている",
+  "source": "research/market/2026-08-29.json"
+}

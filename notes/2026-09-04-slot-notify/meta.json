@@ -1,0 +1,21 @@
+{
+  "slug": "2026-09-04-slot-notify",
+  "themeId": "2026-W36-05",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "運用",
+  "type": "free",
+  "title": "集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": [
+    "GoogleAppsScript",
+    "GAS",
+    "業務効率化"
+  ],
+  "demo": null,
+  "artifacts": [
+    "code"
+  ],
+  "publishDate": "2026-09-04",
+  "charCount": 2943,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

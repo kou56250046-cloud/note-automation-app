@@ -1,0 +1,31 @@
+{
+  "productType": "tool",
+  "blocks": [
+    {"n": 1, "type": "hook", "lines": [1, 1]},
+    {"n": 2, "type": "problem", "lines": [3, 8]},
+    {"n": 3, "type": "ideal-future-1", "lines": [12, 17]},
+    {"n": 4, "type": "reproducibility-1-simplify", "lines": [19, 21]},
+    {"n": 5, "type": "ideal-future-2", "lines": [25, 30]},
+    {"n": 6, "type": "reproducibility-2-ease", "lines": [32, 36]},
+    {"n": 7, "type": "fear", "lines": [40, 46]},
+    {"n": 8, "type": "ideal-future-3", "lines": [50, 53]},
+    {"n": 9, "type": "reproducibility-3-artifact-disclosure", "lines": [57, 90]},
+    {"n": 8.5, "type": "ideal-future-4", "lines": [94, 97]},
+    {"n": 10, "type": "reproducibility-4-inconvenience", "lines": [101, 106]},
+    {"n": 11, "type": "objection-removal", "lines": [110, 138]},
+    {"n": 12, "type": "funnel", "lines": [142, 151]},
+    {"n": 13, "type": "closing", "lines": [155, 158]}
+  ],
+  "fearCount": 1,
+  "fearBlock": 7,
+  "reproducibility": ["単純化", "簡易化", "成果物の開示", "不便だった状況"],
+  "closingType": "ideal-future",
+  "exitActions": 1,
+  "deadlineClaims": [],
+  "toolEvidence": {
+    "disclosed": true,
+    "firstStep": "89-90行目（GEMINI_API_KEYを登録し、config.gsのSHEET_NAMEを書き換え、フォームにテスト回答を1件送る）",
+    "requirements": "85-87行目（Googleアカウント／Gemini APIキー／Apps Scriptの実行権限の承認／Slack通知は任意）",
+    "limitations": "130-133行目・135行目（特定日付の調整には非対応／時間帯は3枠が既定／日本語以外は未検証／締切日時の設定は自分で行う）"
+  }
+}

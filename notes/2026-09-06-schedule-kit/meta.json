@@ -1,0 +1,25 @@
+{
+  "slug": "2026-09-06-schedule-kit",
+  "themeId": "2026-W36-07",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "完成版",
+  "type": "paid",
+  "productType": "tool",
+  "price": 1480,
+  "title": "日程調整の都合を自由記述で集めて、全員が空いている枠を画面に出す一式",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート",
+  "hashtags": [
+    "GAS",
+    "GeminiAPI",
+    "プロンプト"
+  ],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/",
+  "artifacts": [
+    "code",
+    "prompt"
+  ],
+  "publishDate": "2026-09-06",
+  "charCount": 5013,
+  "letterCharCount": 2512,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

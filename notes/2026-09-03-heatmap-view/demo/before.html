@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>日程調整 結果一覧（before）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #ffffff;
+    color: #202124;
+  }
+  .wrap {
+    width: 900px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 4px;
+    font-weight: bold;
+  }
+  .sub {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 14px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid #dcdcdc;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #f0f0f0;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  td.name {
+    white-space: nowrap;
+    font-weight: bold;
+    width: 110px;
+  }
+  td.status {
+    white-space: nowrap;
+    width: 140px;
+    color: #999;
+  }
+  td.status.pending {
+    color: #b06a00;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日程調整 結果一覧</h1>
+    <p class="sub">回答者ごとに、空いている曜日・時間帯を文章で並べています。</p>
+    <table>
+      <thead>
+        <tr>
+          <th>回答者名</th>
+          <th>空いている曜日・時間帯</th>
+          <th>処理状態</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name">佐藤</td>
+          <td>月:午後・夜 / 火:午前・午後 / 水:午前・午後・夜 / 木:なし / 金:午前</td>
+          <td class="status">done</td>
+        </tr>
+        <tr>
+          <td class="name">鈴木</td>
+          <td>月:午後 / 火:午前 / 水:午前・午後・夜 / 木:夜 / 金:午前・午後</td>
+          <td class="status">done</td>
+        </tr>
+        <tr>
+          <td class="name">高橋</td>
+          <td>月:午前・午後・夜 / 火:午後 / 水:午前・午後 / 木:なし / 金:午後・夜</td>
+          <td class="status">done</td>
+        </tr>
+        <tr>
+          <td class="name">田中</td>
+          <td>月:夜 / 火:午前・午後・夜 / 水:午前・夜 / 木:なし / 金:午前・午後</td>
+          <td class="status">done</td>
+        </tr>
+        <tr>
+          <td class="name">伊藤</td>
+          <td>月:午後・夜 / 火:午前・午後 / 水:午前・午後・夜 / 木:なし / 金:午前・午後・夜</td>
+          <td class="status">done</td>
+        </tr>
+        <tr>
+          <td class="name">渡辺</td>
+          <td>（処理中のため未反映）</td>
+          <td class="status pending">pending</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日程調整ヒートマップ（after）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+  }
+  .wrap {
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 12px;
+    font-weight: bold;
+  }
+  .sub {
+    font-size: 12px;
+    color: #666666;
+    margin: 0 0 16px;
+  }
+  .heatmap-scroll {
+    width: fit-content;
+    max-width: 100%;
+    max-height: 420px;
+    overflow: auto;
+    border: 1px solid #d5d5d7;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: 112px repeat(15, 44px);
+    grid-auto-rows: 32px;
+    min-width: max-content;
+  }
+  .cell {
+    border: 1px solid #eeeeee;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+  }
+  .cell.corner,
+  .cell.head {
+    position: sticky;
+    top: 0;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    background: #eeeeee;
+    z-index: 2;
+  }
+  .cell.corner {
+    left: 0;
+    z-index: 3;
+  }
+  .cell.label {
+    position: sticky;
+    left: 0;
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: #fafafa;
+    z-index: 1;
+  }
+  .cell.label:hover,
+  .cell.label:focus {
+    overflow: visible;
+    z-index: 5;
+    outline: none;
+  }
+  .cell.label:hover::after,
+  .cell.label:focus::after {
+    content: attr(data-full);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 2px;
+    padding: 4px 8px;
+    background: #333333;
+    color: #ffffff;
+    font-size: 12px;
+    white-space: nowrap;
+    border-radius: 4px;
+  }
+  .legend {
+    margin-top: 14px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .legend .label-text {
+    margin-right: 12px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    margin-left: 12px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .swatch:first-of-type {
+    margin-left: 0;
+  }
+  .swatch.available { background: #1971c2; }
+  .swatch.unavailable { background: #e8590c; }
+  .swatch.unanswered { background: #ced4da; }
+  .note {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: #fff4e6;
+    border: 1px solid #ffd8a8;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日程調整ヒートマップ</h1>
+    <p class="sub">参加者24人 / 月〜金 × 午前・午後・夜（行ラベルにカーソルを合わせると全体表示）</p>
+    <div class="heatmap-scroll">
+      <div class="heatmap-grid" id="grid"></div>
+    </div>
+    <div class="legend">
+      <span class="label-text">凡例:</span>
+      <span class="swatch available"></span>空き
+      <span class="swatch unavailable"></span>不可
+      <span class="swatch unanswered"></span>未回答
+    </div>
+    <div class="note">
+      共有する前に、Web App のデプロイ設定を確認してください。「アクセスできるユーザー」が「自分のみ」のままだと、参加者はこの画面を開けません。
+    </div>
+  </div>
+<script>
+  var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+  var SLOTS = ['am', 'pm', 'eve'];
+  var DAY_LABELS = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
+  var SLOT_SHORT = { am: 'AM', pm: 'PM', eve: '夜' };
+
+  var PARTICIPANTS = [
+    { name: '佐藤健太', responded: true, avail: [1,0,1,0,1,1,1,1,0,0,0,1,1,1,0] },
+    { name: '田中さくら', responded: true, avail: [0,1,1,1,0,0,1,0,1,1,1,0,0,1,1] },
+    { name: '高橋大輔(リーダー)', responded: true, avail: [1,1,0,1,1,0,0,1,1,0,1,1,1,0,0] },
+    { name: '伊藤舞', responded: true, avail: [0,0,1,1,1,1,0,0,1,1,0,0,1,1,1] },
+    { name: '渡辺翔太', responded: false, avail: [] },
+    { name: '山本美咲', responded: true, avail: [1,1,1,0,0,0,1,1,0,1,1,1,0,0,1] },
+    { name: '中村拓也', responded: true, avail: [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0] },
+    { name: '小林彩香', responded: true, avail: [1,0,0,1,1,0,1,0,0,1,1,0,1,0,1] },
+    { name: '加藤颯太', responded: true, avail: [0,0,1,0,1,1,1,0,1,0,1,1,0,1,0] },
+    { name: '吉田陽菜', responded: true, avail: [1,1,0,0,1,1,0,1,1,0,0,1,1,0,1] },
+    { name: '山田健一(サブリーダー)', responded: true, avail: [0,1,1,1,0,0,1,1,0,1,0,0,1,1,0] },
+    { name: '佐々木涼', responded: true, avail: [1,0,1,1,0,1,0,0,1,1,1,0,0,0,1] },
+    { name: '松本あかり', responded: false, avail: [] },
+    { name: '井上大樹', responded: true, avail: [0,1,0,0,1,0,1,1,0,0,1,1,0,1,1] },
+    { name: '木村ひなた', responded: true, avail: [1,1,1,1,0,0,0,0,1,1,0,1,1,0,0] },
+    { name: '林悠真', responded: true, avail: [0,0,0,1,1,1,1,0,1,0,1,0,1,1,0] },
+    { name: '斎藤結衣', responded: true, avail: [1,0,1,0,0,1,0,1,0,1,0,1,0,0,1] },
+    { name: '清水蓮', responded: true, avail: [0,1,0,1,1,0,1,0,1,0,1,1,1,0,0] },
+    { name: '山口莉子', responded: true, avail: [1,1,0,0,0,1,1,1,0,0,1,0,0,1,1] },
+    { name: '松田大和', responded: false, avail: [] },
+    { name: '井田美穂(パートタイム)', responded: true, avail: [0,0,1,1,0,0,0,1,1,1,0,0,1,1,0] },
+    { name: '岡田翔', responded: true, avail: [1,0,0,0,1,1,1,0,0,1,1,1,0,0,1] },
+    { name: '長谷川花', responded: true, avail: [0,1,1,0,1,0,0,1,1,0,0,1,1,1,0] },
+    { name: '村上健(新入社員研修中)', responded: true, avail: [1,1,1,1,1,0,0,0,1,1,0,0,0,1,1] }
+  ];
+
+  // 状態は「空き/不可/未回答」の3つだけ。連続値ではなく固定の3色にする。
+  var COLOR = { available: '#1971c2', unavailable: '#e8590c', unanswered: '#ced4da' };
+  function colorFor(status) {
+    return COLOR[status];
+  }
+
+  var html = '<div class="cell corner">参加者</div>';
+  DAYS.forEach(function (d) {
+    SLOTS.forEach(function (s) {
+      html += '<div class="cell head">' + DAY_LABELS[d] + SLOT_SHORT[s] + '</div>';
+    });
+  });
+
+  PARTICIPANTS.forEach(function (p, pi) {
+    html += '<div class="cell label" tabindex="0" data-full="' + p.name + '">' + p.name + '</div>';
+    for (var si = 0; si < 15; si++) {
+      var status = !p.responded ? 'unanswered' : (p.avail[si] ? 'available' : 'unavailable');
+      html += '<div class="cell" style="background:' + colorFor(status) + '"></div>';
+    }
+  });
+
+  document.getElementById('grid').innerHTML = html;
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "slug": "2026-09-03-heatmap-view",
+  "themeId": "2026-W36-04",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "画面",
+  "type": "free",
+  "title": "全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化",
+  "hashtags": [
+    "GAS",
+    "UIデザイン",
+    "LP制作",
+    "生成AI"
+  ],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/",
+  "artifacts": [
+    "beforeAfter",
+    "code"
+  ],
+  "publishDate": "2026-09-03",
+  "charCount": 2679,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

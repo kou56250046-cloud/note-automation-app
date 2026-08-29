@@ -1,0 +1,22 @@
+{
+  "slug": "2026-09-01-slot-extract",
+  "themeId": "2026-W36-02",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "中核",
+  "type": "free",
+  "title": "Geminiに自由記述の空き時間を構造化させる。プロンプトと呼び出しコードの全文",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート",
+  "hashtags": [
+    "GAS",
+    "GeminiAPI",
+    "プロンプト"
+  ],
+  "demo": null,
+  "artifacts": [
+    "code",
+    "prompt"
+  ],
+  "publishDate": "2026-09-01",
+  "charCount": 2642,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

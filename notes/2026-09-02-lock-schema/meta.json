@@ -1,0 +1,21 @@
+{
+  "slug": "2026-09-02-lock-schema",
+  "themeId": "2026-W36-03",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "失敗",
+  "type": "free",
+  "title": "同時送信の二重書き込みとGeminiの形式崩れを防ぐ。壊れる集計コードと直したコード",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想",
+  "hashtags": [
+    "GoogleAppsScript",
+    "GAS",
+    "業務効率化"
+  ],
+  "demo": null,
+  "artifacts": [
+    "code"
+  ],
+  "publishDate": "2026-09-02",
+  "charCount": 2819,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}

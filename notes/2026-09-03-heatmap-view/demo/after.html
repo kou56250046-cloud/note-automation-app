@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>日程調整 ヒートマップ（after）</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 900px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 16px;
+    margin: 0 0 4px;
+    font-weight: bold;
+  }
+  .sub {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 16px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 80px repeat(5, 1fr);
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .head {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    padding: 8px 0;
+    color: #444;
+  }
+  .rowlabel {
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    color: #444;
+  }
+  .cell {
+    --intensity: 0;
+    position: relative;
+    border-radius: 6px;
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: hsl(212, 70%, calc(94% - (var(--intensity) * 46%)));
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .cell .count {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1.1;
+  }
+  .cell .unit {
+    font-size: 10px;
+    color: rgba(0,0,0,0.55);
+  }
+  .cell.level-0 .count { color: #999; }
+  .cell.level-1 .count,
+  .cell.level-1 .unit { color: #1d1d1f; }
+  .cell.level-2 .count,
+  .cell.level-2 .unit,
+  .cell.level-full .count,
+  .cell.level-full .unit { color: #ffffff; }
+  .cell.level-full {
+    border: 2px solid #d4a017;
+    box-shadow: 0 0 0 2px rgba(212,160,23,0.25) inset;
+  }
+  .cell.level-full .badge {
+    font-size: 10px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-top: 2px;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #555;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .legend .swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  .legend .item {
+    display: flex;
+    align-items: center;
+  }
+  .sw-0 { background: hsl(212, 70%, 94%); border: 1px solid rgba(0,0,0,0.1); }
+  .sw-1 { background: hsl(212, 70%, 71%); }
+  .sw-2 { background: hsl(212, 70%, 48%); }
+  .sw-full { background: hsl(212, 70%, 48%); border: 2px solid #d4a017; }
+
+  .pending-banner {
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 12px 14px;
+    border-radius: 6px;
+    color: #6b4c00;
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(212,160,23,0.10),
+      rgba(212,160,23,0.10) 8px,
+      rgba(212,160,23,0.18) 8px,
+      rgba(212,160,23,0.18) 16px
+    );
+    border: 1px solid rgba(212,160,23,0.4);
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日程調整 ヒートマップ</h1>
+    <p class="sub">曜日 × 時間帯ごとに、空いている人数を色の濃さで示しています。</p>
+
+    <div class="legend">
+      <span class="item"><span class="swatch sw-0"></span>0人</span>
+      <span class="item"><span class="swatch sw-1"></span>1〜2人</span>
+      <span class="item"><span class="swatch sw-2"></span>3〜4人</span>
+      <span class="item"><span class="swatch sw-full"></span>全員（5人）</span>
+    </div>
+
+    <div class="grid">
+      <div class="head"></div>
+      <div class="head">月</div>
+      <div class="head">火</div>
+      <div class="head">水</div>
+      <div class="head">木</div>
+      <div class="head">金</div>
+
+      <div class="rowlabel">午前</div>
+      <div class="cell level-0" style="--intensity:0"><span class="count">1</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-full" style="--intensity:1"><span class="count">5</span><span class="unit">人</span><span class="badge">全員空き</span></div>
+      <div class="cell level-0" style="--intensity:0"><span class="count">0</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+
+      <div class="rowlabel">午後</div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-0" style="--intensity:0"><span class="count">0</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+
+      <div class="rowlabel">夜</div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-0" style="--intensity:0"><span class="count">1</span><span class="unit">人</span></div>
+      <div class="cell level-2" style="--intensity:0.8"><span class="count">4</span><span class="unit">人</span></div>
+      <div class="cell level-0" style="--intensity:0"><span class="count">1</span><span class="unit">人</span></div>
+      <div class="cell level-1" style="--intensity:0.4"><span class="count">2</span><span class="unit">人</span></div>
+    </div>
+
+    <div class="pending-banner">
+      斜線の帯 = 未回答が1人（渡辺・処理待ち）います。この人が回答すると、
+      どの枠の数字も変わる可能性があります。集計にはまだ含めていません。
+    </div>
+  </div>
+</body>
+</html>

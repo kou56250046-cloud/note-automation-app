@@ -1,0 +1,23 @@
+{
+  "slug": "2026-09-05-heatmap-pitfalls",
+  "themeId": "2026-W36-06",
+  "systemId": "2026-W36-schedule-heatmap",
+  "serialRole": "つまずき",
+  "type": "free",
+  "title": "ヒートマップの見せ方でつまずいた5箇所。before→afterで直す",
+  "category": "GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化",
+  "hashtags": [
+    "GAS",
+    "UIデザイン",
+    "LP制作",
+    "生成AI"
+  ],
+  "demo": "https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-05-heatmap-pitfalls/",
+  "artifacts": [
+    "beforeAfter",
+    "code"
+  ],
+  "publishDate": "2026-09-05",
+  "charCount": 3015,
+  "createdAt": "2026-08-29T12:00:00+09:00"
+}
