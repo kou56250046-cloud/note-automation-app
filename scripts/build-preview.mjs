@@ -635,6 +635,40 @@ function gateHtml(g) {
 const demoPath = (slug) => (PUBLIC ? `../demo/${slug}/` : `/demo/${slug}/`);
 
 /**
+ * デモの実体がどの記事にあるかを meta.demo から求める。
+ *
+ * 記事の slug とデモの slug は一致しない。日曜の有料noteは、その週の
+ * 木曜（画面）で作ったデモを指す。自分の slug で組み立てると
+ * /demo/{有料noteのslug}/ を指してしまい 404 になる。
+ */
+const demoSlugOf = (m) => {
+  const hit = String(m?.demo ?? '').match(/\/demo\/([^/?#]+)/);
+  return hit ? hit[1] : null;
+};
+
+/**
+ * デモの実体があるかを確認する。
+ *
+ * リンク先の demo/{slug}/ は配信時に build-demo.mjs が組み直すので、
+ * 元ファイルである notes/{slug}/demo/ でも判定する。
+ * 無いのにボタンを出すと、読者にも自分にも 404 を踏ませる。
+ */
+const demoExists = (slug) =>
+  !!slug && (existsSync(join(NOTES, slug, 'demo', 'before.html')) ||
+             existsSync(join(ROOT, 'demo', slug, 'index.html')));
+
+/** 記事が指すデモの slug。実体が無ければ null（リンクを出さない）。 */
+const resolveDemo = (m) => {
+  const slug = demoSlugOf(m);
+  if (!slug) return null;
+  if (!demoExists(slug)) {
+    console.warn(`  ! デモの実体がありません: demo/${slug}/ — リンクを出しません`);
+    return null;
+  }
+  return slug;
+};
+
+/**
  * onclick 属性の中に埋め込める JS の文字列リテラルを作る。
  *
  * JSON.stringify の結果は `"..."` の形になる。属性値もダブルクォートで
@@ -718,6 +752,7 @@ function profileCardHtml() {
 function buildIndex(items, gates) {
   const cards = items.map((it) => {
     const m = it.meta;
+    const dslug = resolveDemo(m);
     const badge = m.type === 'paid'
       ? '<span class="badge paid">有料</span>'
       : '<span class="badge free">無料</span>';
@@ -730,7 +765,7 @@ function buildIndex(items, gates) {
   ${gateHtml(gates[it.slug])}
   <div class="row">
     <a href="./${esc(it.slug)}.html"><button class="primary">開く</button></a>
-    ${m.demo ? `<a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener"><button>before / after を見る</button></a>` : ''}
+    ${dslug ? `<a href="${esc(demoPath(dslug))}" target="_blank" rel="noopener"><button>before / after を見る</button></a>` : ''}
     <button class="toggle" onclick="togglePosted('${esc(it.slug)}', this)">投稿済みにする</button>
   </div>
 </div>`;
@@ -757,6 +792,7 @@ const attr = (s) => esc(s).replace(/"/g, '&quot;');
 
 function buildArticle(it, gates, passphrase) {
   const m = it.meta;
+  const dslug = resolveDemo(m);
   const freeHtml = mdToHtml(it.free);
   const freeText = mdToPlain(it.free);
   const paidHtml = it.paid ? mdToHtml(it.paid) : '';
@@ -808,7 +844,7 @@ ${paidHtml}`);
     <button onclick="copyText(this, ${jsStr(m.title)})">タイトルをコピー</button>
     ${buttons}
     ${tags ? `<button onclick="copyText(this, ${jsStr(tags)})">ハッシュタグをコピー</button>` : ''}
-    ${m.demo ? `<a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener"><button>before / after を開く</button></a>` : ''}
+    ${dslug ? `<a href="${esc(demoPath(dslug))}" target="_blank" rel="noopener"><button>before / after を開く</button></a>` : ''}
     ${PUBLIC ? '<button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>' : ''}
   </div>
 </div>
@@ -818,25 +854,25 @@ ${paidHtml}`);
   <div class="muted">${esc(m.category ?? '')} ／ ${esc(m.publishDate ?? '')} ／ ${esc(tags)}</div>
 </header>
 
-${m.demo ? `<details class="demo-embed" open>
+${dslug ? `<details class="demo-embed" open>
   <summary>読者が見る before / after</summary>
   <div class="demo-pair">
     <div class="demo-pane">
       <span class="demo-tag">BEFORE</span>
       <div class="demo-frame">
-        <iframe src="${esc(demoPath(it.slug))}before.html" title="before" loading="lazy"></iframe>
+        <iframe src="${esc(demoPath(dslug))}before.html" title="before" loading="lazy"></iframe>
       </div>
     </div>
     <div class="demo-pane">
       <span class="demo-tag after">AFTER</span>
       <div class="demo-frame">
-        <iframe src="${esc(demoPath(it.slug))}after.html" title="after" loading="lazy"></iframe>
+        <iframe src="${esc(demoPath(dslug))}after.html" title="after" loading="lazy"></iframe>
       </div>
     </div>
   </div>
   <div class="muted">
     タブで切り替えられる版は
-    <a href="${esc(demoPath(it.slug))}" target="_blank" rel="noopener">こちら</a>。
+    <a href="${esc(demoPath(dslug))}" target="_blank" rel="noopener">こちら</a>。
     記事に載せているURL → <code>${esc(m.demo)}</code>
   </div>
 </details>` : ''}
