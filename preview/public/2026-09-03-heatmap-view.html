@@ -1,0 +1,1030 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GAS #UIデザイン #LP制作 #生成AI&quot;)">ハッシュタグをコピー</button>
+    <a href="../demo/2026-09-03-heatmap-view/" target="_blank" rel="noopener"><button>before / after を開く</button></a>
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化 ／ 2026-09-03 ／ #GAS #UIデザイン #LP制作 #生成AI</div>
+</header>
+
+<details class="demo-embed" open>
+  <summary>読者が見る before / after</summary>
+  <div class="demo-pair">
+    <div class="demo-pane">
+      <span class="demo-tag">BEFORE</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-09-03-heatmap-view/before.html" title="before" loading="lazy"></iframe>
+      </div>
+    </div>
+    <div class="demo-pane">
+      <span class="demo-tag after">AFTER</span>
+      <div class="demo-frame">
+        <iframe src="../demo/2026-09-03-heatmap-view/after.html" title="after" loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+  <div class="muted">
+    タブで切り替えられる版は
+    <a href="../demo/2026-09-03-heatmap-view/" target="_blank" rel="noopener">こちら</a>。
+    記事に載せているURL → <code>https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/</code>
+  </div>
+</details>
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 10 件</div><ul><li class="warn">L46 人数の主張。profile.md に根拠が無ければ書けない（ethics-line を起動する）</li><li class="warn">L52 前の見出しから 229 文字（目安 300）。見出しが多すぎる</li><li class="warn">L68 一文が 92 文字（目安 60）</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;全員の空き状況を、名前を1人ずつ見て突き合わせるのをやめました。&lt;/p&gt;
+&lt;p&gt;曜日と時間帯のマス目に、空いている人数を色の濃さで出すだけです。目で探す作業がまるごと消えます。&lt;/p&gt;
+&lt;p&gt;前提を3行で置きます。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;回答フォームの自由記述をGeminiが構造化し、曜日×時間帯のtrue/falseがシートに入っている状態から始めます&lt;/li&gt;
+&lt;li&gt;未処理の行（処理状態がpendingまたはerror）が混ざっていることもあります&lt;/li&gt;
+&lt;li&gt;自由記述をGeminiに投げるプロンプトや、構造化のコードはこの記事では扱いません&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;ここから先は、このデータを画面に変える話だけです。月〜水を読んでいなくても、この1本だけで動きます。&lt;/p&gt;
+&lt;h2&gt;一覧表だと、なぜ突き合わせが要るのか&lt;/h2&gt;
+&lt;p&gt;一覧表のままだと、回答が集まるたびに名前を1人ずつ見ていくことになります。&lt;/p&gt;
+&lt;p&gt;佐藤さんは月の午後と火の午前が空いている。鈴木さんは月の午後と水の午前が空いている。高橋さんは……と、6人分の文章を頭の中で重ねることになります。&lt;/p&gt;
+&lt;p&gt;全員が空いている枠を探すには、6人分の空き枠をすべて覚えておく必要があります。人数が増えるほど、この突き合わせは辛くなります。&lt;/p&gt;
+&lt;p&gt;一覧表そのものが悪いわけではありません。悪いのは、&lt;strong&gt;空き枠を人の頭の中で交差させないと答えが出ない&lt;/strong&gt;構造です。&lt;/p&gt;
+&lt;p&gt;この交差を、画面の側にやらせます。曜日×時間帯のマス目を先に作り、そこに「空いている人数」を集計してから置くだけです。人が見るのは、集計済みの数字と色だけになります。&lt;/p&gt;
+&lt;h2&gt;濃淡を離散段階にする&lt;/h2&gt;
+&lt;p&gt;人数は整数です。0人、1人、2人と、飛び飛びの値しか取りません。&lt;/p&gt;
+&lt;p&gt;人数をそのまま0〜5の連続値としてHSLの明度に流し込むと、1段階あたりの明度差は9ポイント程度にしかなりません。3人と4人のように隣り合う値の差は、並べて見比べないと読み取りにくい幅にとどまります。&lt;/p&gt;
+&lt;p&gt;連続値のグラデーションは、値がなめらかに変わるデータ向けです。人数のような整数の集計には向いていません。&lt;/p&gt;
+&lt;p&gt;そこで段階を4つに絞りました。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;0人 — ほぼ白&lt;/li&gt;
+&lt;li&gt;1〜2人 — 薄い青&lt;/li&gt;
+&lt;li&gt;3〜4人 — 濃い青&lt;/li&gt;
+&lt;li&gt;全員（この記事の例では5人） — 濃い青に金の枠&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;4段階なら、開いた瞬間に「多い・少ない・全員」が判別できます。段階の境目は人数に応じて調整してください。私はこの例では「半数未満」「半数以上」「全員」の3区分に「0人」を足して4段階にしています。&lt;/p&gt;
+&lt;h2&gt;「全員空き」だけを別扱いにする&lt;/h2&gt;
+&lt;p&gt;濃淡の4段階目は、他の段階と別の意味を持っています。&lt;/p&gt;
+&lt;p&gt;3〜4人が空いている枠は「候補」です。全員が空いている枠は「決定できる」枠です。同じ濃い青の一段階として扱うと、この違いが埋もれます。&lt;/p&gt;
+&lt;p&gt;だから全員空きのセルだけ、金の枠と「全員空き」の文字を追加しています。色の濃さだけに頼ると、色の判別が苦手な人には伝わりません。文字のラベルを添えているのはそのためです。&lt;/p&gt;
+&lt;p&gt;幹事がこの画面を開いたとき、最初に目に入るのは金の枠です。決定できる枠から先に見えるようにしています。&lt;/p&gt;
+&lt;h2&gt;未回答を、色ではなく模様で示す&lt;/h2&gt;
+&lt;p&gt;集計から抜けている人がいます。処理状態が&lt;code&gt;pending&lt;/code&gt;（Geminiの処理待ち）や&lt;code&gt;error&lt;/code&gt;（構造化に失敗)の行は、集計に含めていません。&lt;/p&gt;
+&lt;p&gt;含めない理由は、含めると「不可」と区別がつかなくなるからです。未回答の人を人数0として数えると、その人が本当は空いているかもしれない枠まで「不可」に見えてしまいます。&lt;/p&gt;
+&lt;p&gt;未回答は、空きでも不可でもない第3の状態です。数字が無いという事実そのものが情報なので、色の濃淡には乗せません。&lt;/p&gt;
+&lt;p&gt;私はこの状態を、グリッドの下に斜線模様の帯で示しています。個々のマス目に小さく散らすことも考えましたが、やめました。&lt;/p&gt;
+&lt;p&gt;未回答の人がどの曜日を空けているかは、まだ分かりません。特定のマス目だけに斜線を置くと「その枠だけ人数が足りない」という誤った情報になります。未回答の影響は、全部の枠に等しく及びます。だから帯として、グリッド全体にかかる形で出しています。&lt;/p&gt;
+&lt;h2&gt;実物: before → after&lt;/h2&gt;
+&lt;p&gt;名前を縦に並べただけの一覧と、曜日×時間帯のヒートマップのライブデモを置きます。&lt;/p&gt;
+&lt;p&gt;デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/&lt;/p&gt;
+&lt;p&gt;beforeは、回答者ごとに空いている曜日・時間帯を文章で並べた一覧です。全員の共通枠を探すには、6人分の文章を読み比べる必要があります。&lt;/p&gt;
+&lt;p&gt;afterは、5日×3時間帯のグリッドに人数を数字と色で出し、全員空きの枠を金の枠で強調し、未回答者の存在を斜線の帯で示しています。同じ6人分のデータを、表示だけ変えています。&lt;/p&gt;
+&lt;p&gt;シートの列は、A タイムスタンプ・B 回答者名・C 都合・D 処理状態・E 構造化結果・F 処理日時の並びを想定しています。&lt;/p&gt;
+&lt;h3&gt;GAS側（Code.gs）&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;// config.gs に置いてある定数（この画面が使う分だけ）
+const SHEET_NAME = 'responses';
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const SLOTS = ['am', 'pm', 'eve'];
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('dashboard')
+    .evaluate()
+    .setTitle('日程調整ヒートマップ')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getHeatmapData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  if (lastRow &amp;lt; 2) {
+    return { counts: {}, processedCount: 0, pendingNames: [] };
+  }
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const counts = {};
+  DAYS.forEach(function (day) {
+    counts[day] = {};
+    SLOTS.forEach(function (slot) {
+      counts[day][slot] = 0;
+    });
+  });
+
+  let processedCount = 0;
+  const pendingNames = [];
+
+  rows.forEach(function (row) {
+    const name = row[1];    // B列: 回答者名
+    const status = row[3];  // D列: 処理状態
+    const rawJson = row[4]; // E列: 構造化結果
+
+    if (status !== 'done' || !rawJson) {
+      if (status === 'pending' || status === 'error') {
+        pendingNames.push(name);
+      }
+      return;
+    }
+
+    let availability;
+    try {
+      availability = JSON.parse(rawJson);
+    } catch (err) {
+      pendingNames.push(name);
+      return;
+    }
+
+    processedCount += 1;
+
+    DAYS.forEach(function (day) {
+      SLOTS.forEach(function (slot) {
+        if (availability[day] &amp;amp;&amp;amp; availability[day][slot] === true) {
+          counts[day][slot] += 1;
+        }
+      });
+    });
+  });
+
+  return { counts: counts, processedCount: processedCount, pendingNames: pendingNames };
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;画面側（dashboard.html）&lt;/h3&gt;
+&lt;pre&gt;&lt;code&gt;&amp;lt;!DOCTYPE html&amp;gt;
+&amp;lt;html&amp;gt;
+&amp;lt;head&amp;gt;
+  &amp;lt;base target=&quot;_top&quot;&amp;gt;
+  &amp;lt;style&amp;gt;
+    body {
+      font-family: system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 60px repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+    .head, .rowlabel { font-size: 12px; font-weight: bold; text-align: center; padding: 6px 0; }
+    .cell {
+      --intensity: 0;
+      position: relative;
+      border-radius: 6px;
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: hsl(212, 70%, calc(94% - (var(--intensity) * 46%)));
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .cell .count { font-size: 16px; font-weight: bold; }
+    .cell.full { border: 2px solid #d4a017; }
+    .cell.full .count { color: #fff; }
+    .cell.full .badge { font-size: 9px; color: #fff; }
+    .pending-banner {
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(212,160,23,0.4);
+      background-image: repeating-linear-gradient(45deg,
+        rgba(212,160,23,0.10), rgba(212,160,23,0.10) 8px,
+        rgba(212,160,23,0.18) 8px, rgba(212,160,23,0.18) 16px);
+    }
+  &amp;lt;/style&amp;gt;
+&amp;lt;/head&amp;gt;
+&amp;lt;body&amp;gt;
+  &amp;lt;h1&amp;gt;日程調整ヒートマップ&amp;lt;/h1&amp;gt;
+  &amp;lt;div class=&quot;grid&quot; id=&quot;grid&quot;&amp;gt;読み込み中です&amp;lt;/div&amp;gt;
+  &amp;lt;div id=&quot;banner&quot;&amp;gt;&amp;lt;/div&amp;gt;
+
+  &amp;lt;script&amp;gt;
+    const DAY_LABELS = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
+    const SLOT_LABELS = { am: '午前', pm: '午後', eve: '夜' };
+    const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const SLOTS = ['am', 'pm', 'eve'];
+
+    google.script.run.withSuccessHandler(render).getHeatmapData();
+
+    function levelClass(count, total) {
+      if (count === 0) return 'level-0';
+      if (total &amp;gt; 0 &amp;amp;&amp;amp; count === total) return 'full';
+      if (count / total &amp;gt;= 0.5) return 'level-2';
+      return 'level-1';
+    }
+
+    function render(data) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '&amp;lt;div&amp;gt;&amp;lt;/div&amp;gt;' + DAYS.map(function (d) {
+        return '&amp;lt;div class=&quot;head&quot;&amp;gt;' + DAY_LABELS[d] + '&amp;lt;/div&amp;gt;';
+      }).join('');
+
+      SLOTS.forEach(function (slot) {
+        grid.innerHTML += '&amp;lt;div class=&quot;rowlabel&quot;&amp;gt;' + SLOT_LABELS[slot] + '&amp;lt;/div&amp;gt;';
+        DAYS.forEach(function (day) {
+          const count = data.counts[day][slot];
+          const total = data.processedCount;
+          const intensity = total &amp;gt; 0 ? count / total : 0;
+          const cls = levelClass(count, total);
+          const badge = cls === 'full' ? '&amp;lt;span class=&quot;badge&quot;&amp;gt;全員空き&amp;lt;/span&amp;gt;' : '';
+          grid.innerHTML +=
+            '&amp;lt;div class=&quot;cell ' + cls + '&quot; style=&quot;--intensity:' + intensity + '&quot;&amp;gt;' +
+            '&amp;lt;span class=&quot;count&quot;&amp;gt;' + count + '&amp;lt;/span&amp;gt;' + badge + '&amp;lt;/div&amp;gt;';
+        });
+      });
+
+      const banner = document.getElementById('banner');
+      if (data.pendingNames.length &amp;gt; 0) {
+        banner.className = 'pending-banner';
+        banner.textContent =
+          '斜線の帯 = 未回答が' + data.pendingNames.length + '人います（' +
+          data.pendingNames.join('、') + '）。集計にはまだ含めていません。';
+      }
+    }
+  &amp;lt;/script&amp;gt;
+&amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;変更点&lt;/h3&gt;
+&lt;p&gt;一覧表からヒートマップに変えて、増えたのは3つです。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;表の&lt;code&gt;&amp;lt;tr&amp;gt;&lt;/code&gt;を、曜日×時間帯の&lt;code&gt;&amp;lt;div class=&quot;cell&quot;&amp;gt;&lt;/code&gt;グリッドに変えました&lt;/li&gt;
+&lt;li&gt;人数を4段階に区切り、全員空きだけ金の枠を足しました&lt;/li&gt;
+&lt;li&gt;未処理の行を集計から外し、人数ではなく斜線の帯で存在を示しました&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;列の並びを変える場合は、&lt;code&gt;row[1]&lt;/code&gt;〜&lt;code&gt;row[4]&lt;/code&gt;の添字とE列のJSON構造だけ直せば動きます。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;1つ目。段階の境目を決めずに書き始めると、色分けの条件式がその場しのぎになります。&lt;/p&gt;
+&lt;p&gt;先に「0人」「半数未満」「半数以上」「全員」の4区分を決めてから書くと、あとで直す量が減ります。&lt;/p&gt;
+&lt;p&gt;2つ目。未処理の行をうっかり人数0として数えてしまうことです。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;status !== 'done'&lt;/code&gt;のチェックを先に置き、集計のループに入れない形にしています。ここを間違えると、未回答の人が「全員不可」に紛れ込みます。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;すでに曜日×時間帯の空き状況をシートに持っている人は、まず人数を4段階に区切ってください。&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;連続値のグラデーションを使っている場合は、境目を決めて離散化するところから始めます。段階を区切るだけで、全員空きの枠が探しやすくなります。&lt;/p&gt;
+&lt;h2&gt;残る手作業&lt;/h2&gt;
+&lt;p&gt;未回答の人に個別に催促するかどうかは、この画面では決めません。&lt;/p&gt;
+&lt;p&gt;斜線の帯を見て、誰にいつ声をかけるかは、幹事が判断する部分として残しています。&lt;/p&gt;
+&lt;p&gt;画面ができると、次はトリガーと通知の設計が要ります。締切を過ぎたら誰に何を送るかは、金曜の記事で扱います。&lt;/p&gt;" data-text="全員の空き状況を、名前を1人ずつ見て突き合わせるのをやめました。
+
+曜日と時間帯のマス目に、空いている人数を色の濃さで出すだけです。目で探す作業がまるごと消えます。
+
+前提を3行で置きます。
+
+- 回答フォームの自由記述をGeminiが構造化し、曜日×時間帯のtrue/falseがシートに入っている状態から始めます
+- 未処理の行（処理状態がpendingまたはerror）が混ざっていることもあります
+- 自由記述をGeminiに投げるプロンプトや、構造化のコードはこの記事では扱いません
+
+ここから先は、このデータを画面に変える話だけです。月〜水を読んでいなくても、この1本だけで動きます。
+
+一覧表だと、なぜ突き合わせが要るのか
+
+一覧表のままだと、回答が集まるたびに名前を1人ずつ見ていくことになります。
+
+佐藤さんは月の午後と火の午前が空いている。鈴木さんは月の午後と水の午前が空いている。高橋さんは……と、6人分の文章を頭の中で重ねることになります。
+
+全員が空いている枠を探すには、6人分の空き枠をすべて覚えておく必要があります。人数が増えるほど、この突き合わせは辛くなります。
+
+一覧表そのものが悪いわけではありません。悪いのは、空き枠を人の頭の中で交差させないと答えが出ない構造です。
+
+この交差を、画面の側にやらせます。曜日×時間帯のマス目を先に作り、そこに「空いている人数」を集計してから置くだけです。人が見るのは、集計済みの数字と色だけになります。
+
+濃淡を離散段階にする
+
+人数は整数です。0人、1人、2人と、飛び飛びの値しか取りません。
+
+人数をそのまま0〜5の連続値としてHSLの明度に流し込むと、1段階あたりの明度差は9ポイント程度にしかなりません。3人と4人のように隣り合う値の差は、並べて見比べないと読み取りにくい幅にとどまります。
+
+連続値のグラデーションは、値がなめらかに変わるデータ向けです。人数のような整数の集計には向いていません。
+
+そこで段階を4つに絞りました。
+
+- 0人 — ほぼ白
+- 1〜2人 — 薄い青
+- 3〜4人 — 濃い青
+- 全員（この記事の例では5人） — 濃い青に金の枠
+
+4段階なら、開いた瞬間に「多い・少ない・全員」が判別できます。段階の境目は人数に応じて調整してください。私はこの例では「半数未満」「半数以上」「全員」の3区分に「0人」を足して4段階にしています。
+
+「全員空き」だけを別扱いにする
+
+濃淡の4段階目は、他の段階と別の意味を持っています。
+
+3〜4人が空いている枠は「候補」です。全員が空いている枠は「決定できる」枠です。同じ濃い青の一段階として扱うと、この違いが埋もれます。
+
+だから全員空きのセルだけ、金の枠と「全員空き」の文字を追加しています。色の濃さだけに頼ると、色の判別が苦手な人には伝わりません。文字のラベルを添えているのはそのためです。
+
+幹事がこの画面を開いたとき、最初に目に入るのは金の枠です。決定できる枠から先に見えるようにしています。
+
+未回答を、色ではなく模様で示す
+
+集計から抜けている人がいます。処理状態がpending（Geminiの処理待ち）やerror（構造化に失敗)の行は、集計に含めていません。
+
+含めない理由は、含めると「不可」と区別がつかなくなるからです。未回答の人を人数0として数えると、その人が本当は空いているかもしれない枠まで「不可」に見えてしまいます。
+
+未回答は、空きでも不可でもない第3の状態です。数字が無いという事実そのものが情報なので、色の濃淡には乗せません。
+
+私はこの状態を、グリッドの下に斜線模様の帯で示しています。個々のマス目に小さく散らすことも考えましたが、やめました。
+
+未回答の人がどの曜日を空けているかは、まだ分かりません。特定のマス目だけに斜線を置くと「その枠だけ人数が足りない」という誤った情報になります。未回答の影響は、全部の枠に等しく及びます。だから帯として、グリッド全体にかかる形で出しています。
+
+実物: before → after
+
+名前を縦に並べただけの一覧と、曜日×時間帯のヒートマップのライブデモを置きます。
+
+デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/
+
+beforeは、回答者ごとに空いている曜日・時間帯を文章で並べた一覧です。全員の共通枠を探すには、6人分の文章を読み比べる必要があります。
+
+afterは、5日×3時間帯のグリッドに人数を数字と色で出し、全員空きの枠を金の枠で強調し、未回答者の存在を斜線の帯で示しています。同じ6人分のデータを、表示だけ変えています。
+
+シートの列は、A タイムスタンプ・B 回答者名・C 都合・D 処理状態・E 構造化結果・F 処理日時の並びを想定しています。
+
+GAS側（Code.gs）
+
+// config.gs に置いてある定数（この画面が使う分だけ）
+const SHEET_NAME = 'responses';
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const SLOTS = ['am', 'pm', 'eve'];
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('dashboard')
+    .evaluate()
+    .setTitle('日程調整ヒートマップ')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getHeatmapData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) {
+    return { counts: {}, processedCount: 0, pendingNames: [] };
+  }
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const counts = {};
+  DAYS.forEach(function (day) {
+    counts[day] = {};
+    SLOTS.forEach(function (slot) {
+      counts[day][slot] = 0;
+    });
+  });
+
+  let processedCount = 0;
+  const pendingNames = [];
+
+  rows.forEach(function (row) {
+    const name = row[1];    // B列: 回答者名
+    const status = row[3];  // D列: 処理状態
+    const rawJson = row[4]; // E列: 構造化結果
+
+    if (status !== 'done' || !rawJson) {
+      if (status === 'pending' || status === 'error') {
+        pendingNames.push(name);
+      }
+      return;
+    }
+
+    let availability;
+    try {
+      availability = JSON.parse(rawJson);
+    } catch (err) {
+      pendingNames.push(name);
+      return;
+    }
+
+    processedCount += 1;
+
+    DAYS.forEach(function (day) {
+      SLOTS.forEach(function (slot) {
+        if (availability[day] &amp;&amp; availability[day][slot] === true) {
+          counts[day][slot] += 1;
+        }
+      });
+    });
+  });
+
+  return { counts: counts, processedCount: processedCount, pendingNames: pendingNames };
+}
+
+
+画面側（dashboard.html）
+
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;base target=&quot;_top&quot;&gt;
+  &lt;style&gt;
+    body {
+      font-family: system-ui, -apple-system, &quot;Segoe UI&quot;, sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 60px repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+    .head, .rowlabel { font-size: 12px; font-weight: bold; text-align: center; padding: 6px 0; }
+    .cell {
+      --intensity: 0;
+      position: relative;
+      border-radius: 6px;
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: hsl(212, 70%, calc(94% - (var(--intensity) * 46%)));
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .cell .count { font-size: 16px; font-weight: bold; }
+    .cell.full { border: 2px solid #d4a017; }
+    .cell.full .count { color: #fff; }
+    .cell.full .badge { font-size: 9px; color: #fff; }
+    .pending-banner {
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(212,160,23,0.4);
+      background-image: repeating-linear-gradient(45deg,
+        rgba(212,160,23,0.10), rgba(212,160,23,0.10) 8px,
+        rgba(212,160,23,0.18) 8px, rgba(212,160,23,0.18) 16px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;日程調整ヒートマップ&lt;/h1&gt;
+  &lt;div class=&quot;grid&quot; id=&quot;grid&quot;&gt;読み込み中です&lt;/div&gt;
+  &lt;div id=&quot;banner&quot;&gt;&lt;/div&gt;
+
+  &lt;script&gt;
+    const DAY_LABELS = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
+    const SLOT_LABELS = { am: '午前', pm: '午後', eve: '夜' };
+    const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const SLOTS = ['am', 'pm', 'eve'];
+
+    google.script.run.withSuccessHandler(render).getHeatmapData();
+
+    function levelClass(count, total) {
+      if (count === 0) return 'level-0';
+      if (total &gt; 0 &amp;&amp; count === total) return 'full';
+      if (count / total &gt;= 0.5) return 'level-2';
+      return 'level-1';
+    }
+
+    function render(data) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '&lt;div&gt;&lt;/div&gt;' + DAYS.map(function (d) {
+        return '&lt;div class=&quot;head&quot;&gt;' + DAY_LABELS[d] + '&lt;/div&gt;';
+      }).join('');
+
+      SLOTS.forEach(function (slot) {
+        grid.innerHTML += '&lt;div class=&quot;rowlabel&quot;&gt;' + SLOT_LABELS[slot] + '&lt;/div&gt;';
+        DAYS.forEach(function (day) {
+          const count = data.counts[day][slot];
+          const total = data.processedCount;
+          const intensity = total &gt; 0 ? count / total : 0;
+          const cls = levelClass(count, total);
+          const badge = cls === 'full' ? '&lt;span class=&quot;badge&quot;&gt;全員空き&lt;/span&gt;' : '';
+          grid.innerHTML +=
+            '&lt;div class=&quot;cell ' + cls + '&quot; style=&quot;--intensity:' + intensity + '&quot;&gt;' +
+            '&lt;span class=&quot;count&quot;&gt;' + count + '&lt;/span&gt;' + badge + '&lt;/div&gt;';
+        });
+      });
+
+      const banner = document.getElementById('banner');
+      if (data.pendingNames.length &gt; 0) {
+        banner.className = 'pending-banner';
+        banner.textContent =
+          '斜線の帯 = 未回答が' + data.pendingNames.length + '人います（' +
+          data.pendingNames.join('、') + '）。集計にはまだ含めていません。';
+      }
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+
+
+変更点
+
+一覧表からヒートマップに変えて、増えたのは3つです。
+
+- 表の&lt;tr&gt;を、曜日×時間帯の&lt;div class=&quot;cell&quot;&gt;グリッドに変えました
+- 人数を4段階に区切り、全員空きだけ金の枠を足しました
+- 未処理の行を集計から外し、人数ではなく斜線の帯で存在を示しました
+
+列の並びを変える場合は、row[1]〜row[4]の添字とE列のJSON構造だけ直せば動きます。
+
+つまずきどころ
+
+1つ目。段階の境目を決めずに書き始めると、色分けの条件式がその場しのぎになります。
+
+先に「0人」「半数未満」「半数以上」「全員」の4区分を決めてから書くと、あとで直す量が減ります。
+
+2つ目。未処理の行をうっかり人数0として数えてしまうことです。
+
+status !== 'done'のチェックを先に置き、集計のループに入れない形にしています。ここを間違えると、未回答の人が「全員不可」に紛れ込みます。
+
+今日できること
+
+すでに曜日×時間帯の空き状況をシートに持っている人は、まず人数を4段階に区切ってください。
+
+連続値のグラデーションを使っている場合は、境目を決めて離散化するところから始めます。段階を区切るだけで、全員空きの枠が探しやすくなります。
+
+残る手作業
+
+未回答の人に個別に催促するかどうかは、この画面では決めません。
+
+斜線の帯を見て、誰にいつ声をかけるかは、幹事が判断する部分として残しています。
+
+画面ができると、次はトリガーと通知の設計が要ります。締切を過ぎたら誰に何を送るかは、金曜の記事で扱います。"></div>
+
+
+<div class="article">
+<p>全員の空き状況を、名前を1人ずつ見て突き合わせるのをやめました。</p>
+<p>曜日と時間帯のマス目に、空いている人数を色の濃さで出すだけです。目で探す作業がまるごと消えます。</p>
+<p>前提を3行で置きます。</p>
+<ul>
+<li>回答フォームの自由記述をGeminiが構造化し、曜日×時間帯のtrue/falseがシートに入っている状態から始めます</li>
+<li>未処理の行（処理状態がpendingまたはerror）が混ざっていることもあります</li>
+<li>自由記述をGeminiに投げるプロンプトや、構造化のコードはこの記事では扱いません</li>
+</ul>
+<p>ここから先は、このデータを画面に変える話だけです。月〜水を読んでいなくても、この1本だけで動きます。</p>
+<h2>一覧表だと、なぜ突き合わせが要るのか</h2>
+<p>一覧表のままだと、回答が集まるたびに名前を1人ずつ見ていくことになります。</p>
+<p>佐藤さんは月の午後と火の午前が空いている。鈴木さんは月の午後と水の午前が空いている。高橋さんは……と、6人分の文章を頭の中で重ねることになります。</p>
+<p>全員が空いている枠を探すには、6人分の空き枠をすべて覚えておく必要があります。人数が増えるほど、この突き合わせは辛くなります。</p>
+<p>一覧表そのものが悪いわけではありません。悪いのは、<strong>空き枠を人の頭の中で交差させないと答えが出ない</strong>構造です。</p>
+<p>この交差を、画面の側にやらせます。曜日×時間帯のマス目を先に作り、そこに「空いている人数」を集計してから置くだけです。人が見るのは、集計済みの数字と色だけになります。</p>
+<h2>濃淡を離散段階にする</h2>
+<p>人数は整数です。0人、1人、2人と、飛び飛びの値しか取りません。</p>
+<p>人数をそのまま0〜5の連続値としてHSLの明度に流し込むと、1段階あたりの明度差は9ポイント程度にしかなりません。3人と4人のように隣り合う値の差は、並べて見比べないと読み取りにくい幅にとどまります。</p>
+<p>連続値のグラデーションは、値がなめらかに変わるデータ向けです。人数のような整数の集計には向いていません。</p>
+<p>そこで段階を4つに絞りました。</p>
+<ul>
+<li>0人 — ほぼ白</li>
+<li>1〜2人 — 薄い青</li>
+<li>3〜4人 — 濃い青</li>
+<li>全員（この記事の例では5人） — 濃い青に金の枠</li>
+</ul>
+<p>4段階なら、開いた瞬間に「多い・少ない・全員」が判別できます。段階の境目は人数に応じて調整してください。私はこの例では「半数未満」「半数以上」「全員」の3区分に「0人」を足して4段階にしています。</p>
+<h2>「全員空き」だけを別扱いにする</h2>
+<p>濃淡の4段階目は、他の段階と別の意味を持っています。</p>
+<p>3〜4人が空いている枠は「候補」です。全員が空いている枠は「決定できる」枠です。同じ濃い青の一段階として扱うと、この違いが埋もれます。</p>
+<p>だから全員空きのセルだけ、金の枠と「全員空き」の文字を追加しています。色の濃さだけに頼ると、色の判別が苦手な人には伝わりません。文字のラベルを添えているのはそのためです。</p>
+<p>幹事がこの画面を開いたとき、最初に目に入るのは金の枠です。決定できる枠から先に見えるようにしています。</p>
+<h2>未回答を、色ではなく模様で示す</h2>
+<p>集計から抜けている人がいます。処理状態が<code>pending</code>（Geminiの処理待ち）や<code>error</code>（構造化に失敗)の行は、集計に含めていません。</p>
+<p>含めない理由は、含めると「不可」と区別がつかなくなるからです。未回答の人を人数0として数えると、その人が本当は空いているかもしれない枠まで「不可」に見えてしまいます。</p>
+<p>未回答は、空きでも不可でもない第3の状態です。数字が無いという事実そのものが情報なので、色の濃淡には乗せません。</p>
+<p>私はこの状態を、グリッドの下に斜線模様の帯で示しています。個々のマス目に小さく散らすことも考えましたが、やめました。</p>
+<p>未回答の人がどの曜日を空けているかは、まだ分かりません。特定のマス目だけに斜線を置くと「その枠だけ人数が足りない」という誤った情報になります。未回答の影響は、全部の枠に等しく及びます。だから帯として、グリッド全体にかかる形で出しています。</p>
+<h2>実物: before → after</h2>
+<p>名前を縦に並べただけの一覧と、曜日×時間帯のヒートマップのライブデモを置きます。</p>
+<p>デモURL: https://kou56250046-cloud.github.io/note-automation-app/demo/2026-09-03-heatmap-view/</p>
+<p>beforeは、回答者ごとに空いている曜日・時間帯を文章で並べた一覧です。全員の共通枠を探すには、6人分の文章を読み比べる必要があります。</p>
+<p>afterは、5日×3時間帯のグリッドに人数を数字と色で出し、全員空きの枠を金の枠で強調し、未回答者の存在を斜線の帯で示しています。同じ6人分のデータを、表示だけ変えています。</p>
+<p>シートの列は、A タイムスタンプ・B 回答者名・C 都合・D 処理状態・E 構造化結果・F 処理日時の並びを想定しています。</p>
+<h3>GAS側（Code.gs）</h3>
+<pre><code>// config.gs に置いてある定数（この画面が使う分だけ）
+const SHEET_NAME = 'responses';
+const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+const SLOTS = ['am', 'pm', 'eve'];
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('dashboard')
+    .evaluate()
+    .setTitle('日程調整ヒートマップ')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getHeatmapData() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) {
+    return { counts: {}, processedCount: 0, pendingNames: [] };
+  }
+
+  const rows = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
+  const counts = {};
+  DAYS.forEach(function (day) {
+    counts[day] = {};
+    SLOTS.forEach(function (slot) {
+      counts[day][slot] = 0;
+    });
+  });
+
+  let processedCount = 0;
+  const pendingNames = [];
+
+  rows.forEach(function (row) {
+    const name = row[1];    // B列: 回答者名
+    const status = row[3];  // D列: 処理状態
+    const rawJson = row[4]; // E列: 構造化結果
+
+    if (status !== 'done' || !rawJson) {
+      if (status === 'pending' || status === 'error') {
+        pendingNames.push(name);
+      }
+      return;
+    }
+
+    let availability;
+    try {
+      availability = JSON.parse(rawJson);
+    } catch (err) {
+      pendingNames.push(name);
+      return;
+    }
+
+    processedCount += 1;
+
+    DAYS.forEach(function (day) {
+      SLOTS.forEach(function (slot) {
+        if (availability[day] &amp;&amp; availability[day][slot] === true) {
+          counts[day][slot] += 1;
+        }
+      });
+    });
+  });
+
+  return { counts: counts, processedCount: processedCount, pendingNames: pendingNames };
+}</code></pre>
+<h3>画面側（dashboard.html）</h3>
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;base target="_top"&gt;
+  &lt;style&gt;
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f5f5f7;
+      margin: 0;
+      padding: 24px;
+      color: #1d1d1f;
+    }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 60px repeat(5, 1fr);
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+    .head, .rowlabel { font-size: 12px; font-weight: bold; text-align: center; padding: 6px 0; }
+    .cell {
+      --intensity: 0;
+      position: relative;
+      border-radius: 6px;
+      height: 52px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: hsl(212, 70%, calc(94% - (var(--intensity) * 46%)));
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .cell .count { font-size: 16px; font-weight: bold; }
+    .cell.full { border: 2px solid #d4a017; }
+    .cell.full .count { color: #fff; }
+    .cell.full .badge { font-size: 9px; color: #fff; }
+    .pending-banner {
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(212,160,23,0.4);
+      background-image: repeating-linear-gradient(45deg,
+        rgba(212,160,23,0.10), rgba(212,160,23,0.10) 8px,
+        rgba(212,160,23,0.18) 8px, rgba(212,160,23,0.18) 16px);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;日程調整ヒートマップ&lt;/h1&gt;
+  &lt;div class="grid" id="grid"&gt;読み込み中です&lt;/div&gt;
+  &lt;div id="banner"&gt;&lt;/div&gt;
+
+  &lt;script&gt;
+    const DAY_LABELS = { mon: '月', tue: '火', wed: '水', thu: '木', fri: '金' };
+    const SLOT_LABELS = { am: '午前', pm: '午後', eve: '夜' };
+    const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    const SLOTS = ['am', 'pm', 'eve'];
+
+    google.script.run.withSuccessHandler(render).getHeatmapData();
+
+    function levelClass(count, total) {
+      if (count === 0) return 'level-0';
+      if (total &gt; 0 &amp;&amp; count === total) return 'full';
+      if (count / total &gt;= 0.5) return 'level-2';
+      return 'level-1';
+    }
+
+    function render(data) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '&lt;div&gt;&lt;/div&gt;' + DAYS.map(function (d) {
+        return '&lt;div class="head"&gt;' + DAY_LABELS[d] + '&lt;/div&gt;';
+      }).join('');
+
+      SLOTS.forEach(function (slot) {
+        grid.innerHTML += '&lt;div class="rowlabel"&gt;' + SLOT_LABELS[slot] + '&lt;/div&gt;';
+        DAYS.forEach(function (day) {
+          const count = data.counts[day][slot];
+          const total = data.processedCount;
+          const intensity = total &gt; 0 ? count / total : 0;
+          const cls = levelClass(count, total);
+          const badge = cls === 'full' ? '&lt;span class="badge"&gt;全員空き&lt;/span&gt;' : '';
+          grid.innerHTML +=
+            '&lt;div class="cell ' + cls + '" style="--intensity:' + intensity + '"&gt;' +
+            '&lt;span class="count"&gt;' + count + '&lt;/span&gt;' + badge + '&lt;/div&gt;';
+        });
+      });
+
+      const banner = document.getElementById('banner');
+      if (data.pendingNames.length &gt; 0) {
+        banner.className = 'pending-banner';
+        banner.textContent =
+          '斜線の帯 = 未回答が' + data.pendingNames.length + '人います（' +
+          data.pendingNames.join('、') + '）。集計にはまだ含めていません。';
+      }
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<h3>変更点</h3>
+<p>一覧表からヒートマップに変えて、増えたのは3つです。</p>
+<ul>
+<li>表の<code>&lt;tr&gt;</code>を、曜日×時間帯の<code>&lt;div class="cell"&gt;</code>グリッドに変えました</li>
+<li>人数を4段階に区切り、全員空きだけ金の枠を足しました</li>
+<li>未処理の行を集計から外し、人数ではなく斜線の帯で存在を示しました</li>
+</ul>
+<p>列の並びを変える場合は、<code>row[1]</code>〜<code>row[4]</code>の添字とE列のJSON構造だけ直せば動きます。</p>
+<h2>つまずきどころ</h2>
+<p>1つ目。段階の境目を決めずに書き始めると、色分けの条件式がその場しのぎになります。</p>
+<p>先に「0人」「半数未満」「半数以上」「全員」の4区分を決めてから書くと、あとで直す量が減ります。</p>
+<p>2つ目。未処理の行をうっかり人数0として数えてしまうことです。</p>
+<p><code>status !== 'done'</code>のチェックを先に置き、集計のループに入れない形にしています。ここを間違えると、未回答の人が「全員不可」に紛れ込みます。</p>
+<h2>今日できること</h2>
+<p><strong>すでに曜日×時間帯の空き状況をシートに持っている人は、まず人数を4段階に区切ってください。</strong></p>
+<p>連続値のグラデーションを使っている場合は、境目を決めて離散化するところから始めます。段階を区切るだけで、全員空きの枠が探しやすくなります。</p>
+<h2>残る手作業</h2>
+<p>未回答の人に個別に催促するかどうかは、この画面では決めません。</p>
+<p>斜線の帯を見て、誰にいつ声をかけるかは、幹事が判断する部分として残しています。</p>
+<p>画面ができると、次はトリガーと通知の設計が要ります。締切を過ぎたら誰に何を送るかは、金曜の記事で扱います。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

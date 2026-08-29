@@ -1,0 +1,805 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>参加者の空き状況を自由記述で集める。日程調整フォームの入口設計 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;参加者の空き状況を自由記述で集める。日程調整フォームの入口設計&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GoogleAppsScript #GAS #業務効率化&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>参加者の空き状況を自由記述で集める。日程調整フォームの入口設計</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想 ／ 2026-08-31 ／ #GoogleAppsScript #GAS #業務効率化</div>
+</header>
+
+
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 9 件</div><ul><li class="warn">L11 一文が 63 文字（目安 60）</li><li class="warn">L19 前の見出しから 199 文字（目安 300）。見出しが多すぎる</li><li class="warn">L31 前の見出しから 212 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;「火水木ならいつでも」「月曜以外なら」——日程調整フォームに返ってくるのは、たいていこういう文です。&lt;/p&gt;
+&lt;p&gt;これを上から順に読んで、曜日ごとの空き表に手で書き写しているなら、その手作業はシートの列設計で減らせます。&lt;/p&gt;
+&lt;p&gt;日程調整の入口では、これに加えて2つの管理が要ります。締切を過ぎた回答をどう扱うか。同じ人が2回目に送ってきた回答をどう扱うか。&lt;/p&gt;
+&lt;p&gt;この記事では、この2つを含めた入口の設計だけを書きます。Geminiでの構造化は次の記事の範囲です。&lt;/p&gt;
+&lt;h2&gt;こんな作業をしていませんか&lt;/h2&gt;
+&lt;p&gt;Googleフォームで日程調整の自由記述を集めて、返ってきた回答を上から順に読みながら、曜日ごとの空き状況を手で表に書き写す。&lt;/p&gt;
+&lt;p&gt;締切のあとに届いた回答をどう扱うか決めておらず、集計する段になって「これはもう遅い」と気づく。&lt;/p&gt;
+&lt;p&gt;同じ人が予定を変えて2回答えてきて、シートには行が2つ残り、どちらが最新か分からなくなる。&lt;/p&gt;
+&lt;p&gt;この3つは別々の問題ではありません。シートの列設計を最初に決めていないから起きています。&lt;/p&gt;
+&lt;h2&gt;日程調整のシートに必要な3つの条件&lt;/h2&gt;
+&lt;p&gt;フォームの回答をインストーラブルトリガーで受け取り、シートに1行ずつ積む。ここまでは、どんな用途でも同じ形です。&lt;/p&gt;
+&lt;p&gt;日程調整では、そこに3つの条件が加わります。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;自由記述が要約対象の長文ではなく、曜日と時間帯に正規化する前提の短文であること&lt;/li&gt;
+&lt;li&gt;締切日時をどこかに持ち、締切後の回答を区別する必要があること&lt;/li&gt;
+&lt;li&gt;同じ回答者が複数回答したとき、最新の内容で上書きする必要があること&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;この3つを、シートの列とコードの両方に反映させます。&lt;/p&gt;
+&lt;h2&gt;インストーラブルトリガーを設定する&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;onFormSubmit(e)&lt;/code&gt; という関数名を置くだけの「シンプルトリガー」では、外部サービスへの接続権限がありません。&lt;/p&gt;
+&lt;p&gt;構造化の段でGemini APIを呼ぶ以上、インストーラブルトリガーを使います。設定手順は次のとおりです。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;スクリプトエディタを開き、左メニューの時計アイコン(トリガー)をクリックする&lt;/li&gt;
+&lt;li&gt;「トリガーを追加」を押す&lt;/li&gt;
+&lt;li&gt;実行する関数を &lt;code&gt;onFormSubmit&lt;/code&gt; にする&lt;/li&gt;
+&lt;li&gt;イベントのソースを「フォームから」にする&lt;/li&gt;
+&lt;li&gt;イベントの種類を「フォーム送信時」にする&lt;/li&gt;
+&lt;li&gt;保存すると、初回だけ権限の承認ダイアログが出る&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;承認は、シートの所有者本人でログインした状態で行ってください。共有アカウントで作業していると、ダイアログが出ずに止まって見えることがあります。&lt;/p&gt;
+&lt;h2&gt;シートの列設計&lt;/h2&gt;
+&lt;p&gt;シート名は &lt;code&gt;responses&lt;/code&gt; にします。列は6つです。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A列 タイムスタンプ — フォーム送信時刻&lt;/li&gt;
+&lt;li&gt;B列 回答者名 — フォームの記述式1問目&lt;/li&gt;
+&lt;li&gt;C列 都合 — 自由記述。「火水木ならいつでも」のような曖昧な文がそのまま入る&lt;/li&gt;
+&lt;li&gt;D列 処理状態 — &lt;code&gt;pending&lt;/code&gt; / &lt;code&gt;done&lt;/code&gt; / &lt;code&gt;error&lt;/code&gt; のいずれか&lt;/li&gt;
+&lt;li&gt;E列 構造化結果 — Gemini が返したJSON文字列。次の記事で埋める&lt;/li&gt;
+&lt;li&gt;F列 処理日時 — 構造化が終わった時刻&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;C列に入る文言は、正規化されていない生の日本語です。曜日と時間帯への変換はここでは行いません。後段で「空き」「不可」「未回答」の3段階に直す前提で、そのまま受け取ります。&lt;/p&gt;
+&lt;h2&gt;締切をどこに持つか&lt;/h2&gt;
+&lt;p&gt;締切日時は、シートの列には持たせません。回答が増えるたびに全行へコピーする理由がなく、システム全体で1つの値だからです。&lt;/p&gt;
+&lt;p&gt;スクリプトプロパティに &lt;code&gt;DEADLINE_AT&lt;/code&gt; という名前で、ISO8601形式の文字列を1つ保存します。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;DEADLINE_AT = 2026-09-04T18:00:00+09:00&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;締切をあとから動かしたくなったときも、スクリプトプロパティを書き換えるだけで済みます。シートの数式やコードを触る必要がありません。&lt;/p&gt;
+&lt;p&gt;締切を過ぎて届いた回答は、処理状態を &lt;code&gt;error&lt;/code&gt; にして残します。処理状態は3値と決めているため、締切超過専用の状態は増やしません。代わりにE列(構造化結果)へ「締切超過」という文字列を入れ、あとで見分けられるようにします。&lt;/p&gt;
+&lt;p&gt;締切を過ぎた回答を捨てずに残すのは、幹事が「本当に間に合わなかったのか」を確認できるようにするためです。自動で消すと、あとから揉めます。&lt;/p&gt;
+&lt;h2&gt;同じ人が2回答えたときの扱い&lt;/h2&gt;
+&lt;p&gt;日程調整では、参加者が予定を変えて2回目の回答を送ってくることがよくあります。アンケートの感想であればどちらも別の意見として残せますが、都合は1人につき1つに定まっている必要があります。&lt;/p&gt;
+&lt;p&gt;このシステムでは、後勝ちにします。回答者名で既存の行を探し、見つかれば上書き、無ければ新規追加します。&lt;/p&gt;
+&lt;p&gt;回答者名は完全一致で突合します。&lt;/p&gt;
+&lt;h2&gt;受信からシート書き込みまでのコード&lt;/h2&gt;
+&lt;p&gt;差し替えるのは &lt;code&gt;config.gs&lt;/code&gt; の定数だけです。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// config.gs
+const SHEET_NAME = 'responses';
+const NAME_COLUMN_HEADER = '回答者名';
+const FREE_TEXT_COLUMN_HEADER = '都合';
+
+// システム全体で1つだけ持つ締切。スクリプトプロパティのキー名
+const DEADLINE_PROPERTY_KEY = 'DEADLINE_AT';
+
+const HEADERS = [
+  'タイムスタンプ',
+  NAME_COLUMN_HEADER,
+  FREE_TEXT_COLUMN_HEADER,
+  '処理状態',
+  '構造化結果',
+  '処理日時'
+];&lt;/code&gt;&lt;/pre&gt;
+&lt;pre&gt;&lt;code&gt;// intake.gs
+function onFormSubmit(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(SHEET_NAME);
+
+  ensureHeaders_(sheet);
+
+  const itemResponses = e.response.getItemResponses();
+  let name = '';
+  let freeText = '';
+
+  for (const item of itemResponses) {
+    const title = item.getItem().getTitle();
+    if (title === NAME_COLUMN_HEADER) {
+      name = item.getResponse();
+    } else if (title === FREE_TEXT_COLUMN_HEADER) {
+      freeText = item.getResponse();
+    }
+  }
+
+  if (!name) {
+    // 名前が空だと突合できないため、error として残す
+    sheet.appendRow([new Date(), '(未入力)', freeText, 'error', '未入力のため保留', '']);
+    return;
+  }
+
+  const deadline = getDeadline_();
+  const now = new Date();
+  const isLate = deadline &amp;amp;&amp;amp; now &amp;gt; deadline;
+
+  const existingRow = findRowByName_(sheet, name);
+  const status = isLate ? 'error' : 'pending';
+  const note = isLate ? '締切超過' : '';
+  const row = [now, name, freeText, status, note, ''];
+
+  if (existingRow) {
+    // 同じ回答者名の行があれば上書きする(後勝ち)
+    sheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+}
+
+function ensureHeaders_(sheet) {
+  const firstRow = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  const hasHeaders = HEADERS.every((h, i) =&amp;gt; firstRow[i] === h);
+  if (!hasHeaders) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  }
+}
+
+function findRowByName_(sheet, name) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow &amp;lt; 2) return null;
+
+  const names = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  for (let i = 0; i &amp;lt; names.length; i++) {
+    if (names[i][0] === name) {
+      return i + 2; // ヘッダー行のオフセット
+    }
+  }
+  return null;
+}
+
+function getDeadline_() {
+  const value = PropertiesService
+    .getScriptProperties()
+    .getProperty(DEADLINE_PROPERTY_KEY);
+  return value ? new Date(value) : null;
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;ensureHeaders_&lt;/code&gt; は、シートを作り直したときにも自動でヘッダーを揃えます。手で列名を打ち直す作業を減らせます。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;1つ目は、締切のタイムゾーンです。&lt;code&gt;DEADLINE_AT&lt;/code&gt; に &lt;code&gt;+09:00&lt;/code&gt; を付け忘れると、GASの実行環境の解釈次第で数時間ずれます。JSTで運用するなら、必ずオフセット付きで書いてください。&lt;/p&gt;
+&lt;p&gt;2つ目は、回答者名の表記揺れです。このコードは完全一致でしか同一人物と判定しないので、全角と半角、姓名の間のスペースの有無が揺れると別人の行が増えます。ここは自動では吸収しません。フォームの記述式に「姓名の間にスペースを入れない」と注記を添えるかどうかは、運用側の判断に残しています。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;自分のフォームとシートに対して、&lt;code&gt;onFormSubmit&lt;/code&gt; をインストーラブルトリガーとして登録してください。&lt;/p&gt;
+&lt;p&gt;そのあと、スクリプトプロパティに &lt;code&gt;DEADLINE_AT&lt;/code&gt; を1つ設定し、同じ名前で2回テスト送信してみます。行が2つに増えず、2回目の内容で1行だけ上書きされていれば、入口は完成です。&lt;/p&gt;
+&lt;p&gt;締切に手作業が残ります。開始のたびに &lt;code&gt;DEADLINE_AT&lt;/code&gt; の値を手で書き換える作業だけは、このコードでは自動化していません。&lt;/p&gt;
+&lt;p&gt;火曜の記事では、この &lt;code&gt;pending&lt;/code&gt; 行を拾ってGeminiに投げ、曜日×時間帯の空き状況に構造化するコードを書きます。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;今週は「日程調整ヒートマップ」というひとつの自動化システムを、7本に分けて書いています。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;月: 参加者の空き状況を自由記述で集める。日程調整フォームの入口設計&lt;/li&gt;
+&lt;li&gt;火: Geminiに自由記述の空き時間を構造化させる。プロンプトと呼び出しコードの全文&lt;/li&gt;
+&lt;li&gt;水: 同時送信の二重書き込みとGeminiの形式崩れを防ぐ。壊れる集計コードと直したコード&lt;/li&gt;
+&lt;li&gt;木: 全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード&lt;/li&gt;
+&lt;li&gt;金: 集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定&lt;/li&gt;
+&lt;li&gt;土: ヒートマップの見せ方でつまずいた5箇所。before→afterで直す&lt;/li&gt;
+&lt;li&gt;日: 日程調整ヒートマップ完成版一式。差し替えて自分の会議調整で使う手順書(有料)&lt;/li&gt;
+&lt;/ul&gt;" data-text="「火水木ならいつでも」「月曜以外なら」——日程調整フォームに返ってくるのは、たいていこういう文です。
+
+これを上から順に読んで、曜日ごとの空き表に手で書き写しているなら、その手作業はシートの列設計で減らせます。
+
+日程調整の入口では、これに加えて2つの管理が要ります。締切を過ぎた回答をどう扱うか。同じ人が2回目に送ってきた回答をどう扱うか。
+
+この記事では、この2つを含めた入口の設計だけを書きます。Geminiでの構造化は次の記事の範囲です。
+
+こんな作業をしていませんか
+
+Googleフォームで日程調整の自由記述を集めて、返ってきた回答を上から順に読みながら、曜日ごとの空き状況を手で表に書き写す。
+
+締切のあとに届いた回答をどう扱うか決めておらず、集計する段になって「これはもう遅い」と気づく。
+
+同じ人が予定を変えて2回答えてきて、シートには行が2つ残り、どちらが最新か分からなくなる。
+
+この3つは別々の問題ではありません。シートの列設計を最初に決めていないから起きています。
+
+日程調整のシートに必要な3つの条件
+
+フォームの回答をインストーラブルトリガーで受け取り、シートに1行ずつ積む。ここまでは、どんな用途でも同じ形です。
+
+日程調整では、そこに3つの条件が加わります。
+
+- 自由記述が要約対象の長文ではなく、曜日と時間帯に正規化する前提の短文であること
+- 締切日時をどこかに持ち、締切後の回答を区別する必要があること
+- 同じ回答者が複数回答したとき、最新の内容で上書きする必要があること
+
+この3つを、シートの列とコードの両方に反映させます。
+
+インストーラブルトリガーを設定する
+
+onFormSubmit(e) という関数名を置くだけの「シンプルトリガー」では、外部サービスへの接続権限がありません。
+
+構造化の段でGemini APIを呼ぶ以上、インストーラブルトリガーを使います。設定手順は次のとおりです。
+
+- スクリプトエディタを開き、左メニューの時計アイコン(トリガー)をクリックする
+- 「トリガーを追加」を押す
+- 実行する関数を onFormSubmit にする
+- イベントのソースを「フォームから」にする
+- イベントの種類を「フォーム送信時」にする
+- 保存すると、初回だけ権限の承認ダイアログが出る
+
+承認は、シートの所有者本人でログインした状態で行ってください。共有アカウントで作業していると、ダイアログが出ずに止まって見えることがあります。
+
+シートの列設計
+
+シート名は responses にします。列は6つです。
+
+- A列 タイムスタンプ — フォーム送信時刻
+- B列 回答者名 — フォームの記述式1問目
+- C列 都合 — 自由記述。「火水木ならいつでも」のような曖昧な文がそのまま入る
+- D列 処理状態 — pending / done / error のいずれか
+- E列 構造化結果 — Gemini が返したJSON文字列。次の記事で埋める
+- F列 処理日時 — 構造化が終わった時刻
+
+C列に入る文言は、正規化されていない生の日本語です。曜日と時間帯への変換はここでは行いません。後段で「空き」「不可」「未回答」の3段階に直す前提で、そのまま受け取ります。
+
+締切をどこに持つか
+
+締切日時は、シートの列には持たせません。回答が増えるたびに全行へコピーする理由がなく、システム全体で1つの値だからです。
+
+スクリプトプロパティに DEADLINE_AT という名前で、ISO8601形式の文字列を1つ保存します。
+
+
+DEADLINE_AT = 2026-09-04T18:00:00+09:00
+
+
+締切をあとから動かしたくなったときも、スクリプトプロパティを書き換えるだけで済みます。シートの数式やコードを触る必要がありません。
+
+締切を過ぎて届いた回答は、処理状態を error にして残します。処理状態は3値と決めているため、締切超過専用の状態は増やしません。代わりにE列(構造化結果)へ「締切超過」という文字列を入れ、あとで見分けられるようにします。
+
+締切を過ぎた回答を捨てずに残すのは、幹事が「本当に間に合わなかったのか」を確認できるようにするためです。自動で消すと、あとから揉めます。
+
+同じ人が2回答えたときの扱い
+
+日程調整では、参加者が予定を変えて2回目の回答を送ってくることがよくあります。アンケートの感想であればどちらも別の意見として残せますが、都合は1人につき1つに定まっている必要があります。
+
+このシステムでは、後勝ちにします。回答者名で既存の行を探し、見つかれば上書き、無ければ新規追加します。
+
+回答者名は完全一致で突合します。
+
+受信からシート書き込みまでのコード
+
+差し替えるのは config.gs の定数だけです。
+
+
+// config.gs
+const SHEET_NAME = 'responses';
+const NAME_COLUMN_HEADER = '回答者名';
+const FREE_TEXT_COLUMN_HEADER = '都合';
+
+// システム全体で1つだけ持つ締切。スクリプトプロパティのキー名
+const DEADLINE_PROPERTY_KEY = 'DEADLINE_AT';
+
+const HEADERS = [
+  'タイムスタンプ',
+  NAME_COLUMN_HEADER,
+  FREE_TEXT_COLUMN_HEADER,
+  '処理状態',
+  '構造化結果',
+  '処理日時'
+];
+
+
+
+// intake.gs
+function onFormSubmit(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(SHEET_NAME);
+
+  ensureHeaders_(sheet);
+
+  const itemResponses = e.response.getItemResponses();
+  let name = '';
+  let freeText = '';
+
+  for (const item of itemResponses) {
+    const title = item.getItem().getTitle();
+    if (title === NAME_COLUMN_HEADER) {
+      name = item.getResponse();
+    } else if (title === FREE_TEXT_COLUMN_HEADER) {
+      freeText = item.getResponse();
+    }
+  }
+
+  if (!name) {
+    // 名前が空だと突合できないため、error として残す
+    sheet.appendRow([new Date(), '(未入力)', freeText, 'error', '未入力のため保留', '']);
+    return;
+  }
+
+  const deadline = getDeadline_();
+  const now = new Date();
+  const isLate = deadline &amp;&amp; now &gt; deadline;
+
+  const existingRow = findRowByName_(sheet, name);
+  const status = isLate ? 'error' : 'pending';
+  const note = isLate ? '締切超過' : '';
+  const row = [now, name, freeText, status, note, ''];
+
+  if (existingRow) {
+    // 同じ回答者名の行があれば上書きする(後勝ち)
+    sheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+}
+
+function ensureHeaders_(sheet) {
+  const firstRow = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  const hasHeaders = HEADERS.every((h, i) =&gt; firstRow[i] === h);
+  if (!hasHeaders) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  }
+}
+
+function findRowByName_(sheet, name) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) return null;
+
+  const names = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  for (let i = 0; i &lt; names.length; i++) {
+    if (names[i][0] === name) {
+      return i + 2; // ヘッダー行のオフセット
+    }
+  }
+  return null;
+}
+
+function getDeadline_() {
+  const value = PropertiesService
+    .getScriptProperties()
+    .getProperty(DEADLINE_PROPERTY_KEY);
+  return value ? new Date(value) : null;
+}
+
+
+ensureHeaders_ は、シートを作り直したときにも自動でヘッダーを揃えます。手で列名を打ち直す作業を減らせます。
+
+つまずきどころ
+
+1つ目は、締切のタイムゾーンです。DEADLINE_AT に +09:00 を付け忘れると、GASの実行環境の解釈次第で数時間ずれます。JSTで運用するなら、必ずオフセット付きで書いてください。
+
+2つ目は、回答者名の表記揺れです。このコードは完全一致でしか同一人物と判定しないので、全角と半角、姓名の間のスペースの有無が揺れると別人の行が増えます。ここは自動では吸収しません。フォームの記述式に「姓名の間にスペースを入れない」と注記を添えるかどうかは、運用側の判断に残しています。
+
+今日できること
+
+自分のフォームとシートに対して、onFormSubmit をインストーラブルトリガーとして登録してください。
+
+そのあと、スクリプトプロパティに DEADLINE_AT を1つ設定し、同じ名前で2回テスト送信してみます。行が2つに増えず、2回目の内容で1行だけ上書きされていれば、入口は完成です。
+
+締切に手作業が残ります。開始のたびに DEADLINE_AT の値を手で書き換える作業だけは、このコードでは自動化していません。
+
+火曜の記事では、この pending 行を拾ってGeminiに投げ、曜日×時間帯の空き状況に構造化するコードを書きます。
+
+---
+
+今週は「日程調整ヒートマップ」というひとつの自動化システムを、7本に分けて書いています。
+
+- 月: 参加者の空き状況を自由記述で集める。日程調整フォームの入口設計
+- 火: Geminiに自由記述の空き時間を構造化させる。プロンプトと呼び出しコードの全文
+- 水: 同時送信の二重書き込みとGeminiの形式崩れを防ぐ。壊れる集計コードと直したコード
+- 木: 全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード
+- 金: 集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定
+- 土: ヒートマップの見せ方でつまずいた5箇所。before→afterで直す
+- 日: 日程調整ヒートマップ完成版一式。差し替えて自分の会議調整で使う手順書(有料)"></div>
+
+
+<div class="article">
+<p>「火水木ならいつでも」「月曜以外なら」——日程調整フォームに返ってくるのは、たいていこういう文です。</p>
+<p>これを上から順に読んで、曜日ごとの空き表に手で書き写しているなら、その手作業はシートの列設計で減らせます。</p>
+<p>日程調整の入口では、これに加えて2つの管理が要ります。締切を過ぎた回答をどう扱うか。同じ人が2回目に送ってきた回答をどう扱うか。</p>
+<p>この記事では、この2つを含めた入口の設計だけを書きます。Geminiでの構造化は次の記事の範囲です。</p>
+<h2>こんな作業をしていませんか</h2>
+<p>Googleフォームで日程調整の自由記述を集めて、返ってきた回答を上から順に読みながら、曜日ごとの空き状況を手で表に書き写す。</p>
+<p>締切のあとに届いた回答をどう扱うか決めておらず、集計する段になって「これはもう遅い」と気づく。</p>
+<p>同じ人が予定を変えて2回答えてきて、シートには行が2つ残り、どちらが最新か分からなくなる。</p>
+<p>この3つは別々の問題ではありません。シートの列設計を最初に決めていないから起きています。</p>
+<h2>日程調整のシートに必要な3つの条件</h2>
+<p>フォームの回答をインストーラブルトリガーで受け取り、シートに1行ずつ積む。ここまでは、どんな用途でも同じ形です。</p>
+<p>日程調整では、そこに3つの条件が加わります。</p>
+<ul>
+<li>自由記述が要約対象の長文ではなく、曜日と時間帯に正規化する前提の短文であること</li>
+<li>締切日時をどこかに持ち、締切後の回答を区別する必要があること</li>
+<li>同じ回答者が複数回答したとき、最新の内容で上書きする必要があること</li>
+</ul>
+<p>この3つを、シートの列とコードの両方に反映させます。</p>
+<h2>インストーラブルトリガーを設定する</h2>
+<p><code>onFormSubmit(e)</code> という関数名を置くだけの「シンプルトリガー」では、外部サービスへの接続権限がありません。</p>
+<p>構造化の段でGemini APIを呼ぶ以上、インストーラブルトリガーを使います。設定手順は次のとおりです。</p>
+<ul>
+<li>スクリプトエディタを開き、左メニューの時計アイコン(トリガー)をクリックする</li>
+<li>「トリガーを追加」を押す</li>
+<li>実行する関数を <code>onFormSubmit</code> にする</li>
+<li>イベントのソースを「フォームから」にする</li>
+<li>イベントの種類を「フォーム送信時」にする</li>
+<li>保存すると、初回だけ権限の承認ダイアログが出る</li>
+</ul>
+<p>承認は、シートの所有者本人でログインした状態で行ってください。共有アカウントで作業していると、ダイアログが出ずに止まって見えることがあります。</p>
+<h2>シートの列設計</h2>
+<p>シート名は <code>responses</code> にします。列は6つです。</p>
+<ul>
+<li>A列 タイムスタンプ — フォーム送信時刻</li>
+<li>B列 回答者名 — フォームの記述式1問目</li>
+<li>C列 都合 — 自由記述。「火水木ならいつでも」のような曖昧な文がそのまま入る</li>
+<li>D列 処理状態 — <code>pending</code> / <code>done</code> / <code>error</code> のいずれか</li>
+<li>E列 構造化結果 — Gemini が返したJSON文字列。次の記事で埋める</li>
+<li>F列 処理日時 — 構造化が終わった時刻</li>
+</ul>
+<p>C列に入る文言は、正規化されていない生の日本語です。曜日と時間帯への変換はここでは行いません。後段で「空き」「不可」「未回答」の3段階に直す前提で、そのまま受け取ります。</p>
+<h2>締切をどこに持つか</h2>
+<p>締切日時は、シートの列には持たせません。回答が増えるたびに全行へコピーする理由がなく、システム全体で1つの値だからです。</p>
+<p>スクリプトプロパティに <code>DEADLINE_AT</code> という名前で、ISO8601形式の文字列を1つ保存します。</p>
+<pre><code>DEADLINE_AT = 2026-09-04T18:00:00+09:00</code></pre>
+<p>締切をあとから動かしたくなったときも、スクリプトプロパティを書き換えるだけで済みます。シートの数式やコードを触る必要がありません。</p>
+<p>締切を過ぎて届いた回答は、処理状態を <code>error</code> にして残します。処理状態は3値と決めているため、締切超過専用の状態は増やしません。代わりにE列(構造化結果)へ「締切超過」という文字列を入れ、あとで見分けられるようにします。</p>
+<p>締切を過ぎた回答を捨てずに残すのは、幹事が「本当に間に合わなかったのか」を確認できるようにするためです。自動で消すと、あとから揉めます。</p>
+<h2>同じ人が2回答えたときの扱い</h2>
+<p>日程調整では、参加者が予定を変えて2回目の回答を送ってくることがよくあります。アンケートの感想であればどちらも別の意見として残せますが、都合は1人につき1つに定まっている必要があります。</p>
+<p>このシステムでは、後勝ちにします。回答者名で既存の行を探し、見つかれば上書き、無ければ新規追加します。</p>
+<p>回答者名は完全一致で突合します。</p>
+<h2>受信からシート書き込みまでのコード</h2>
+<p>差し替えるのは <code>config.gs</code> の定数だけです。</p>
+<pre><code>// config.gs
+const SHEET_NAME = 'responses';
+const NAME_COLUMN_HEADER = '回答者名';
+const FREE_TEXT_COLUMN_HEADER = '都合';
+
+// システム全体で1つだけ持つ締切。スクリプトプロパティのキー名
+const DEADLINE_PROPERTY_KEY = 'DEADLINE_AT';
+
+const HEADERS = [
+  'タイムスタンプ',
+  NAME_COLUMN_HEADER,
+  FREE_TEXT_COLUMN_HEADER,
+  '処理状態',
+  '構造化結果',
+  '処理日時'
+];</code></pre>
+<pre><code>// intake.gs
+function onFormSubmit(e) {
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(SHEET_NAME);
+
+  ensureHeaders_(sheet);
+
+  const itemResponses = e.response.getItemResponses();
+  let name = '';
+  let freeText = '';
+
+  for (const item of itemResponses) {
+    const title = item.getItem().getTitle();
+    if (title === NAME_COLUMN_HEADER) {
+      name = item.getResponse();
+    } else if (title === FREE_TEXT_COLUMN_HEADER) {
+      freeText = item.getResponse();
+    }
+  }
+
+  if (!name) {
+    // 名前が空だと突合できないため、error として残す
+    sheet.appendRow([new Date(), '(未入力)', freeText, 'error', '未入力のため保留', '']);
+    return;
+  }
+
+  const deadline = getDeadline_();
+  const now = new Date();
+  const isLate = deadline &amp;&amp; now &gt; deadline;
+
+  const existingRow = findRowByName_(sheet, name);
+  const status = isLate ? 'error' : 'pending';
+  const note = isLate ? '締切超過' : '';
+  const row = [now, name, freeText, status, note, ''];
+
+  if (existingRow) {
+    // 同じ回答者名の行があれば上書きする(後勝ち)
+    sheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+}
+
+function ensureHeaders_(sheet) {
+  const firstRow = sheet.getRange(1, 1, 1, HEADERS.length).getValues()[0];
+  const hasHeaders = HEADERS.every((h, i) =&gt; firstRow[i] === h);
+  if (!hasHeaders) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+  }
+}
+
+function findRowByName_(sheet, name) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow &lt; 2) return null;
+
+  const names = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  for (let i = 0; i &lt; names.length; i++) {
+    if (names[i][0] === name) {
+      return i + 2; // ヘッダー行のオフセット
+    }
+  }
+  return null;
+}
+
+function getDeadline_() {
+  const value = PropertiesService
+    .getScriptProperties()
+    .getProperty(DEADLINE_PROPERTY_KEY);
+  return value ? new Date(value) : null;
+}</code></pre>
+<p><code>ensureHeaders_</code> は、シートを作り直したときにも自動でヘッダーを揃えます。手で列名を打ち直す作業を減らせます。</p>
+<h2>つまずきどころ</h2>
+<p>1つ目は、締切のタイムゾーンです。<code>DEADLINE_AT</code> に <code>+09:00</code> を付け忘れると、GASの実行環境の解釈次第で数時間ずれます。JSTで運用するなら、必ずオフセット付きで書いてください。</p>
+<p>2つ目は、回答者名の表記揺れです。このコードは完全一致でしか同一人物と判定しないので、全角と半角、姓名の間のスペースの有無が揺れると別人の行が増えます。ここは自動では吸収しません。フォームの記述式に「姓名の間にスペースを入れない」と注記を添えるかどうかは、運用側の判断に残しています。</p>
+<h2>今日できること</h2>
+<p>自分のフォームとシートに対して、<code>onFormSubmit</code> をインストーラブルトリガーとして登録してください。</p>
+<p>そのあと、スクリプトプロパティに <code>DEADLINE_AT</code> を1つ設定し、同じ名前で2回テスト送信してみます。行が2つに増えず、2回目の内容で1行だけ上書きされていれば、入口は完成です。</p>
+<p>締切に手作業が残ります。開始のたびに <code>DEADLINE_AT</code> の値を手で書き換える作業だけは、このコードでは自動化していません。</p>
+<p>火曜の記事では、この <code>pending</code> 行を拾ってGeminiに投げ、曜日×時間帯の空き状況に構造化するコードを書きます。</p>
+<hr>
+<p>今週は「日程調整ヒートマップ」というひとつの自動化システムを、7本に分けて書いています。</p>
+<ul>
+<li>月: 参加者の空き状況を自由記述で集める。日程調整フォームの入口設計</li>
+<li>火: Geminiに自由記述の空き時間を構造化させる。プロンプトと呼び出しコードの全文</li>
+<li>水: 同時送信の二重書き込みとGeminiの形式崩れを防ぐ。壊れる集計コードと直したコード</li>
+<li>木: 全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード</li>
+<li>金: 集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定</li>
+<li>土: ヒートマップの見せ方でつまずいた5箇所。before→afterで直す</li>
+<li>日: 日程調整ヒートマップ完成版一式。差し替えて自分の会議調整で使う手順書(有料)</li>
+</ul>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>

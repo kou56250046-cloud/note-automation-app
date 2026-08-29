@@ -1,0 +1,977 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<title>集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定 — note-factory</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2B6CB0">
+<link rel="icon" href="../assets/icons/posts-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/icons/posts-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="投稿キュー">
+<style>
+:root{--fg:#1a1a1a;--sub:#666;--line:#e6e6e6;--bg:#fff;--accent:#2b6cb0;--warn:#b7791f;--err:#c53030}
+*{box-sizing:border-box}
+body{margin:0;background:#f7f7f5;color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.9;font-size:16px}
+.wrap{max-width:720px;margin:0 auto;padding:32px 20px 96px}
+a{color:var(--accent)}
+header.top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px}
+header.top h1{font-size:20px;margin:0 0 6px}
+.muted{color:var(--sub);font-size:13px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 8px;line-height:1.6}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;margin-right:6px;vertical-align:middle}
+.badge.free{background:#e6f0ff;color:#2b6cb0}
+.badge.paid{background:#fff3e0;color:#b7791f}
+.badge.done{background:#e8f5e9;color:#2e7d32}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{font:inherit;font-size:13px;padding:8px 14px;border:1px solid var(--line);
+  background:#fff;border-radius:7px;cursor:pointer;transition:.15s}
+button:hover{background:#f0f0ee}
+button.primary{background:var(--fg);color:#fff;border-color:var(--fg)}
+button.primary:hover{opacity:.85}
+button.ok{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.gate{margin-top:12px;font-size:13px;border-top:1px dashed var(--line);padding-top:10px}
+.gate .err{color:var(--err)}
+.gate .warn{color:var(--warn)}
+.gate ul{margin:4px 0 0;padding-left:18px}
+.article{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:28px 32px}
+.article h2{font-size:20px;margin:32px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.article h3{font-size:17px;margin:26px 0 10px}
+.article p{margin:0 0 20px}
+.article ul,.article ol{margin:0 0 20px;padding-left:24px}
+.article li{margin-bottom:6px}
+.article blockquote{margin:0 0 20px;padding:2px 16px;border-left:3px solid var(--line);color:var(--sub)}
+.article pre{background:#f5f5f3;border:1px solid var(--line);border-radius:6px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.7}
+.article code{background:#f0f0ee;padding:1px 5px;border-radius:4px;font-size:13px}
+.article pre code{background:none;padding:0}
+.article hr{border:0;border-top:1px solid var(--line);margin:32px 0}
+.paywall{margin:36px 0;padding:14px 16px;background:#fff8e1;border:1px dashed var(--warn);
+  border-radius:8px;color:var(--warn);font-size:13px;text-align:center}
+.sticky{position:sticky;top:0;background:#f7f7f5;padding:14px 0;z-index:10;border-bottom:1px solid var(--line);margin-bottom:20px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--fg);color:#fff;padding:11px 22px;border-radius:99px;font-size:14px;
+  opacity:0;pointer-events:none;transition:.2s}
+.toast.show{opacity:1}
+.warnbox{background:#fff5f5;border:1px solid #feb2b2;color:var(--err);
+  border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px}
+/* 読者が踏む before/after を、投稿前にここで確認できるようにする。
+   デモページごと埋め込むと iframe が入れ子になってスクロールが三重になるため、
+   before.html と after.html を直接並べる */
+.demo-embed{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px 14px;background:#fafafa}
+.demo-embed summary{cursor:pointer;font-size:13px;font-weight:600;
+  padding:2px 0 10px;user-select:none}
+.demo-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.demo-pair{grid-template-columns:1fr}}
+.demo-pane{min-width:0}
+.demo-tag{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;
+  color:var(--muted);padding:0 0 5px}
+.demo-tag.after{color:var(--ok,#2f6f4e)}
+/* 縮小して全体を収める。ペインが狭いままだと LP が縦に伸びて
+   ファーストビューの形が分からなくなる */
+.demo-frame{position:relative;overflow:hidden;height:min(46vh,380px);
+  border:1px solid var(--line);border-radius:7px;background:#fff}
+.demo-frame iframe{display:block;border:0;width:200%;height:200%;
+  transform:scale(.5);transform-origin:0 0}
+.demo-embed .muted{font-size:12px;margin-top:10px;word-break:break-all}
+/* 見出し画像のプロンプト。人間が Gemini に貼るだけの状態にする */
+.thumb-box{margin:0 0 26px;border:1px solid var(--line);border-radius:10px;
+  padding:13px 14px 14px;background:#fafafa}
+.thumb-head{font-size:13px;font-weight:600;margin-bottom:10px}
+/* 閉じたままでもコピーできるよう、ボタンは details の外に置く */
+.thumb-box summary{cursor:pointer;font-size:12px;color:var(--muted);
+  padding:4px 0 8px;user-select:none}
+.thumb-box .row{margin-bottom:8px}
+.thumb-prompt{margin:0;padding:13px 15px;background:#fff;border:1px solid var(--line);
+  border-radius:7px;font-size:12px;line-height:1.75;max-height:300px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.thumb-box .muted{font-size:12px;margin-top:9px}
+.lockbox{margin:36px 0;padding:22px 20px;background:#fffdf5;
+  border:1px dashed var(--warn);border-radius:10px;text-align:center}
+.lockbox .lead{font-size:14px;color:var(--warn);margin-bottom:14px}
+.lockbox input{font:inherit;font-size:15px;padding:11px 14px;width:100%;max-width:320px;
+  border:1px solid var(--line);border-radius:7px;margin-bottom:10px;text-align:center}
+.lockbox .err{color:var(--err);font-size:13px;min-height:18px;margin-top:8px}
+.lockbox .note{font-size:12px;color:var(--sub);margin-top:12px;line-height:1.7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+<div class="wrap">
+<div class="sticky">
+  <a href="./index.html" class="muted">← 投稿キュー</a>
+  <div class="row">
+    <button onclick="copyText(this, &quot;集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定&quot;)">タイトルをコピー</button>
+    <button class="primary" onclick="copyRich(this,'free')">本文をコピー</button>
+    <button onclick="copyText(this, &quot;#GoogleAppsScript #GAS #業務効率化&quot;)">ハッシュタグをコピー</button>
+    
+    <button id="forget" style="display:none" onclick="forgetPass()">合言葉を消す</button>
+  </div>
+</div>
+
+<header class="top">
+  <h1>集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定</h1>
+  <div class="muted">GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想 ／ 2026-09-04 ／ #GoogleAppsScript #GAS #業務効率化</div>
+</header>
+
+
+
+
+
+
+
+
+
+<div class="gate"><div class="warn">lint 警告 15 件</div><ul><li class="warn">L15 前の見出しから 215 文字（目安 300）。見出しが多すぎる</li><li class="warn">L19 一文が 63 文字（目安 60）</li><li class="warn">L25 前の見出しから 170 文字（目安 300）。見出しが多すぎる</li></ul></div>
+
+<div id="free" data-html="&lt;p&gt;締切の時刻がきたら、そこで初めて全員の空き状況を突き合わせます。&lt;/p&gt;
+&lt;p&gt;回答が来るたびに通知を出すと、締切前に何度も同じ内容がSlackに流れます。これを避けるため、通知の起点を「回答」ではなく「締切時刻」に置きます。時間主導トリガーを1つ、締切の日時に合わせて仕込むだけです。&lt;/p&gt;
+&lt;h2&gt;回答のたびに鳴らすと、通知が中間報告で埋まる&lt;/h2&gt;
+&lt;p&gt;回答が届くたびに通知する設計にすると、こんな流れになります。&lt;/p&gt;
+&lt;p&gt;月曜に3件、火曜に5件、水曜に2件。回答が来るたびにSlackが鳴り、内容はそのつど「まだ全員揃っていません」という中間報告です。&lt;/p&gt;
+&lt;p&gt;チャンネルに並ぶのは、どれも「まだ全員揃っていません」という同じ趣旨の投稿です。締切前に何度流しても、受け取った側が取れる行動は変わりません。&lt;/p&gt;
+&lt;p&gt;意味のある通知は、締切が来て、全員の回答が出そろった瞬間の1回だけです。それ以外は雑音になります。&lt;/p&gt;
+&lt;h2&gt;この記事の前提&lt;/h2&gt;
+&lt;p&gt;このシステムでは、フォームの自由記述をGeminiが読みます。&lt;/p&gt;
+&lt;p&gt;曜日と時間帯ごとの空き状況を、true/falseのJSONにして&lt;code&gt;responses&lt;/code&gt;シートのE列に書き込む形にしています。&lt;/p&gt;
+&lt;p&gt;D列の「処理状態」が&lt;code&gt;done&lt;/code&gt;になっている行だけが、集計の対象です。&lt;/p&gt;
+&lt;p&gt;この記事では、そのE列がすでに埋まっている状態から、締切時刻の通知までを扱います。&lt;/p&gt;
+&lt;h2&gt;締切時刻に1回だけ走るトリガーを作る&lt;/h2&gt;
+&lt;p&gt;GASのトリガーには、フォーム送信のたびに動くイベント型と、決めた時刻に動く時間主導型があります。&lt;/p&gt;
+&lt;p&gt;日程調整の締切通知には、時間主導型を使います。回答のたびに動かす理由がないからです。&lt;/p&gt;
+&lt;p&gt;トリガー画面からの設定手順は次の通りです。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;スクリプトエディタで時計アイコンの「トリガー」を開く&lt;/li&gt;
+&lt;li&gt;「トリガーを追加」を押す&lt;/li&gt;
+&lt;li&gt;実行する関数に&lt;code&gt;checkDeadlineAndNotify&lt;/code&gt;を選ぶ&lt;/li&gt;
+&lt;li&gt;イベントのソースで「時間主導型」を選ぶ&lt;/li&gt;
+&lt;li&gt;時間ベースのトリガーの種類で「特定の日付と時刻」を選ぶ&lt;/li&gt;
+&lt;li&gt;締切の日付と時刻を指定して保存する&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;締切のたびに画面から設定し直すのは手間なので、コードから登録する形も用意しておきます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 締切の日時を指定してトリガーを1つ登録する
+function scheduleDeadlineNotification(deadlineDate) {
+  ScriptApp.newTrigger('checkDeadlineAndNotify')
+    .timeBased()
+    .at(deadlineDate)
+    .create();
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;deadlineDate&lt;/code&gt;にDateオブジェクトを渡して実行すると、その日時だけに動くトリガーが1つ登録されます。&lt;/p&gt;
+&lt;p&gt;一度実行が終わると、このトリガーは自動で削除されます。次の締切には、また新しい日時で登録し直します。&lt;/p&gt;
+&lt;h2&gt;誰の権限で動くか&lt;/h2&gt;
+&lt;p&gt;このトリガーは、登録した人のアカウント権限で動きます。共有した相手が見ているシートの上で動くわけではありません。&lt;/p&gt;
+&lt;p&gt;幹事が異動や退職でアカウントを使えなくなると、トリガーは静かに止まります。エラー通知も出ません。&lt;/p&gt;
+&lt;p&gt;シートも通知チャンネルも見た目は変わらないので、止まったこと自体に気づきにくいという点が厄介です。&lt;/p&gt;
+&lt;p&gt;他人にこの仕組みを渡すときは、権限の引き継ぎを先に決めておきます。次の幹事が自分のアカウントで&lt;code&gt;scheduleDeadlineNotification&lt;/code&gt;を実行し直す形です。&lt;/p&gt;
+&lt;h2&gt;全員が空いている枠を探す&lt;/h2&gt;
+&lt;p&gt;締切が来たら、&lt;code&gt;findCommonSlots()&lt;/code&gt;が&lt;code&gt;responses&lt;/code&gt;シートを読み、全員が空いている枠を探します。&lt;/p&gt;
+&lt;p&gt;考え方はこうです。D列が&lt;code&gt;done&lt;/code&gt;の行だけを対象にし、その人数を母数にします。曜日と時間帯の組み合わせごとに、空いている人数を数えます。&lt;/p&gt;
+&lt;p&gt;母数と同じ人数が空いていれば、そこは全員一致の枠です。&lt;/p&gt;
+&lt;p&gt;ここで壊れやすい書き方があります。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;// 壊れる例:1行でも壊れたJSONがあると、関数全体が止まる
+function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var availabilityList = [];
+  for (var i = 1; i &amp;lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+    availabilityList.push(JSON.parse(data[i][4]));
+  }
+  // ここから先の集計処理
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Geminiの出力が想定外の形（末尾が途中で切れているなど）で1行でも入ると、&lt;code&gt;JSON.parse&lt;/code&gt;が例外を投げます。&lt;/p&gt;
+&lt;p&gt;例外はキャッチされないので、その1行のために全員分の集計が止まります。1行の不備が全体を止めない形に直します。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var names = [];
+  var availabilityList = [];
+
+  for (var i = 1; i &amp;lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+
+    try {
+      var availability = JSON.parse(data[i][4]);
+      names.push(data[i][1]);
+      availabilityList.push(availability);
+    } catch (e) {
+      Logger.log('E列のJSONが壊れています。行: ' + (i + 1));
+      continue;
+    }
+  }
+
+  var totalCount = names.length;
+  if (totalCount === 0) {
+    return { text: '集計対象の回答がまだありません。' };
+  }
+
+  var commonSlots = [];
+  var counts = {};
+
+  DAYS.forEach(function (day) {
+    SLOTS.forEach(function (slot) {
+      var key = day + '-' + slot;
+      var freeCount = 0;
+
+      for (var j = 0; j &amp;lt; availabilityList.length; j++) {
+        var a = availabilityList[j];
+        if (a[day] &amp;amp;&amp;amp; a[day][slot] === true) {
+          freeCount++;
+        }
+      }
+
+      counts[key] = freeCount;
+      if (freeCount === totalCount) {
+        commonSlots.push({ day: day, slot: slot });
+      }
+    });
+  });
+
+  if (commonSlots.length &amp;gt; 0) {
+    var lines = commonSlots.map(function (s) {
+      return DAY_LABELS[s.day] + '曜' + SLOT_LABELS[s.slot];
+    });
+    return {
+      text: '全員が空いている枠が見つかりました\n' + lines.join('\n') +
+        '\n（回答者 ' + totalCount + '名で集計）'
+    };
+  }
+
+  var bestKey = null;
+  var bestCount = -1;
+
+  Object.keys(counts).forEach(function (key) {
+    if (counts[key] &amp;gt; bestCount) {
+      bestCount = counts[key];
+      bestKey = key;
+    }
+  });
+
+  if (bestCount === 0) {
+    return {
+      text: '全員が一致する枠はありませんでした\n' +
+        '回答 ' + totalCount + '名のうち、空いていると答えた人がいる枠が1つもありません\n' +
+        '候補の曜日か時間帯を広げて、もう一度聞き直してください'
+    };
+  }
+
+  var bestDay = bestKey.split('-')[0];
+  var bestSlot = bestKey.split('-')[1];
+
+  var absentNames = [];
+  for (var k = 0; k &amp;lt; availabilityList.length; k++) {
+    var av = availabilityList[k];
+    if (!av[bestDay] || av[bestDay][bestSlot] !== true) {
+      absentNames.push(names[k]);
+    }
+  }
+
+  return {
+    text: '全員が一致する枠はありませんでした\n' +
+      '最も多くの人が空いているのは ' + DAY_LABELS[bestDay] + '曜' + SLOT_LABELS[bestSlot] +
+      '（' + bestCount + '/' + totalCount + '名）\n' +
+      '空いていない人: ' + absentNames.join('、')
+  };
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;壊れたJSONの行は&lt;code&gt;Logger.log&lt;/code&gt;に記録してスキップするだけにしています。落とすのはその1行だけで、他の回答者の集計は止まりません。&lt;/p&gt;
+&lt;p&gt;曜日のキーそのものが欠けている場合にも備えて、&lt;code&gt;a[day] &amp;amp;&amp;amp; a[day][slot]&lt;/code&gt; の形で参照しています。E列は手で書き換えられる場所なので、キーがある前提で読むと通知の処理ごと落ちます。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;bestCount&lt;/code&gt; が0のときは別の文面を返します。全員が全枠を不可と答えた状態で「最も多くの人が空いているのは月曜午前（0名）」と送っても、受け取った側は動けません。候補の範囲を広げて聞き直す、という次の行動を書きます。&lt;/p&gt;
+&lt;h2&gt;全員一致がないとき、何を通知するか&lt;/h2&gt;
+&lt;p&gt;日程調整では、全員が空いている枠がそのまま見つかるとは限りません。&lt;/p&gt;
+&lt;p&gt;ここで「見つかりませんでした」だけを送ると、通知を受け取った幹事は結局シートを開いて手で見比べることになります。仕組みを作った意味が半分になります。&lt;/p&gt;
+&lt;p&gt;このシステムでは、一致がなかったときに2つの情報をセットで返します。&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;最も多くの人が空いている枠と、その人数&lt;/li&gt;
+&lt;li&gt;その枠で空いていない人の名前&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;幹事は「あと誰に個別で聞けばいいか」がその場で分かります。全員に再調整を依頼しなくても、1人か2人に声をかけるだけで済む場合があるからです。&lt;/p&gt;
+&lt;h2&gt;Slackへ送る&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;findCommonSlots()&lt;/code&gt;が返した文字列を、そのままIncoming WebhookにPOSTします。&lt;/p&gt;
+&lt;p&gt;Webhook URLはコードに直書きせず、スクリプトプロパティに保存しておきます。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;function notifySlack_(text) {
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  var payload = { text: text };
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload)
+  };
+
+  UrlFetchApp.fetch(webhookUrl, options);
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;締切トリガーから呼ぶ入口はこれだけです。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;function checkDeadlineAndNotify() {
+  var result = findCommonSlots();
+  notifySlack_(result.text);
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;未回答の人を計算に入れない&lt;/h2&gt;
+&lt;p&gt;締切を過ぎても、フォームにまったく回答していない人が残ることがあります。&lt;/p&gt;
+&lt;p&gt;このシステムでは、そういう人を「不可」として扱いません。D列が&lt;code&gt;done&lt;/code&gt;の行だけを母数にしているので、未回答の人はそもそも計算から外れます。&lt;/p&gt;
+&lt;p&gt;「不可」に含めると、実際には都合を聞けていないだけなのに、その人のせいで枠が全部埋まらなくなります。母数から外すのは、この誤りを避けるための設計です。&lt;/p&gt;
+&lt;h2&gt;つまずきどころ&lt;/h2&gt;
+&lt;p&gt;締切ちょうどの時刻に駆け込みで届いた回答は、Geminiの構造化が間に合わず、D列がまだ&lt;code&gt;pending&lt;/code&gt;のまま残ることがあります。&lt;/p&gt;
+&lt;p&gt;その状態で通知が飛ぶと、駆け込みで回答した人が母数からも抜け落ちます。締切トリガーの時刻を、フォームの締切より10分ほど後ろにずらしておくと、この取りこぼしを減らせます。&lt;/p&gt;
+&lt;p&gt;もう1つは、Slack側でWebhookのURLを発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けて送り続け、通知だけが届かなくなります。&lt;/p&gt;
+&lt;h2&gt;残る手作業&lt;/h2&gt;
+&lt;p&gt;ここまでの仕組みを組んでも、手作業がすべて消えるわけではありません。&lt;/p&gt;
+&lt;p&gt;Slack Incoming WebhookのURLを発行する作業が1つ。締切の日時を関数に渡して登録する作業が、もう1つ残ります。&lt;/p&gt;
+&lt;p&gt;前者は最初の1回だけです。後者は、日程調整のたびに毎回人の手で行います。&lt;/p&gt;
+&lt;p&gt;どちらもシステムの外側にある情報だからです。Webhook URLはSlack側の管理画面でしか発行できません。締切の日時は、日程調整のたびに毎回変わります。&lt;/p&gt;
+&lt;h2&gt;今日できること&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;findCommonSlots()&lt;/code&gt;を、ダミーの回答データを2〜3行入れたシートに対して手動実行してください。&lt;/p&gt;
+&lt;p&gt;実行結果のログに、全員一致の枠か、最多枠と空いていない人の名前のどちらかが出ます。&lt;/p&gt;
+&lt;p&gt;Slackへの送信を試す前に、まずこの集計ロジックが手元のシートで正しく動くことを確認しておくと、Webhookの設定でつまずいたときに原因を切り分けやすくなります。&lt;/p&gt;
+&lt;hr&gt;
+&lt;p&gt;締切に1回だけ通知を出す設計は、コードの量としては多くありません。変わるのは「いつ動かすか」という1点だけです。&lt;/p&gt;
+&lt;p&gt;次に自分の集計に組み込むときは、まずトリガーの種類を疑ってみてください。&lt;/p&gt;" data-text="締切の時刻がきたら、そこで初めて全員の空き状況を突き合わせます。
+
+回答が来るたびに通知を出すと、締切前に何度も同じ内容がSlackに流れます。これを避けるため、通知の起点を「回答」ではなく「締切時刻」に置きます。時間主導トリガーを1つ、締切の日時に合わせて仕込むだけです。
+
+回答のたびに鳴らすと、通知が中間報告で埋まる
+
+回答が届くたびに通知する設計にすると、こんな流れになります。
+
+月曜に3件、火曜に5件、水曜に2件。回答が来るたびにSlackが鳴り、内容はそのつど「まだ全員揃っていません」という中間報告です。
+
+チャンネルに並ぶのは、どれも「まだ全員揃っていません」という同じ趣旨の投稿です。締切前に何度流しても、受け取った側が取れる行動は変わりません。
+
+意味のある通知は、締切が来て、全員の回答が出そろった瞬間の1回だけです。それ以外は雑音になります。
+
+この記事の前提
+
+このシステムでは、フォームの自由記述をGeminiが読みます。
+
+曜日と時間帯ごとの空き状況を、true/falseのJSONにしてresponsesシートのE列に書き込む形にしています。
+
+D列の「処理状態」がdoneになっている行だけが、集計の対象です。
+
+この記事では、そのE列がすでに埋まっている状態から、締切時刻の通知までを扱います。
+
+締切時刻に1回だけ走るトリガーを作る
+
+GASのトリガーには、フォーム送信のたびに動くイベント型と、決めた時刻に動く時間主導型があります。
+
+日程調整の締切通知には、時間主導型を使います。回答のたびに動かす理由がないからです。
+
+トリガー画面からの設定手順は次の通りです。
+
+1. スクリプトエディタで時計アイコンの「トリガー」を開く
+2. 「トリガーを追加」を押す
+3. 実行する関数にcheckDeadlineAndNotifyを選ぶ
+4. イベントのソースで「時間主導型」を選ぶ
+5. 時間ベースのトリガーの種類で「特定の日付と時刻」を選ぶ
+6. 締切の日付と時刻を指定して保存する
+
+締切のたびに画面から設定し直すのは手間なので、コードから登録する形も用意しておきます。
+
+
+// 締切の日時を指定してトリガーを1つ登録する
+function scheduleDeadlineNotification(deadlineDate) {
+  ScriptApp.newTrigger('checkDeadlineAndNotify')
+    .timeBased()
+    .at(deadlineDate)
+    .create();
+}
+
+
+deadlineDateにDateオブジェクトを渡して実行すると、その日時だけに動くトリガーが1つ登録されます。
+
+一度実行が終わると、このトリガーは自動で削除されます。次の締切には、また新しい日時で登録し直します。
+
+誰の権限で動くか
+
+このトリガーは、登録した人のアカウント権限で動きます。共有した相手が見ているシートの上で動くわけではありません。
+
+幹事が異動や退職でアカウントを使えなくなると、トリガーは静かに止まります。エラー通知も出ません。
+
+シートも通知チャンネルも見た目は変わらないので、止まったこと自体に気づきにくいという点が厄介です。
+
+他人にこの仕組みを渡すときは、権限の引き継ぎを先に決めておきます。次の幹事が自分のアカウントでscheduleDeadlineNotificationを実行し直す形です。
+
+全員が空いている枠を探す
+
+締切が来たら、findCommonSlots()がresponsesシートを読み、全員が空いている枠を探します。
+
+考え方はこうです。D列がdoneの行だけを対象にし、その人数を母数にします。曜日と時間帯の組み合わせごとに、空いている人数を数えます。
+
+母数と同じ人数が空いていれば、そこは全員一致の枠です。
+
+ここで壊れやすい書き方があります。
+
+
+// 壊れる例:1行でも壊れたJSONがあると、関数全体が止まる
+function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var availabilityList = [];
+  for (var i = 1; i &lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+    availabilityList.push(JSON.parse(data[i][4]));
+  }
+  // ここから先の集計処理
+}
+
+
+Geminiの出力が想定外の形（末尾が途中で切れているなど）で1行でも入ると、JSON.parseが例外を投げます。
+
+例外はキャッチされないので、その1行のために全員分の集計が止まります。1行の不備が全体を止めない形に直します。
+
+
+function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var names = [];
+  var availabilityList = [];
+
+  for (var i = 1; i &lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+
+    try {
+      var availability = JSON.parse(data[i][4]);
+      names.push(data[i][1]);
+      availabilityList.push(availability);
+    } catch (e) {
+      Logger.log('E列のJSONが壊れています。行: ' + (i + 1));
+      continue;
+    }
+  }
+
+  var totalCount = names.length;
+  if (totalCount === 0) {
+    return { text: '集計対象の回答がまだありません。' };
+  }
+
+  var commonSlots = [];
+  var counts = {};
+
+  DAYS.forEach(function (day) {
+    SLOTS.forEach(function (slot) {
+      var key = day + '-' + slot;
+      var freeCount = 0;
+
+      for (var j = 0; j &lt; availabilityList.length; j++) {
+        var a = availabilityList[j];
+        if (a[day] &amp;&amp; a[day][slot] === true) {
+          freeCount++;
+        }
+      }
+
+      counts[key] = freeCount;
+      if (freeCount === totalCount) {
+        commonSlots.push({ day: day, slot: slot });
+      }
+    });
+  });
+
+  if (commonSlots.length &gt; 0) {
+    var lines = commonSlots.map(function (s) {
+      return DAY_LABELS[s.day] + '曜' + SLOT_LABELS[s.slot];
+    });
+    return {
+      text: '全員が空いている枠が見つかりました\n' + lines.join('\n') +
+        '\n（回答者 ' + totalCount + '名で集計）'
+    };
+  }
+
+  var bestKey = null;
+  var bestCount = -1;
+
+  Object.keys(counts).forEach(function (key) {
+    if (counts[key] &gt; bestCount) {
+      bestCount = counts[key];
+      bestKey = key;
+    }
+  });
+
+  if (bestCount === 0) {
+    return {
+      text: '全員が一致する枠はありませんでした\n' +
+        '回答 ' + totalCount + '名のうち、空いていると答えた人がいる枠が1つもありません\n' +
+        '候補の曜日か時間帯を広げて、もう一度聞き直してください'
+    };
+  }
+
+  var bestDay = bestKey.split('-')[0];
+  var bestSlot = bestKey.split('-')[1];
+
+  var absentNames = [];
+  for (var k = 0; k &lt; availabilityList.length; k++) {
+    var av = availabilityList[k];
+    if (!av[bestDay] || av[bestDay][bestSlot] !== true) {
+      absentNames.push(names[k]);
+    }
+  }
+
+  return {
+    text: '全員が一致する枠はありませんでした\n' +
+      '最も多くの人が空いているのは ' + DAY_LABELS[bestDay] + '曜' + SLOT_LABELS[bestSlot] +
+      '（' + bestCount + '/' + totalCount + '名）\n' +
+      '空いていない人: ' + absentNames.join('、')
+  };
+}
+
+
+壊れたJSONの行はLogger.logに記録してスキップするだけにしています。落とすのはその1行だけで、他の回答者の集計は止まりません。
+
+曜日のキーそのものが欠けている場合にも備えて、a[day] &amp;&amp; a[day][slot] の形で参照しています。E列は手で書き換えられる場所なので、キーがある前提で読むと通知の処理ごと落ちます。
+
+bestCount が0のときは別の文面を返します。全員が全枠を不可と答えた状態で「最も多くの人が空いているのは月曜午前（0名）」と送っても、受け取った側は動けません。候補の範囲を広げて聞き直す、という次の行動を書きます。
+
+全員一致がないとき、何を通知するか
+
+日程調整では、全員が空いている枠がそのまま見つかるとは限りません。
+
+ここで「見つかりませんでした」だけを送ると、通知を受け取った幹事は結局シートを開いて手で見比べることになります。仕組みを作った意味が半分になります。
+
+このシステムでは、一致がなかったときに2つの情報をセットで返します。
+
+- 最も多くの人が空いている枠と、その人数
+- その枠で空いていない人の名前
+
+幹事は「あと誰に個別で聞けばいいか」がその場で分かります。全員に再調整を依頼しなくても、1人か2人に声をかけるだけで済む場合があるからです。
+
+Slackへ送る
+
+findCommonSlots()が返した文字列を、そのままIncoming WebhookにPOSTします。
+
+Webhook URLはコードに直書きせず、スクリプトプロパティに保存しておきます。
+
+
+function notifySlack_(text) {
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  var payload = { text: text };
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload)
+  };
+
+  UrlFetchApp.fetch(webhookUrl, options);
+}
+
+
+締切トリガーから呼ぶ入口はこれだけです。
+
+
+function checkDeadlineAndNotify() {
+  var result = findCommonSlots();
+  notifySlack_(result.text);
+}
+
+
+未回答の人を計算に入れない
+
+締切を過ぎても、フォームにまったく回答していない人が残ることがあります。
+
+このシステムでは、そういう人を「不可」として扱いません。D列がdoneの行だけを母数にしているので、未回答の人はそもそも計算から外れます。
+
+「不可」に含めると、実際には都合を聞けていないだけなのに、その人のせいで枠が全部埋まらなくなります。母数から外すのは、この誤りを避けるための設計です。
+
+つまずきどころ
+
+締切ちょうどの時刻に駆け込みで届いた回答は、Geminiの構造化が間に合わず、D列がまだpendingのまま残ることがあります。
+
+その状態で通知が飛ぶと、駆け込みで回答した人が母数からも抜け落ちます。締切トリガーの時刻を、フォームの締切より10分ほど後ろにずらしておくと、この取りこぼしを減らせます。
+
+もう1つは、Slack側でWebhookのURLを発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けて送り続け、通知だけが届かなくなります。
+
+残る手作業
+
+ここまでの仕組みを組んでも、手作業がすべて消えるわけではありません。
+
+Slack Incoming WebhookのURLを発行する作業が1つ。締切の日時を関数に渡して登録する作業が、もう1つ残ります。
+
+前者は最初の1回だけです。後者は、日程調整のたびに毎回人の手で行います。
+
+どちらもシステムの外側にある情報だからです。Webhook URLはSlack側の管理画面でしか発行できません。締切の日時は、日程調整のたびに毎回変わります。
+
+今日できること
+
+findCommonSlots()を、ダミーの回答データを2〜3行入れたシートに対して手動実行してください。
+
+実行結果のログに、全員一致の枠か、最多枠と空いていない人の名前のどちらかが出ます。
+
+Slackへの送信を試す前に、まずこの集計ロジックが手元のシートで正しく動くことを確認しておくと、Webhookの設定でつまずいたときに原因を切り分けやすくなります。
+
+---
+
+締切に1回だけ通知を出す設計は、コードの量としては多くありません。変わるのは「いつ動かすか」という1点だけです。
+
+次に自分の集計に組み込むときは、まずトリガーの種類を疑ってみてください。"></div>
+
+
+<div class="article">
+<p>締切の時刻がきたら、そこで初めて全員の空き状況を突き合わせます。</p>
+<p>回答が来るたびに通知を出すと、締切前に何度も同じ内容がSlackに流れます。これを避けるため、通知の起点を「回答」ではなく「締切時刻」に置きます。時間主導トリガーを1つ、締切の日時に合わせて仕込むだけです。</p>
+<h2>回答のたびに鳴らすと、通知が中間報告で埋まる</h2>
+<p>回答が届くたびに通知する設計にすると、こんな流れになります。</p>
+<p>月曜に3件、火曜に5件、水曜に2件。回答が来るたびにSlackが鳴り、内容はそのつど「まだ全員揃っていません」という中間報告です。</p>
+<p>チャンネルに並ぶのは、どれも「まだ全員揃っていません」という同じ趣旨の投稿です。締切前に何度流しても、受け取った側が取れる行動は変わりません。</p>
+<p>意味のある通知は、締切が来て、全員の回答が出そろった瞬間の1回だけです。それ以外は雑音になります。</p>
+<h2>この記事の前提</h2>
+<p>このシステムでは、フォームの自由記述をGeminiが読みます。</p>
+<p>曜日と時間帯ごとの空き状況を、true/falseのJSONにして<code>responses</code>シートのE列に書き込む形にしています。</p>
+<p>D列の「処理状態」が<code>done</code>になっている行だけが、集計の対象です。</p>
+<p>この記事では、そのE列がすでに埋まっている状態から、締切時刻の通知までを扱います。</p>
+<h2>締切時刻に1回だけ走るトリガーを作る</h2>
+<p>GASのトリガーには、フォーム送信のたびに動くイベント型と、決めた時刻に動く時間主導型があります。</p>
+<p>日程調整の締切通知には、時間主導型を使います。回答のたびに動かす理由がないからです。</p>
+<p>トリガー画面からの設定手順は次の通りです。</p>
+<ol>
+<li>スクリプトエディタで時計アイコンの「トリガー」を開く</li>
+<li>「トリガーを追加」を押す</li>
+<li>実行する関数に<code>checkDeadlineAndNotify</code>を選ぶ</li>
+<li>イベントのソースで「時間主導型」を選ぶ</li>
+<li>時間ベースのトリガーの種類で「特定の日付と時刻」を選ぶ</li>
+<li>締切の日付と時刻を指定して保存する</li>
+</ol>
+<p>締切のたびに画面から設定し直すのは手間なので、コードから登録する形も用意しておきます。</p>
+<pre><code>// 締切の日時を指定してトリガーを1つ登録する
+function scheduleDeadlineNotification(deadlineDate) {
+  ScriptApp.newTrigger('checkDeadlineAndNotify')
+    .timeBased()
+    .at(deadlineDate)
+    .create();
+}</code></pre>
+<p><code>deadlineDate</code>にDateオブジェクトを渡して実行すると、その日時だけに動くトリガーが1つ登録されます。</p>
+<p>一度実行が終わると、このトリガーは自動で削除されます。次の締切には、また新しい日時で登録し直します。</p>
+<h2>誰の権限で動くか</h2>
+<p>このトリガーは、登録した人のアカウント権限で動きます。共有した相手が見ているシートの上で動くわけではありません。</p>
+<p>幹事が異動や退職でアカウントを使えなくなると、トリガーは静かに止まります。エラー通知も出ません。</p>
+<p>シートも通知チャンネルも見た目は変わらないので、止まったこと自体に気づきにくいという点が厄介です。</p>
+<p>他人にこの仕組みを渡すときは、権限の引き継ぎを先に決めておきます。次の幹事が自分のアカウントで<code>scheduleDeadlineNotification</code>を実行し直す形です。</p>
+<h2>全員が空いている枠を探す</h2>
+<p>締切が来たら、<code>findCommonSlots()</code>が<code>responses</code>シートを読み、全員が空いている枠を探します。</p>
+<p>考え方はこうです。D列が<code>done</code>の行だけを対象にし、その人数を母数にします。曜日と時間帯の組み合わせごとに、空いている人数を数えます。</p>
+<p>母数と同じ人数が空いていれば、そこは全員一致の枠です。</p>
+<p>ここで壊れやすい書き方があります。</p>
+<pre><code>// 壊れる例:1行でも壊れたJSONがあると、関数全体が止まる
+function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var availabilityList = [];
+  for (var i = 1; i &lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+    availabilityList.push(JSON.parse(data[i][4]));
+  }
+  // ここから先の集計処理
+}</code></pre>
+<p>Geminiの出力が想定外の形（末尾が途中で切れているなど）で1行でも入ると、<code>JSON.parse</code>が例外を投げます。</p>
+<p>例外はキャッチされないので、その1行のために全員分の集計が止まります。1行の不備が全体を止めない形に直します。</p>
+<pre><code>function findCommonSlots() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  var names = [];
+  var availabilityList = [];
+
+  for (var i = 1; i &lt; data.length; i++) {
+    if (data[i][3] !== 'done') continue;
+
+    try {
+      var availability = JSON.parse(data[i][4]);
+      names.push(data[i][1]);
+      availabilityList.push(availability);
+    } catch (e) {
+      Logger.log('E列のJSONが壊れています。行: ' + (i + 1));
+      continue;
+    }
+  }
+
+  var totalCount = names.length;
+  if (totalCount === 0) {
+    return { text: '集計対象の回答がまだありません。' };
+  }
+
+  var commonSlots = [];
+  var counts = {};
+
+  DAYS.forEach(function (day) {
+    SLOTS.forEach(function (slot) {
+      var key = day + '-' + slot;
+      var freeCount = 0;
+
+      for (var j = 0; j &lt; availabilityList.length; j++) {
+        var a = availabilityList[j];
+        if (a[day] &amp;&amp; a[day][slot] === true) {
+          freeCount++;
+        }
+      }
+
+      counts[key] = freeCount;
+      if (freeCount === totalCount) {
+        commonSlots.push({ day: day, slot: slot });
+      }
+    });
+  });
+
+  if (commonSlots.length &gt; 0) {
+    var lines = commonSlots.map(function (s) {
+      return DAY_LABELS[s.day] + '曜' + SLOT_LABELS[s.slot];
+    });
+    return {
+      text: '全員が空いている枠が見つかりました\n' + lines.join('\n') +
+        '\n（回答者 ' + totalCount + '名で集計）'
+    };
+  }
+
+  var bestKey = null;
+  var bestCount = -1;
+
+  Object.keys(counts).forEach(function (key) {
+    if (counts[key] &gt; bestCount) {
+      bestCount = counts[key];
+      bestKey = key;
+    }
+  });
+
+  if (bestCount === 0) {
+    return {
+      text: '全員が一致する枠はありませんでした\n' +
+        '回答 ' + totalCount + '名のうち、空いていると答えた人がいる枠が1つもありません\n' +
+        '候補の曜日か時間帯を広げて、もう一度聞き直してください'
+    };
+  }
+
+  var bestDay = bestKey.split('-')[0];
+  var bestSlot = bestKey.split('-')[1];
+
+  var absentNames = [];
+  for (var k = 0; k &lt; availabilityList.length; k++) {
+    var av = availabilityList[k];
+    if (!av[bestDay] || av[bestDay][bestSlot] !== true) {
+      absentNames.push(names[k]);
+    }
+  }
+
+  return {
+    text: '全員が一致する枠はありませんでした\n' +
+      '最も多くの人が空いているのは ' + DAY_LABELS[bestDay] + '曜' + SLOT_LABELS[bestSlot] +
+      '（' + bestCount + '/' + totalCount + '名）\n' +
+      '空いていない人: ' + absentNames.join('、')
+  };
+}</code></pre>
+<p>壊れたJSONの行は<code>Logger.log</code>に記録してスキップするだけにしています。落とすのはその1行だけで、他の回答者の集計は止まりません。</p>
+<p>曜日のキーそのものが欠けている場合にも備えて、<code>a[day] &amp;&amp; a[day][slot]</code> の形で参照しています。E列は手で書き換えられる場所なので、キーがある前提で読むと通知の処理ごと落ちます。</p>
+<p><code>bestCount</code> が0のときは別の文面を返します。全員が全枠を不可と答えた状態で「最も多くの人が空いているのは月曜午前（0名）」と送っても、受け取った側は動けません。候補の範囲を広げて聞き直す、という次の行動を書きます。</p>
+<h2>全員一致がないとき、何を通知するか</h2>
+<p>日程調整では、全員が空いている枠がそのまま見つかるとは限りません。</p>
+<p>ここで「見つかりませんでした」だけを送ると、通知を受け取った幹事は結局シートを開いて手で見比べることになります。仕組みを作った意味が半分になります。</p>
+<p>このシステムでは、一致がなかったときに2つの情報をセットで返します。</p>
+<ul>
+<li>最も多くの人が空いている枠と、その人数</li>
+<li>その枠で空いていない人の名前</li>
+</ul>
+<p>幹事は「あと誰に個別で聞けばいいか」がその場で分かります。全員に再調整を依頼しなくても、1人か2人に声をかけるだけで済む場合があるからです。</p>
+<h2>Slackへ送る</h2>
+<p><code>findCommonSlots()</code>が返した文字列を、そのままIncoming WebhookにPOSTします。</p>
+<p>Webhook URLはコードに直書きせず、スクリプトプロパティに保存しておきます。</p>
+<pre><code>function notifySlack_(text) {
+  var webhookUrl = PropertiesService.getScriptProperties()
+    .getProperty('SLACK_WEBHOOK_URL');
+
+  if (!webhookUrl) {
+    Logger.log('SLACK_WEBHOOK_URLが未設定です');
+    return;
+  }
+
+  var payload = { text: text };
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload)
+  };
+
+  UrlFetchApp.fetch(webhookUrl, options);
+}</code></pre>
+<p>締切トリガーから呼ぶ入口はこれだけです。</p>
+<pre><code>function checkDeadlineAndNotify() {
+  var result = findCommonSlots();
+  notifySlack_(result.text);
+}</code></pre>
+<h2>未回答の人を計算に入れない</h2>
+<p>締切を過ぎても、フォームにまったく回答していない人が残ることがあります。</p>
+<p>このシステムでは、そういう人を「不可」として扱いません。D列が<code>done</code>の行だけを母数にしているので、未回答の人はそもそも計算から外れます。</p>
+<p>「不可」に含めると、実際には都合を聞けていないだけなのに、その人のせいで枠が全部埋まらなくなります。母数から外すのは、この誤りを避けるための設計です。</p>
+<h2>つまずきどころ</h2>
+<p>締切ちょうどの時刻に駆け込みで届いた回答は、Geminiの構造化が間に合わず、D列がまだ<code>pending</code>のまま残ることがあります。</p>
+<p>その状態で通知が飛ぶと、駆け込みで回答した人が母数からも抜け落ちます。締切トリガーの時刻を、フォームの締切より10分ほど後ろにずらしておくと、この取りこぼしを減らせます。</p>
+<p>もう1つは、Slack側でWebhookのURLを発行し直したときです。スクリプトプロパティの値を更新し忘れると、古いURLに向けて送り続け、通知だけが届かなくなります。</p>
+<h2>残る手作業</h2>
+<p>ここまでの仕組みを組んでも、手作業がすべて消えるわけではありません。</p>
+<p>Slack Incoming WebhookのURLを発行する作業が1つ。締切の日時を関数に渡して登録する作業が、もう1つ残ります。</p>
+<p>前者は最初の1回だけです。後者は、日程調整のたびに毎回人の手で行います。</p>
+<p>どちらもシステムの外側にある情報だからです。Webhook URLはSlack側の管理画面でしか発行できません。締切の日時は、日程調整のたびに毎回変わります。</p>
+<h2>今日できること</h2>
+<p><code>findCommonSlots()</code>を、ダミーの回答データを2〜3行入れたシートに対して手動実行してください。</p>
+<p>実行結果のログに、全員一致の枠か、最多枠と空いていない人の名前のどちらかが出ます。</p>
+<p>Slackへの送信を試す前に、まずこの集計ロジックが手元のシートで正しく動くことを確認しておくと、Webhookの設定でつまずいたときに原因を切り分けやすくなります。</p>
+<hr>
+<p>締切に1回だけ通知を出す設計は、コードの量としては多くありません。変わるのは「いつ動かすか」という1点だけです。</p>
+<p>次に自分の集計に組み込むときは、まずトリガーの種類を疑ってみてください。</p>
+
+</div></div>
+<script>
+const toast = (msg) => {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 1800);
+};
+
+/**
+ * text/html と text/plain を同時に書き込む。
+ * note のエディタは text/html を読むので、見出し・太字・リスト・引用・
+ * 区切り線がそのまま入る。
+ *
+ * navigator.clipboard.write() はセキュアコンテキストを要求するため
+ * file:// では動かない。必ず localhost 経由で開くこと。
+ */
+async function copyRich(btn, id) {
+  const el = document.getElementById(id);
+  const html = el.dataset.html, text = el.dataset.text;
+  try {
+    if (!navigator.clipboard?.write) throw new Error('clipboard API 無し');
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html':  new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([text], { type: 'text/plain' }),
+    })]);
+    toast('コピーしました（書式つき）');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('書式なしでコピーしました');
+    } catch {
+      toast('コピーに失敗しました。localhost で開いていますか？');
+    }
+  }
+}
+
+async function copyText(btn, value) {
+  try {
+    await navigator.clipboard.writeText(value);
+    toast('コピーしました');
+    btn.classList.add('ok');
+    setTimeout(() => btn.classList.remove('ok'), 1200);
+  } catch { toast('コピーに失敗しました'); }
+}
+
+const KEY = 'note-factory-posted';
+const posted = () => JSON.parse(localStorage.getItem(KEY) || '{}');
+function togglePosted(slug, el) {
+  const p = posted();
+  if (p[slug]) delete p[slug]; else p[slug] = new Date().toISOString();
+  localStorage.setItem(KEY, JSON.stringify(p));
+  render();
+}
+function render() {
+  const p = posted();
+  document.querySelectorAll('[data-slug]').forEach((card) => {
+    const done = !!p[card.dataset.slug];
+    card.style.opacity = done ? .5 : 1;
+    const b = card.querySelector('.done-badge');
+    if (b) b.style.display = done ? 'inline-block' : 'none';
+    const t = card.querySelector('.toggle');
+    if (t) t.textContent = done ? '投稿済みを取り消す' : '投稿済みにする';
+  });
+}
+document.addEventListener('DOMContentLoaded', render);
+
+const ITER = 310000;
+const PASS_KEY = 'nf-pass';
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+/**
+ * 合言葉は localStorage に保存する。一度入れれば次回以降は自動で開く。
+ *
+ * 端末に残るため、他人が触れる端末では「合言葉を消す」を押すこと。
+ * ボタンを用意していないと、手放すときに消す手段がなくなる。
+ */
+const savePass = (p) => { try { localStorage.setItem(PASS_KEY, p); } catch {} };
+const readPass = () => { try { return localStorage.getItem(PASS_KEY); } catch { return null; } };
+function forgetPass() {
+  try { localStorage.removeItem(PASS_KEY); } catch {}
+  location.reload();
+}
+
+async function decryptPayload(pass, enc) {
+  const raw = b64(enc), salt = raw.slice(0, 16), iv = raw.slice(16, 28), ct = raw.slice(28);
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  return JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)));
+}
+
+async function applyPass(pass, quiet) {
+  const el = document.getElementById('paid');
+  if (!el || !el.dataset.enc) return false;
+  const err = document.getElementById('lockerr');
+  if (err) err.textContent = quiet ? '' : '復号しています…';
+  try {
+    const data = await decryptPayload(pass, el.dataset.enc);
+    el.dataset.html = data.html;
+    el.dataset.text = data.text;
+    document.getElementById('paid-body').innerHTML = data.html;
+    document.getElementById('paid-lock').style.display = 'none';
+    document.getElementById('paid-actions').style.display = '';
+    const forget = document.getElementById('forget');
+    if (forget) forget.style.display = '';
+    savePass(pass);
+    if (err) err.textContent = '';
+    return true;
+  } catch (e) {
+    // 保存済みの合言葉で失敗したら、古いものが残っている。消して入力に戻す
+    if (quiet) { try { localStorage.removeItem(PASS_KEY); } catch {} }
+    if (err) err.textContent = quiet ? '' : '合言葉が違います。';
+    return false;
+  }
+}
+
+async function unlockPaid() {
+  const pw = document.getElementById('pw').value;
+  if (!pw) { document.getElementById('lockerr').textContent = '合言葉を入力してください。'; return; }
+  await applyPass(pw, false);
+}
+
+// 一度入れれば次回以降は自動で開く
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = readPass();
+  if (saved) applyPass(saved, true);
+  const pw = document.getElementById('pw');
+  if (pw) pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') unlockPaid(); });
+  // 有料記事が無いページでも、保存済みなら消せるようにしておく
+  const forget = document.getElementById('forget');
+  if (forget && saved) forget.style.display = '';
+});
+
+if('serviceWorker' in navigator && isSecureContext){
+  addEventListener('load', function(){ navigator.serviceWorker.register('../sw.js').catch(function(){}); });
+}
+</script>
