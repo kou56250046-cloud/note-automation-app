@@ -1,0 +1,507 @@
+{
+  "date": "2026-08-29",
+  "tags": [
+    {
+      "tag": "GeminiAPI",
+      "totalCount": 570,
+      "demand": 27.0,
+      "demandP90": 42.1,
+      "supplyPerDay": 1.4,
+      "gapScore": 19.747,
+      "paidRatio": 0.08,
+      "topTitles": [
+        "Gemini 3.5 Flash 速報：4倍のスピードと3倍の値段、何が変わった？",
+        "【GeminiAPI搭載】GASでPDFの傾き自動判定・自動回転スプシ完成！！"
+      ]
+    },
+    {
+      "tag": "GoogleWorkspace",
+      "totalCount": 5453,
+      "demand": 264.5,
+      "demandP90": 909.2,
+      "supplyPerDay": 13.9,
+      "gapScore": 19.067,
+      "paidRatio": 0.11,
+      "topTitles": [
+        "【無料版】まじん式 v4",
+        "【無料】NotebookLMスライドから「音声&字幕付き動画」が作れる\"プロンプト\""
+      ]
+    },
+    {
+      "tag": "GAS",
+      "totalCount": 12422,
+      "demand": 227.5,
+      "demandP90": 710.3,
+      "supplyPerDay": 23.5,
+      "gapScore": 9.683,
+      "paidRatio": 0.11,
+      "topTitles": [
+        "【完全保存版】現役エンジニアのミナト自己紹介＆メンバーシップ「ミナト｜実務特化の自動化戦",
+        "【ミナトの自動化戦略ラボ】全デジタル資産・マスターインデックス"
+      ]
+    },
+    {
+      "tag": "GoogleAppsScript",
+      "totalCount": 5374,
+      "demand": 92.5,
+      "demandP90": 383.9,
+      "supplyPerDay": 10.4,
+      "gapScore": 8.879,
+      "paidRatio": 0.13,
+      "topTitles": [
+        "【完全無料】\"グループカレンダー\"アプリ作ってみた！【GAS】",
+        "【自分OS】日記を「AI時代の資産」に変える。NotebookLM連携ツール配布します【"
+      ]
+    },
+    {
+      "tag": "UIデザイン",
+      "totalCount": 15169,
+      "demand": 81.0,
+      "demandP90": 312.4,
+      "supplyPerDay": 13.2,
+      "gapScore": 6.123,
+      "paidRatio": 0.08,
+      "topTitles": [
+        "「考えなくていいUI」を考える",
+        "DESIGN.mdを日本語UIで本当に使える形へ"
+      ]
+    },
+    {
+      "tag": "NotebookLM",
+      "totalCount": 26085,
+      "demand": 231.0,
+      "demandP90": 909.2,
+      "supplyPerDay": 52.0,
+      "gapScore": 4.439,
+      "paidRatio": 0.08,
+      "topTitles": [
+        "【無料】NotebookLMスライドから「音声&字幕付き動画」が作れる\"プロンプト\"",
+        "仕事にも趣味にも使える。Gemini と NotebookLM の連携で AI がもっと"
+      ]
+    },
+    {
+      "tag": "スプレッドシート",
+      "totalCount": 8563,
+      "demand": 68.0,
+      "demandP90": 176.0,
+      "supplyPerDay": 17.8,
+      "gapScore": 3.827,
+      "paidRatio": 0.17,
+      "topTitles": [
+        "面倒なデータ整理は Gemini にお任せ！AI 関数でスプレッドシートをフル活用しよう",
+        "100万円とデータを返してください。"
+      ]
+    },
+    {
+      "tag": "LP制作",
+      "totalCount": 3333,
+      "demand": 37.0,
+      "demandP90": 121.4,
+      "supplyPerDay": 9.8,
+      "gapScore": 3.764,
+      "paidRatio": 0.14,
+      "topTitles": [
+        "ChatGPTだけで動く！GPT Images 2.0 × Codexで、デザインシステ",
+        "おすすめランディングページ作成AI「HELPPIQ」無料でテンプレートが選べる初心者の作"
+      ]
+    },
+    {
+      "tag": "Webデザイン",
+      "totalCount": 46889,
+      "demand": 64.0,
+      "demandP90": 2533.3,
+      "supplyPerDay": 50.5,
+      "gapScore": 1.268,
+      "paidRatio": 0.07,
+      "topTitles": [
+        "実案件から学んだ、本当に役立つUIデザインの法則50 ユーザビリティチェックリスト総集編",
+        "広告で学ぶ！デザインの基本原則"
+      ]
+    },
+    {
+      "tag": "自動化",
+      "totalCount": 58243,
+      "demand": 66.0,
+      "demandP90": 1215.2,
+      "supplyPerDay": 254.7,
+      "gapScore": 0.259,
+      "paidRatio": 0.18,
+      "topTitles": [
+        "一人起業家のための自律型Web資産構築完全ロードマップ",
+        "坂本松昭への仕事依頼について"
+      ]
+    },
+    {
+      "tag": "Gemini",
+      "totalCount": 173769,
+      "demand": 81.5,
+      "demandP90": 732.5,
+      "supplyPerDay": 480.9,
+      "gapScore": 0.169,
+      "paidRatio": 0.06,
+      "topTitles": [
+        "【神回】Googleスライドが一瞬で完成する\"奇跡\"のプロンプト教えます",
+        "【無料版】まじん式 v4"
+      ]
+    },
+    {
+      "tag": "AIエージェント",
+      "totalCount": 59390,
+      "demand": 34.5,
+      "demandP90": 166.1,
+      "supplyPerDay": 372.8,
+      "gapScore": 0.093,
+      "paidRatio": 0.04,
+      "topTitles": [
+        "AIと二人三脚で劇的進化✨noteの執筆効率を最大化する「生成AI活用メソッド」と実践プ",
+        "AIに素敵で素晴らしい回答を引き出させることもその人の実力や才能らしい❤🐼AIの有効活用"
+      ]
+    },
+    {
+      "tag": "プロンプト",
+      "totalCount": 116202,
+      "demand": 36.0,
+      "demandP90": 546.0,
+      "supplyPerDay": 402.7,
+      "gapScore": 0.089,
+      "paidRatio": 0.23,
+      "topTitles": [
+        "【神回】Googleスライドが一瞬で完成する\"奇跡\"のプロンプト教えます",
+        "【究極】まじん式プロンプトv3"
+      ]
+    },
+    {
+      "tag": "ClaudeCode",
+      "totalCount": 54873,
+      "demand": 24.5,
+      "demandP90": 315.4,
+      "supplyPerDay": 451.9,
+      "gapScore": 0.054,
+      "paidRatio": 0.09,
+      "topTitles": [
+        "AIに書かせたら、前より休めなくなった",
+        "デザイナーの脳内をコピーして、誰でも90点以上のUIを作れるようにする"
+      ]
+    },
+    {
+      "tag": "業務効率化",
+      "totalCount": 101799,
+      "demand": 21.5,
+      "demandP90": 233.2,
+      "supplyPerDay": 484.5,
+      "gapScore": 0.044,
+      "paidRatio": 0.16,
+      "topTitles": [
+        "【無料版】まじん式 v4",
+        "gReach info session - Japan 2025✨GoogleのAI #"
+      ]
+    },
+    {
+      "tag": "AI活用",
+      "totalCount": 298281,
+      "demand": 69.5,
+      "demandP90": 225.6,
+      "supplyPerDay": 1674.4,
+      "gapScore": 0.042,
+      "paidRatio": 0.07,
+      "topTitles": [
+        "松任谷由美が「AIに作詞は無理」と語った理由｜世界共通で求められるのは「綺麗な文章」では",
+        "AIに素敵で素晴らしい回答を引き出させることもその人の実力や才能らしい❤🐼AIの有効活用"
+      ]
+    },
+    {
+      "tag": "生成AI",
+      "totalCount": 498193,
+      "demand": 49.5,
+      "demandP90": 92.2,
+      "supplyPerDay": 1987.1,
+      "gapScore": 0.025,
+      "paidRatio": 0.07,
+      "topTitles": [
+        "松任谷由美が「AIに作詞は無理」と語った理由｜世界共通で求められるのは「綺麗な文章」では",
+        "【励ましの言葉動画紹介】今日という一日を越えたあなたへ"
+      ]
+    }
+  ],
+  "overall": {
+    "count": 1356,
+    "popularCount": 681,
+    "likeMedian": 57,
+    "likeP90": 347.0,
+    "likeMax": 9846,
+    "paidRatio": 0.115,
+    "priceMedian": 500.0,
+    "topHours": [
+      15,
+      14,
+      13
+    ],
+    "uniqueAuthors": 943,
+    "topAuthors": [
+      [
+        "majin_108",
+        46
+      ],
+      [
+        "minato74_",
+        20
+      ],
+      [
+        "a1001_",
+        19
+      ],
+      [
+        "taneakashi",
+        10
+      ],
+      [
+        "inofthefor",
+        8
+      ]
+    ]
+  },
+  "clusters": [
+    {
+      "id": 7,
+      "label": "AI / 仕事 / 副業",
+      "supply": 24,
+      "likeMedian": 63.0,
+      "likeP90": 247.9,
+      "gapScore": 2.625,
+      "paidRatio": 0.0,
+      "tags": [
+        "AIエージェント",
+        "UIデザイン"
+      ],
+      "examples": [
+        "【自己紹介】仕様書のない「規格外」な育児と永遠に終わらない家事をシステム化せよ。ITエン",
+        "Excel挫折社員が『バケモノ』に？ Geminiくんと歩んだコーヒーと成長の記録",
+        "「勉強しなさい」と言わなかった結果"
+      ]
+    },
+    {
+      "id": 11,
+      "label": "NotebookLM / note / Gemini",
+      "supply": 73,
+      "likeMedian": 145,
+      "likeP90": 1263.8,
+      "gapScore": 1.9863,
+      "paidRatio": 0.068,
+      "tags": [
+        "NotebookLM",
+        "GoogleWorkspace"
+      ],
+      "examples": [
+        "【無料版】まじん式 v4",
+        "NotebookLMのスライド生成で結果を自在にコントロールする方法①",
+        "gReach info session - Japan 2025✨GoogleのAI #"
+      ]
+    },
+    {
+      "id": 3,
+      "label": "ツール / AI / Gemini",
+      "supply": 57,
+      "likeMedian": 75,
+      "likeP90": 294.2,
+      "gapScore": 1.3158,
+      "paidRatio": 0.035,
+      "tags": [
+        "GAS",
+        "GeminiAPI"
+      ],
+      "examples": [
+        "【無料】Canvasで「データ分析アプリ」を1発で作るプロンプト【脱Excel】",
+        "【メンバーシップ無料】まじん式 AI Slide Studio v2 ",
+        "【神ツール】フォロワー作の\"魔改造\"ツールがすごすぎる 【SlideCast Studi"
+      ]
+    },
+    {
+      "id": 10,
+      "label": "デザイン / AI / LP",
+      "supply": 53,
+      "likeMedian": 68,
+      "likeP90": 320.4,
+      "gapScore": 1.283,
+      "paidRatio": 0.075,
+      "tags": [
+        "LP制作",
+        "Webデザイン"
+      ],
+      "examples": [
+        "広告で学ぶ！デザインの基本原則",
+        "デザイナーがwebサイトを模写する際に見るべき8つの学習ポイント",
+        "デザインのクオリティを上げる、たった一つのコツ"
+      ]
+    },
+    {
+      "id": 6,
+      "label": "AI / Google / 言葉",
+      "supply": 31,
+      "likeMedian": 37,
+      "likeP90": 286.0,
+      "gapScore": 1.1935,
+      "paidRatio": 0.129,
+      "tags": [
+        "自動化",
+        "GeminiAPI"
+      ],
+      "examples": [
+        "面倒なデータ整理は Gemini にお任せ！AI 関数でスプレッドシートをフル活用しよう",
+        "【自作Chrome拡張】Geminiの不便を消していたら、Driveまで速くなった",
+        "【言葉と行動、その間にあるもの】  第2回スキ動画コンテスト『夏の陣』🏖 "
+      ]
+    },
+    {
+      "id": 8,
+      "label": "AI / 自分 / GAS",
+      "supply": 38,
+      "likeMedian": 45.0,
+      "likeP90": 225.5,
+      "gapScore": 1.1842,
+      "paidRatio": 0.0,
+      "tags": [
+        "Webデザイン",
+        "業務効率化"
+      ],
+      "examples": [
+        "AIに書かせたら、前より休めなくなった",
+        "友達が減ったんじゃない。大切な人が残った。",
+        "「何屋さんですか？」に答えられなくなった人から、AI時代は無双する。"
+      ]
+    },
+    {
+      "id": 0,
+      "label": "GAS / 仕事 / プロンプト",
+      "supply": 50,
+      "likeMedian": 57.5,
+      "likeP90": 188.3,
+      "gapScore": 1.15,
+      "paidRatio": 0.1,
+      "tags": [
+        "Webデザイン",
+        "GAS"
+      ],
+      "examples": [
+        "【究極】まじん式プロンプトv3",
+        "坂本松昭への仕事依頼について",
+        "【リポスト特典あり】まじん、本を出します。〜日本DX大賞受賞のご報告と共に〜"
+      ]
+    },
+    {
+      "id": 4,
+      "label": "AI / LP / エージェント",
+      "supply": 48,
+      "likeMedian": 39.0,
+      "likeP90": 244.2,
+      "gapScore": 0.8125,
+      "paidRatio": 0.104,
+      "tags": [
+        "LP制作",
+        "業務効率化"
+      ],
+      "examples": [
+        "【神回】Googleスライドが一瞬で完成する\"奇跡\"のプロンプト教えます",
+        "BtoCのLPを成功させる為の20項目",
+        "【完全無料】インストールするだけで1日15分の時短！？Geminiを\"最強の相棒\"にする"
+      ]
+    },
+    {
+      "id": 2,
+      "label": "AI / 自動化 / GAS",
+      "supply": 74,
+      "likeMedian": 54.5,
+      "likeP90": 500.4,
+      "gapScore": 0.7365,
+      "paidRatio": 0.068,
+      "tags": [
+        "自動化",
+        "GAS"
+      ],
+      "examples": [
+        "【自己紹介😊】いつも私のnote投稿をご覧いただきありがとうございます💖",
+        "一人起業家のための自律型Web資産構築完全ロードマップ",
+        "【完全保存版】現役エンジニアのミナト自己紹介＆メンバーシップ「ミナト｜実務特化の自動化戦"
+      ]
+    },
+    {
+      "id": 9,
+      "label": "AI / デザイナー / UI",
+      "supply": 81,
+      "likeMedian": 58,
+      "likeP90": 314.0,
+      "gapScore": 0.716,
+      "paidRatio": 0.074,
+      "tags": [
+        "UIデザイン",
+        "Webデザイン"
+      ],
+      "examples": [
+        "【保存版】「もうデザイナー用の最強チートシート作っちゃおうよ」と現役デザイナー4人で超便",
+        "デザイナーの採用担当した私が良いと思ったポートフォリオ",
+        "デザインを「見る」訓練をしている話。4つのステップと勉強法"
+      ]
+    },
+    {
+      "id": 1,
+      "label": "AI / 理由 / Google",
+      "supply": 67,
+      "likeMedian": 38,
+      "likeP90": 233.8,
+      "gapScore": 0.5672,
+      "paidRatio": 0.045,
+      "tags": [
+        "GeminiAPI",
+        "GAS"
+      ],
+      "examples": [
+        "実案件から学んだ、本当に役立つUIデザインの法則50 ユーザビリティチェックリスト総集編",
+        "【完全無料】\"グループカレンダー\"アプリ作ってみた！【GAS】",
+        "【完全無料】AIに「話しかけるだけ」でプロ品質のPDF書類が作れるツールを作ってみた！【"
+      ]
+    },
+    {
+      "id": 5,
+      "label": "Claude / ChatGPT / AI",
+      "supply": 85,
+      "likeMedian": 43,
+      "likeP90": 305.0,
+      "gapScore": 0.5059,
+      "paidRatio": 0.118,
+      "tags": [
+        "ClaudeCode",
+        "LP制作"
+      ],
+      "examples": [
+        "ChatGPTやGeminiで、手描き風加工が簡単にできちゃうプロンプト",
+        "『プロンプト vs 構造体』──ChatGPTの“沼”、本当の深さ知ってますか？",
+        "CodexでLINEスタンプを作ってみた【プロンプト｜AIエージェント｜AI活用｜AI副"
+      ]
+    }
+  ],
+  "titleStyles": {
+    "hype": {
+      "n": 259,
+      "likeMedian": 84,
+      "likeP90": 546.2
+    },
+    "concrete": {
+      "n": 277,
+      "likeMedian": 47,
+      "likeP90": 311.0
+    },
+    "plain": {
+      "n": 145,
+      "likeMedian": 45,
+      "likeP90": 231.2
+    }
+  },
+  "self": {
+    "urlname": "kou_cosmos7",
+    "nickname": "AIで見せられるものを作るアドバイザー",
+    "profile": "Claude Code と Gemini で「人に見せられる成果物」を作る手順を、\nコードとプロンプトの全文つきで公開します。\nWebデザインの before/after、GAS の自動化、NotebookLM の使い倒し。\n動くものだけを置いていきます。",
+    "followerCount": 101,
+    "noteCount": 45
+  },
+  "selfLikeMedian": 6.5,
+  "errors": []
+}

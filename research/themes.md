@@ -1644,3 +1644,296 @@
     - https://ai.google.dev/gemini-api/docs/troubleshooting
     - https://zenn.dev/tmassh/articles/0a69dfd3c5af4c
   status: used   # 2026-08-24 notes/2026-08-30-survey-kit として記事化
+
+- id: 2026-W36-01
+  title: 参加者の空き状況を自由記述で集める。日程調整フォームの入口設計
+  type: free
+  day: mon
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 設計
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 5
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 16
+  rationale: |
+    strength5: account.md のペルソナ「GASで自動化を組んだが人に任せられない人」の入口そのもの。
+    「◯曜午前は無理、火水木ならいつでも」という自由記述の都合を、Geminiに渡しやすい形で
+    シートに集める設計は手元の材料だけで書ける。W35B-01（フォーム→シート入口）と同じ骨格だが、
+    対象データが「アンケートの感想」ではなく「日程の都合」であり、シート構造（回答者名列・
+    自由記述列・処理状態列に加え、今回は締切日時の管理が必須になる点）が異なる。
+    market4: market/2026-08-29.md の「GAS」は需要227.5 / 供給23.5件/日で比9.683（有料率11%、
+    総12,422件）。「GoogleAppsScript」は需要92.5 / 供給10.4件/日で比8.879（有料率13%、総5,374件）。
+    どちらも計測17タグ中の上位帯。今週この帯を複数回使うため5ではなく4とした。
+    willingness2: 無料記事想定。設計図だけでは行動が完結せず、次の記事（中核処理）が要る前提。
+    artifact5: onFormSubmit installable triggerの設定手順＋シート構造の設計図（回答者名/
+    自由記述/締切日時/処理状態列）＋受信〜シート書き込みのGASコード全文を出せる。
+    次点: 「経費申請の受付フォーム設計」は同じ骨格で検討したが、金額・経費という題材は
+    ethics-line観点でリスクが増えるため、この系統自体を選ばなかった（下の除外理由を参照）。
+  artifactPlan: onFormSubmit installable triggerの設定手順＋シート構造の設計図（列定義）＋
+    受信〜シート書き込みのGASコード全文
+  angle: |
+    3行要約: 参加者が自由記述で答えた日程の都合をどう受け取り、どう並べればGeminiに渡しやすいか
+    だけを扱う。後続の「Geminiで空き状況を構造化する」記事を読んでいなくても、この1本で
+    「Geminiに渡せる形のシートが作れる」ところまでは完結する。既出のアンケート要約の入口設計
+    （W35B-01）とは、締切日時の管理列を持つ点と、対象データが感想ではなく日程の都合である点で
+    差別化する。
+  sources:
+    - https://developers.google.com/apps-script/guides/triggers/installable
+  status: used   # 2026-08-29 notes/2026-08-31-schedule-intake として記事化
+
+- id: 2026-W36-02
+  title: Geminiに自由記述の空き時間を構造化させる。プロンプトと呼び出しコードの全文
+  type: free
+  day: tue
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 中核
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート
+  hashtags: [GAS, GeminiAPI, プロンプト]
+  score:
+    strength: 5
+    market: 5
+    willingness: 2
+    artifact: 5
+    total: 17
+  rationale: |
+    strength5: account.md サブ3「Gemini APIは自動化の材料として扱う」にど真ん中で対応する。
+    「火水木ならいつでも」のような自由記述を、曜日×時間帯のboolean配列に変換する処理は
+    要約でも固定ラベルへの分類でもなく、**抽出・正規化**という別の変換タイプであり、
+    既出の議事録要約（要約）・問い合わせ仕分け（固定ラベル分類）・アンケート要約
+    （要約＋感情スコア）のいずれとも中核処理の形が異なる。
+    market5: market/2026-08-29.md の「GeminiAPI」は需要27.0 / 供給1.4件/日で比19.747
+    （有料率8%、総570件）。計測17タグ中1位。総570件は他タグより母数が小さいニッチ帯である点を
+    明記する。ハッシュタグにはこちらを主軸に採用した（内容と直接一致するため、既定のNotebookLM
+    ではなくGeminiAPIを使う。理由はW35B以降と同じ判断基準）。「GAS」比9.683も高い帯。
+    willingness2: 無料記事想定。プロンプトを知っても、自分のシートに繋ぎ込む工程がまだ残る。
+    artifact5: 曜日×時間帯のboolean配列（例: {"mon":{"am":false,"pm":true}, ...}）を返す
+    responseSchemaの定義＋プロンプト全文＋UrlFetchAppでのGemini API呼び出しコード全文を出せる。
+    次点: 「バグ報告の重複検出＋優先度判定」は中核処理がW35B-02（要約＋カテゴリ＋感情スコアの
+    JSON化）と構造的に酷似し、分類・スコアリングという同じ変換タイプになるためこの系統は
+    選ばなかった（下の除外理由を参照）。
+  artifactPlan: 曜日×時間帯のboolean配列を返すresponseSchema定義＋自由記述を構造化させる
+    プロンプト全文＋UrlFetchAppでのGemini API呼び出しコード全文
+  angle: |
+    3行要約: シートの自由記述列に「都合」が1件入っている状態から、Geminiに投げて曜日×時間帯の
+    空き/不可を表すJSONを受け取るところまでを、この1本だけで再現できるようにする。
+    既出の「要約する」「分類する」記事とは、出力が固定ラベルでも自由文でもなく**構造化された
+    スケジュール配列**である点で明確に異なる変換を扱う。
+  sources:
+    - https://ai.google.dev/gemini-api/docs/structured-output
+  status: used   # 2026-08-29 notes/2026-09-01-slot-extract として記事化
+
+- id: 2026-W36-03
+  title: 同時送信の二重書き込みとGeminiの形式崩れを防ぐ。壊れる集計コードと直したコード
+  type: free
+  day: wed
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 失敗
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 5
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 16
+  rationale: |
+    strength5: learnings.mdに「連載の水（失敗時の扱い）の材料として再利用可」と明記されている
+    LockServiceの排他制御と、Geminiのレスポンス検証の材料をそのまま使えるが、対象を
+    「同時にフォームが2件送信されてシートの同じ行を2回処理する」ケースに置き換えている点、
+    加えてGeminiが期待したJSON形式（曜日×時間帯の配列）で返らなかったときのバリデーションと
+    再試行という、水曜特有の失敗モードを扱う点でW35B-03とは題材が異なる。
+    market4: 「GAS」比9.683（需要227.5/供給23.5件/日、有料率11%）、「GoogleAppsScript」比8.879
+    （需要92.5/供給10.4件/日、有料率13%）。
+    willingness2: 無料記事想定。トラブル対処は知って終わりに近く、成果物の受け渡しは発生しない。
+    artifact5: 「同時送信でシートの同じ行を2回処理してしまうコード→LockService.tryLockで
+    直したコード」と「Geminiのレスポンスが期待したJSON形式で返らず落ちるコード→スキーマ検証＋
+    最大3回の再試行で直したコード」の2対を出せる。
+    次点: 「同一人物の再送信を検出して上書きする」処理も検討したが、メールアドレス突合の
+    仕組みまで含めると水曜1本に収まらないため、今回は同時実行の排他制御とJSON形式の検証に絞った。
+  artifactPlan: 壊れるコード（同時送信の二重処理／Geminiの形式崩れで落ちる）→ 直したコード
+    （LockService.tryLock／スキーマ検証つき再試行）の対を2組
+  angle: |
+    3行要約: 「フォームが同時に2件送信されたときに同じ行を2回処理してしまう」「Geminiが
+    期待した形式のJSONを返さないと処理が落ちる」の2つの壊れ方と直し方だけを扱う。月・火を
+    読んでいなくても、「GASから外部APIを叩く自動化」であれば業種を問わず適用できる形で書く。
+    既出のアンケート集計の失敗対応（W35B-03）とは、対象データと失敗モード（429ではなく
+    形式崩れ）が異なる点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/reference/lock/lock-service
+    - https://ai.google.dev/gemini-api/docs/structured-output
+  status: used   # 2026-08-29 notes/2026-09-02-lock-schema として記事化
+
+- id: 2026-W36-04
+  title: 全員の空き状況を、色の濃淡で一目にするヒートマップダッシュボード
+  type: free
+  day: thu
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 画面
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化
+  hashtags: [GAS, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 3
+    artifact: 5
+    total: 18
+  rationale: |
+    strength5: account.md「木・土は必ずサブ①」の指定に直接対応する。HTML Serviceでの
+    ダッシュボード作りは第2版から続く得意領域。
+    market5: market/2026-08-29.md の「UIデザイン」は需要81.0 / 供給13.2件/日で比6.123
+    （有料率8%、総15,169件）。今回の実測でも上位帯。GAS界隈で「スプレッドシートの画面のまま」
+    の記事が多い中、自動化に顔を付ける交差点が空いているというaccount.mdの判断根拠と一致する。
+    willingness3: ヒートマップは「全員が空いている枠が一目でわかる」形を丸ごと再現でき、
+    行動（自分のシートに貼る）に直結しやすい。
+    artifact5: 名前を縦に列挙しただけのbefore（ただの一覧表）→曜日×時間帯のグリッドで
+    空き人数を色の濃淡（CSS grid + HSLのintensity変数）で見せるafterのデモと、
+    HTML Service全文を出せる。CSS gridでのヒートマップ実装（HSLのhueを強度で変える手法、
+    intensity変数を0〜1で持たせる手法）は一次情報で確認済み。
+    次点: 「棒グラフで各曜日の空き人数を示す」も検討したが、既出記事「AIが出したダッシュボードを、
+    色数・目盛り・並びの3箇所で読める形にする」（W34-01）と実物（グラフのbefore/after）が
+    重複するため、グリッドヒートマップに差し替えて採用した。
+  artifactPlan: before（名前を縦に列挙しただけの一覧表）/ after（曜日×時間帯グリッドで
+    空き人数を色の濃淡表示するヒートマップ）のライブデモ＋HTML Service全文
+  angle: |
+    3行要約: 集計結果のスプレッドシートを、そのまま人に見せられる「全員の空き状況が一目で
+    わかるヒートマップ」に変える見た目の直し方だけを扱う。月〜水を読んでいなくても、
+    「Gemini構造化済みの空き状況データがシートにある」という前提だけで、この1本の画面デモと
+    コードが動く。既出のグラフ系・カード系ダッシュボード記事とは、可視化の形（グリッド＋
+    色の濃淡）で明確に差別化する。
+  sources:
+    - https://expensive.toys/blog/pure-CSS-heatmap
+    - https://codelibrary.opendatasoft.com/widget-tricks/heatmaps-custom/
+  status: used   # 2026-08-29 notes/2026-09-03-heatmap-view として記事化
+
+- id: 2026-W36-05
+  title: 集計のトリガーと権限。全員が空いている枠が決まったらSlackに通知する設定
+  type: free
+  day: fri
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 運用
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 自動化フローの設計思想
+  hashtags: [GoogleAppsScript, GAS, 業務効率化]
+  score:
+    strength: 4
+    market: 4
+    willingness: 2
+    artifact: 5
+    total: 15
+  rationale: |
+    strength4: account.md サブ2「権限・スコープ・実行ユーザー。他人に渡すときに必ず詰まる
+    場所」に対応する。トリガー実行者の権限周りは調べ直しがやや必要なためstrength5ではなく4。
+    market4: 「GAS」比9.683（需要227.5/供給23.5件/日、有料率11%）、「GoogleAppsScript」比8.879
+    （需要92.5/供給10.4件/日、有料率13%）。
+    willingness2: 無料記事想定。通知の仕組みを知っても、Slack Webhook URLの発行など
+    読者側の準備工程が別途残る。
+    artifact5: 締切時刻に走る時間主導トリガーの設定手順＋実行権限（誰の権限で動くか）の
+    確認手順＋全員一致の空き枠を検出してSlack Incoming WebhookにPOSTする通知コード全文を出せる。
+    次点: 「回答が集まるたびに即時通知する」形も検討したが、締切前に何度も通知が飛ぶと
+    読者側の運用が煩雑になるため、締切後の一括集計・通知に絞った。
+  artifactPlan: 締切時刻に走る時間主導トリガーの設定手順＋実行権限の確認手順＋
+    全員一致の空き枠検出→Slack通知のGASコード全文
+  angle: |
+    3行要約: 「誰の権限でトリガーが動くか」「全員が空いている枠をどう検出して通知するか」の
+    2点だけを扱う。他の曜日を読んでいなくても、既にGeminiの出力（曜日×時間帯の空き状況）が
+    シートにある前提だけで、この1本の通知設定が再現できる。既出のGASトリガー記事（動かない
+    原因の切り分け）とは、対象が「動かない」ではなく「権限と通知の設計」である点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/guides/triggers/installable
+  status: used   # 2026-08-29 notes/2026-09-04-slot-notify として記事化
+
+- id: 2026-W36-06
+  title: ヒートマップの見せ方でつまずいた5箇所。before→afterで直す
+  type: free
+  day: sat
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: つまずき
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 見せられる自動化
+  hashtags: [GAS, UIデザイン, LP制作, 生成AI]
+  score:
+    strength: 5
+    market: 5
+    willingness: 3
+    artifact: 5
+    total: 18
+  rationale: |
+    strength5: account.md「木・土は必ずサブ①（見せられる自動化）」の指定に対応する。
+    ヒートマップは参加人数が増えるほど、木曜のデモ（少人数）では出ない崩れ方をする。
+    market5: 「UIデザイン」比6.123（需要81.0/供給13.2件/日、有料率8%）。今回の実測でも
+    最上位帯を維持している。
+    willingness3: 見た目の直し方をそのままコピーすれば再現できるため、行動（自分の画面を
+    直す）に繋がりやすい。
+    artifact5: 「参加者が20人を超えるとセルが縦に潰れて色の差が見えなくなる→行の最小高さを
+    固定しスクロール化」「空き/不可/未回答の3段階しか無いのに濃淡が連続的で読みにくい→
+    3段階の離散色に変更」「スマホ幅で曜日列がはみ出す→横スクロール可能なテーブルに変更」
+    「参加者名が長いと行ラベルがヒートマップ本体を圧迫する→省略表示＋ホバーで全体表示」
+    「Web Appのデプロイ設定が自分のみのままで共有相手が開けない→ANYONE等に変更」の5件を
+    before→afterで出せる。
+    次点: 「凡例の位置がわかりにくい」も候補にあったが、上記5件のうち色の離散化修正に
+    凡例の説明を含める形で統合できるため、別項目としては採用しなかった。
+  artifactPlan: セル密度が崩れる／濃淡が連続的で読みにくい／スマホ幅ではみ出す／
+    行ラベルが本体を圧迫する／共有権限で開けない、の5件をbefore→afterコードで示す
+  angle: |
+    3行要約: 木曜で作ったヒートマップを、実際に人数が増えたり人に共有したりしたときに踏む
+    5つの見た目の崩れだけを扱う。木曜を読んでいなくても「HTML Serviceでグリッド画面を
+    公開している」なら踏む可能性がある崩れとして単体で読める。既出の「アンケートダッシュボードの
+    見せ方でつまずいた5箇所」（W35B-06）とは、対象がカード型ではなくヒートマップ型で、
+    崩れの原因（人数増加によるセル密度・色の離散/連続）が異なる点で差別化する。
+  sources:
+    - https://developers.google.com/apps-script/guides/web
+  status: used   # 2026-08-29 notes/2026-09-05-heatmap-pitfalls として記事化
+
+- id: 2026-W36-07
+  title: 日程調整ヒートマップ完成版一式。差し替えて自分の会議調整で使う手順書
+  type: paid
+  day: sun
+  systemId: 2026-W36-schedule-heatmap
+  serialRole: 完成版
+  category: GASと生成AIで他人に渡せる自動化システムを作る / 差し替えて使う自動化テンプレート
+  hashtags: [GAS, GeminiAPI, プロンプト]
+  score:
+    strength: 5
+    market: 4
+    willingness: 5
+    artifact: 5
+    total: 19
+  rationale: |
+    strength5: 連載の完成版そのもの。月〜土で出した6本の成果物をそのまま束ねられる。
+    market4: 「GAS」比9.683（需要227.5/供給23.5件/日、有料率11%）を主軸に、ハッシュタグには
+    「GeminiAPI」（比19.747、需要27.0/供給1.4件/日、有料率8%、総570件・母数は他タグより
+    小さいニッチ帯）を採用した。内容（Gemini API呼び出しを含む完成版一式）と一致するため、
+    NotebookLM（既定タグ）ではなくこちらを主軸にした（W35B以降と同じ判断基準）。
+    「GoogleAppsScript」比8.879（有料率13%）も高く、日程調整のような社内業務での
+    「差し替えるだけで動く」需要が実測に整合している。
+    willingness5: 手順を丸ごとテンプレートとして渡せる。GAS/GoogleAppsScriptの有料率
+    11〜13%が実測で成立しており、「差し替えるだけで動く」ことに対価が付く領域である。
+    候補日程を出すたびに手作業で空き状況を突き合わせる作業は、参加人数が増えるほど
+    時間コストが直線的に増えるため、支払い意欲は高いと判定した。4以上を満たすためpaidに割り当てる。
+    artifact5: フォーム受信〜Gemini構造化〜ヒートマップ表示〜Slack通知までの全コードと、
+    シート名・列名・時間帯の粒度（午前/午後 or 1時間単位）・締切日時・Webhook URLなど
+    「差し替える箇所だけ」をまとめた表を出せる。
+    次点: 「バグ報告トラッカーの完成版」「社内ヘルプデスクの故障報告システムの完成版」は
+    いずれも中核処理が既出の分類・スコアリングと同型になるため、この系統自体を選ばなかった
+    （下の除外理由を参照）。
+  productTypeHint: tool
+  artifactPlan: GASコード一式（入口・中核処理・失敗対策・通知）＋HTML Service一式＋
+    差し替え表（シート名／列名／時間帯の粒度／締切日時／Webhook URL）
+  angle: |
+    3行要約: 月〜土の6本で見せた部品（入口・構造化・失敗対策・画面・通知・つまずき集）を
+    1つのコード一式に束ね、読者が自分の会議調整のシート名や時間帯の粒度だけ差し替えれば
+    動く状態で渡す。単体で読んでも「何が手に入るか」が分かるよう、まず完成後の
+    ヒートマップ画面を先に見せる構成にする。
+    減算ではない価値軸: 「候補日を手作業で突き合わせる時間がなくなる」だけでなく、
+    「幹事役が個別にメッセージを送って都合を聞き直さなくても、全員が空いている枠が
+    自然に見える状態になる」という到達・獲得の軸を明示する。これにより読み手自身の
+    作業時間短縮（減算）に加え、「参加者に負担をかけずに済む状態になる」という獲得の軸を
+    持たせ、letter-audit のA1で否定形の未来像に価値軸が収束するのを避ける。
+  sources:
+    - https://developers.google.com/apps-script/guides/triggers/installable
+    - https://ai.google.dev/gemini-api/docs/structured-output
+    - https://developers.google.com/apps-script/reference/lock/lock-service
+    - https://expensive.toys/blog/pure-CSS-heatmap
+  status: used   # 2026-08-29 notes/2026-09-06-schedule-kit として記事化
